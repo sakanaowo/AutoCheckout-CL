@@ -9,6 +9,7 @@
 
 | File | Nội dung |
 |---|---|
+| [docs/overview.md](docs/overview.md) | Tổng quan dự án, mục tiêu bài toán và giải thích paper PDP cho người có nền tảng DL |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Kế hoạch: quyết định, dữ liệu, các bản sửa F1–F12, thí nghiệm, mốc kiểm soát |
 | [PROGRESS.md](PROGRESS.md) | Tiến độ từng task, nhật ký, handoff |
 | [GCP_TRAINING_GUIDE.md](GCP_TRAINING_GUIDE.md) | Vận hành máy ảo GCP: cài đặt, dữ liệu, chạy thí nghiệm, lấy kết quả |
