@@ -1,0 +1,209 @@
+{
+  "reference_version": "sol-new10-visual-reference-v1",
+  "reviewer": "Codex visual inspection",
+  "created_before_api_at": "2026-10-07T23:05:50+07:00",
+  "owner_masks_available": false,
+  "ground_truth_accuracy": null,
+  "rubric": "Same Luna content rubric: concrete visible observations, reasonable triage, uncertainty for ambiguous ownership; not label accuracy.",
+  "review_complete": true,
+  "cases": [
+    {
+      "case_key": [
+        1,
+        37955
+      ],
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "preview_sha256": "8659d5da609c42ff470e048e26464d9c15c24105d8f8fc7eaee210fa4340f59c",
+      "image_sha256": "9540fbc21ff4777bf06169fcfefc8b6311006b0e30dbd448c8f729070b25e4c6",
+      "cutout_sha256": "9ad916a7cbc29b19ac0fe48af1bb17f03c65087aede23b44567dc84626809652",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "requires_uncertainty": true,
+      "visual_expectation": "Cạnh trái lệch 82 px; chai trong suốt nhãn xanh bị chai vàng che cổ. Chưa xác định ownership của mảnh trong suốt sát vật che; không khẳng định chắc bbox sai từ polygon.",
+      "fingerprint": "4285d842572b62ce86c14e8a2db768b750f1a46669437935fe177e880f6ff86e",
+      "review_sha256": "ce90ff43f4c24bcd2f52082500c9fa44a701d7579378d5f7423657892965ff54",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Mô tả chai trong suốt, vật che vàng-xanh và chênh trái đúng. Kết luận không có bất kỳ pixel mục tiêu gần cạnh trái chưa được xác minh ownership tại vùng cổ bị che; regenerate 0.91, needs_human=false mạnh hơn bằng chứng. Cần pending hoặc mask/trace gốc."
+    },
+    {
+      "case_key": [
+        1,
+        16503
+      ],
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "preview_sha256": "7b6042b7b197d04c50f95779a421a118435209880408aad9e44985dd72f6a382",
+      "image_sha256": "cc896c6e52f9e8038de3bd03f84b40b45b8ece12bc1f9d70784a02d8217f70b3",
+      "cutout_sha256": "9a2ba3a5d031ee941bed42e2436ad9eeb6dc14540774090d0da3fdeb273cc0d6",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "requires_uncertainty": false,
+      "visual_expectation": "Chai nhãn tím nghiêng, cổ/nắp gần chai đỏ phía phải. Chênh cạnh phải 11 px; contour đơn giản hóa và che khuất có thể giải thích. Không có căn cứ tái sinh chỉ từ mức lệch này.",
+      "fingerprint": "b028928b007714d30a9593d6f5a99dc86abece9c4cdbdebfddb2fbea6312802d",
+      "review_sha256": "31050881d87ef06c5b68539b147a4619642346191634150011a1ff307d652f01",
+      "observation_verdict": "SUPPORTED",
+      "content_notes": "Thân chai nhãn tím nằm chéo và cổ/nắp xám còn lộ phía trên chai đỏ đúng ảnh native/cutout. Chênh phải 11 px nhỏ; keep có giải trình hợp lý cho bbox detection, chưa chứng nhận chi tiết owner-mask hoặc polygon."
+    },
+    {
+      "case_key": [
+        2,
+        36910
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "preview_sha256": "2f17327d721e4fbaa8fa8a6a4d9a753f276e9b8482c2b7e17634c822ad2f7660",
+      "image_sha256": "8e2c6b9ad99b1f70a73c1bd1976fe4f4bcc8a747fc853757c59f0a6cffcc7d0c",
+      "cutout_sha256": "a032bf06069043f44703a99e8ad04999d930e7f1df06882880127eb2b20693c1",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "requires_uncertainty": true,
+      "visual_expectation": "Bao trắng-đỏ có các mảnh xám rời trong cutout; cạnh phải lệch 86 px bị lon và bao xanh che. Cyan đã giữ mảnh trái. Cần xác minh có mảnh rời bên phải, không suy ra mọi vùng ngoài cyan là nền/vật khác.",
+      "fingerprint": "7da36edeab3bba52b702708bb0546bfabe2967801f00dc1572e008dfd66bcd9e",
+      "review_sha256": "725e3d6d8045ab5619e8471734bea9dd1894b900db713492ab3dc043a600d440",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Vị trí bao trắng-đỏ, lon và gói xanh, chênh phải 86 px đúng. Cutout có mảnh xám rời, còn vùng phải bị che; model không giải quyết được ownership/mảnh nhỏ trước khi kết luận lỗi rõ. Regenerate 0.94 và needs_human=false không đạt yêu cầu xử lý bất định."
+    },
+    {
+      "case_key": [
+        2,
+        46063
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "preview_sha256": "126bed30b7f87ecbfffb6df5c9b8140ed26708a7bd322fd19084d670ad1a38f2",
+      "image_sha256": "cc57fc8b2b6e4f0be74052ff6f91a43d88d5d36803fe407ec13ba18ed2a6ac62",
+      "cutout_sha256": "e29cc46e8db61105ea231032e2db7fa6a503d37f8a428abb951ffa45ff6f5f85",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "requires_uncertainty": false,
+      "visual_expectation": "Hộp/chai nâu nắp đen bị gói vàng che bên trái. Chênh trái 11 px trên rộng 513 px. Bbox còn chạm các cực trên/phải/dưới; chưa thấy lỗi hình học rõ.",
+      "fingerprint": "69eef3cdf57b14165ef435cbb716002bbc04ac685ba851d2fc92c49de273762f",
+      "review_sha256": "9119257d700753f39657870e27d399f47ea2af8e7fb5b841edeb9eb2da07cca3",
+      "observation_verdict": "SUPPORTED",
+      "content_notes": "Các cực trên/phải/dưới và thân nâu bị gói vàng che bên trái được mô tả đúng. Chênh trái 11 px nhỏ và model nói contour có thể bỏ chi tiết; đề xuất giữ có giải trình phù hợp để sàng lọc, chưa phải nhãn được owner-mask xác minh."
+    },
+    {
+      "case_key": [
+        3,
+        26454
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "preview_sha256": "bd1a9f4d5474aa0a588d451351dc95448adcc94add6c5611f9f402ff2ca4a3cd",
+      "image_sha256": "7558a85dacdef46122d0b173ac0b16ffae677c03a86af67bed8e80f45eb3c278",
+      "cutout_sha256": "1e6b0b6545c3283dcb71430b5586bad489ce05fbdb0970a3ffe582b37dafc812",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "requires_uncertainty": true,
+      "visual_expectation": "Hộp bánh màu be nằm dưới thanh xanh, phần trên bị che; chênh trên 71 px. Không xác định được owner pixels ở vùng thanh xanh; không dùng bbox amodal để chứng nhận nhãn visible-only.",
+      "fingerprint": "36613a3f685b9867bae297b549dfa161e3b00ea12d9b8e2250297a9aa36524aa",
+      "review_sha256": "b2b416a83f3ce9f753fe5f115af37213000544a11a7ef5ae891929c44987f97f",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Hộp bánh be bị thanh xanh che trên, chênh 71 px được mô tả đúng. Không có mask cuối để loại khả năng fragment nhỏ tại vùng chồng lấp; model vẫn regenerate 0.96, needs_human=false. Tính đúng của định nghĩa visible-owner không tự chứng minh phân loại mọi pixel ở cực trên."
+    },
+    {
+      "case_key": [
+        3,
+        15851
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "preview_sha256": "4e782e7ed471ccc0d3bcea25f6ebb0525ce3bd8983f281a0c68cfd7b11fec08c",
+      "image_sha256": "7749fdb3664cb6d1bd37588a5335b5957ca7a0c2de030bc5a8a1b2c2ae2a119c",
+      "cutout_sha256": "30e00b6345c44ea6265656be2e5b9f76c3a0e73f931a73432750454854010053",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "requires_uncertainty": false,
+      "visual_expectation": "Hộp gum xanh xoay nghiêng có bốn cực sát bbox, các góc trống hợp lệ. Chênh trên/phải/dưới chỉ 1 px; chưa thấy lỗi rõ hoặc cần tái sinh.",
+      "fingerprint": "1bc3d1bcf3129313665ff596e99d06d3c3e49babc692751a2ef5f0db502da982",
+      "review_sha256": "c0febaba135344305f610cb6303cc9f37f814291ea378a470c02919b5e7ab5b4",
+      "observation_verdict": "SUPPORTED",
+      "content_notes": "Hộp gum xanh xoay và bốn cực sát bbox phù hợp native. Metadata lệch 1 px ở trên/phải/dưới, các góc nền trống hợp lệ. Giữ có giải trình hợp lý; không suy diễn rằng đã khôi phục mask."
+    },
+    {
+      "case_key": [
+        4,
+        49601
+      ],
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "preview_sha256": "4bd47a1d37febf2aa81586651c7f8f199a98382def4fa64b85c024a864ef69e8",
+      "image_sha256": "472c9c178d4b5b889ecf67200d4584b53337ac85df9f7d9ef950d7f54ca15deb",
+      "cutout_sha256": "cd543dbcab7affe44573d1d66bf9b1af552804d541d52f51e284b06d7d614ff6",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "requires_uncertainty": true,
+      "visual_expectation": "Tấm đen có tay cầm mảnh trong cutout, phía dưới/phải bị túi hồng che; bbox vượt thân polygon 137 px đáy, 3 px phải. Tay cầm/mảnh rời có thể ảnh hưởng cực bbox; cần xem ownership, không tuyên bố chỉ có nền ở đáy.",
+      "fingerprint": "aa4b14c251766c75c237b158db2567381593e566e82108cbca5e270926dce633",
+      "review_sha256": "d4781c54d847e52ae00a782626213f95e6edd6b3aa216991b5b40f894b7c2ca9",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Thân đen kết thúc cao hơn bbox và khoảng nền dưới được mô tả đúng. Cutout còn tay cầm mảnh, phía phải bị túi hồng che; model chưa kiểm chứng các fragment của tay cầm nhưng kết luận cực dưới sai rõ, regenerate 0.94 và không bật human. Cần truy ownership hoặc review trước khi quyết định nhãn."
+    },
+    {
+      "case_key": [
+        4,
+        168
+      ],
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "preview_sha256": "e96fbe9797e2bddec99bcfd57fe87b5600c1a35002f4af2beb2505bd7bcc040d",
+      "image_sha256": "bc1b674efc1580fd20d0733f7222cb4f7f5c38a90566af3fc6d3c64ad9c09449",
+      "cutout_sha256": "be07ef149656df855d570d25c6692e63d7d217e8905952d0a35f4b24013a646a",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "requires_uncertainty": false,
+      "visual_expectation": "Gói tissue trắng nghiêng bị hộp xanh che góc trên trái; chênh trái 14 px trên rộng 647 px. Mép dưới/đỉnh/phải vẫn phù hợp extent; contour có thể bỏ chi tiết nhỏ.",
+      "fingerprint": "0c0fc65c2fdd5e49ef540f3a1a7d2dadfcd3c1b5ee2cfac61ed47f53731fa080",
+      "review_sha256": "37244c8cd61d0b2b9a8d5b32b1a46a39cf058d4a8049889826efaedcdc017a95",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Đề xuất giữ với chênh trái 14 px phù hợp rubric sàng lọc. Tuy nhiên model khẳng định có dải mép be bên trái phần xanh gần cực bbox và polygon bỏ sót; crop native/zoom chỉ rõ mép be lộ bên dưới/phải vật xanh, chưa xác nhận dải tại cực trái bị bỏ. Mô tả fragment phải ở mức khả năng, không chứng nhận missing_visible_fragment."
+    },
+    {
+      "case_key": [
+        3,
+        22011
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "preview_sha256": "5b4d51228f33a7a2211fd15d7511b710f48a75e320565c94b0d985a5e71a821a",
+      "image_sha256": "fd8dec9bfff4754f1d64632490f0cea2b69f04a6d578f09e3a9d3d60d427193a",
+      "cutout_sha256": "51a06a991f59b02e2f2d38dc0579ce22eca15ac747bd5927ce270b9cff0bcb87",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "requires_uncertainty": true,
+      "visual_expectation": "Bao bạc-đen bị lon vàng che góc trên phải; chênh trên 23 px, gần 8% chiều cao. Mảnh nhỏ ở góc dưới trái đã được cyan giữ; không khẳng định có hay không fragment ẩn trên từ crop đơn thuần.",
+      "fingerprint": "02f2577c7bfee6468c00a8186c7093bcd27a74c2bcb54520eee2b8d7b04981c6",
+      "review_sha256": "eb85e6a4582f99d2e3e8de5d76d1296e3e2741750d5f306b020d0299557af6d2",
+      "observation_verdict": "PARTIAL",
+      "content_notes": "Gói bạc, lon vàng che góc trên phải và gap trên 23 px được mô tả đúng. Không xác minh được ownership tại vùng đó từ crop; kết luận không có fragment và bbox lỗi phải tái sinh 0.90, needs_human=false vượt bằng chứng. Đây là đề xuất cần review thêm."
+    },
+    {
+      "case_key": [
+        2,
+        9162
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "preview_sha256": "4f60f8975011e6cba9c4403163a8fabba705203ac718e615dd67c4874561c678",
+      "image_sha256": "2e475e32509e74df29d6a2c701a5910bc5731ed8b9e9866b585c3e59c4c5c9fb",
+      "cutout_sha256": "dc5b8706a6c4c1b4ec467d5cd6e8b83d1efa5e25042b2b838c54d511339243de",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "requires_uncertainty": false,
+      "visual_expectation": "Bao vàng bị cốc/túi cam che phía phải; chênh phải 14 px trên rộng 346 px. Cực trái/trên/dưới bám mục tiêu; giữ có giải trình hoặc pending, không tái sinh chỉ dựa IoU.",
+      "fingerprint": "3cf71cf108da651cb7d7b217664a5d2c00dd4728688ddaaa3256adf1c9eb84c5",
+      "review_sha256": "f060ad1a1a9ec91f4e2016b78b099ba7254954e81bc1ad34b4fee7e3ac17e44e",
+      "observation_verdict": "SUPPORTED",
+      "content_notes": "Bao vàng và vật cam che phía phải được mô tả đúng, chênh phải 14 px đúng metadata. Model chủ động pending + needs_human=true, thừa nhận contour/che khuất không đủ để xác nhận box tight; xử lý bất định phù hợp."
+    }
+  ],
+  "output_reviewed_at": "2026-10-07T23:09:33+07:00",
+  "api_run_id": "fcfa08f8-364a-4db1-951d-baad2f7b9371",
+  "rubric_limitations": "Codex qualitative pixel review, not independent human consensus or owner-mask GT; regenerate proposals on ambiguous fragments need reviewer evidence."
+}

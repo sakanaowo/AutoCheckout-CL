@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-07T22:09:12+07:00",
+  "reviewer": "Codex — fresh independent inspection of 10 native crops, cutouts, geometry and edge zooms",
+  "scope": "grounded observations and admissible triage; not ground-truth label accuracy",
+  "ground_truth_masks_available": false,
+  "new_api_calls": 0,
+  "prompt_version": "rpc-bbox-polygon-review-v3",
+  "cases": [
+    {
+      "case_key": [
+        1,
+        30575
+      ],
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "fingerprint": "35527e7784d1b149f46763063f3d615c8ffa36e3ae14a11c2de9018ca0286d2f",
+      "review_sha256": "b8865566bcb7ed21c4c3c290275a0762dd9e84ceee1fa39c6e90a8e475d2da25",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "regenerate",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Mô tả đúng cạnh trái bbox mở rộng 42 px so với polygon của chai đen. Đề xuất tái sinh hợp lý để đưa vào hàng đợi kiểm tra, chưa xác nhận mask/pixel GT."
+    },
+    {
+      "case_key": [
+        1,
+        42502
+      ],
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "fingerprint": "bdcb81d89e1967c90494959ba66ea9e5b7d07ed34b99dd150942542b56cc3223",
+      "review_sha256": "bf18da427840a3e3a068798dda31c6a85dca4bbb2dc9ef771f166dc9e1669805",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Chênh cực trên 7 px; gói trong suốt xoay và bị vật tròn đỏ che. Nhận xét phân biệt được dư góc của bbox xoay với lỗi lớn."
+    },
+    {
+      "case_key": [
+        2,
+        7318
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "fingerprint": "0c77a39b8a5d37c5be7348c1bf8500e68c85dbaad5fe68ca1365fc8ff91f59dc",
+      "review_sha256": "49dcfa8e4bdff47517aa59c1b249d5c150e557bc88e9bd4f13a48bddb876da74",
+      "observation_verdict": "PARTIAL",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "decision_verdict": "UNSUPPORTED_CERTAINTY",
+      "needs_human_expected": true,
+      "notes": "Hướng lệch trái 136 px đúng, nhưng lon che vùng cạnh trái và có mảnh đỏ cạnh lon. Chưa xác định chắc mảnh đó thuộc sản phẩm nào; kết luận không có pixel mục tiêu và lỗi rõ ràng là mạnh hơn bằng chứng."
+    },
+    {
+      "case_key": [
+        2,
+        41775
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "fingerprint": "ac4ad9e85bbf4b92a3ad27e7e2ba323e369d357a2e2972ee2ad036af156c9fcb",
+      "review_sha256": "7b499cf7cf91b660db865c09e3b5c80db3b806e1ab679c3de0fba8b49c9ee664",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Chênh cực trên 12 px trên chiều cao 589 px; các cực khác khớp. Giữ hoặc pending với giải trình phù hợp cho sàng lọc."
+    },
+    {
+      "case_key": [
+        3,
+        38483
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "fingerprint": "12e6b8ae369af8db740cde6a2ad7832ea297785d050422017f10d6daf988ea03",
+      "review_sha256": "b6f12b96996a0f5adecc97d1a87bee7e32cea06794a6eb124ab67090a6e5d5be",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "regenerate",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Nhận xét đúng phần mở rộng cạnh phải 109 px qua vùng gói đen kế bên. Đề xuất kiểm tra/tái sinh có căn cứ sàng lọc; chưa chứng nhận owner-mask."
+    },
+    {
+      "case_key": [
+        3,
+        58188
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "fingerprint": "35ac1e0df4250a20d4c8c26bc84965366fc00911c60cac03fa0f5a1afd8d7b7f",
+      "review_sha256": "78247f156ee4dd07208f97a8856555cdaf3a0c4dd1c99deb219bffc56d1e4c82",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Cực đáy lệch 11 px, có mép rách/mảnh nhỏ và vật màu nâu che. Nhận xét giữ giới hạn về polygon giản lược, không coi chênh nhỏ là lỗi rõ."
+    },
+    {
+      "case_key": [
+        4,
+        15271
+      ],
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "fingerprint": "ff4f69a4dfc2f67cdd0af0fb2c64dd51b355d08bb763a20d17059d2e53ddfcb8",
+      "review_sha256": "194c78c13cc71fbfcdac3e42dcb69abce4a0d602521fa4406ca431f15acc4f5a",
+      "observation_verdict": "PARTIAL",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "decision_verdict": "UNSUPPORTED_CERTAINTY",
+      "needs_human_expected": true,
+      "notes": "Mô tả phần thân đen đúng nhưng không xử lý đủ khả năng tay cầm mảnh của cutout nằm dọc mép vật che; chênh đỉnh 123 px chưa đủ để khẳng định không có fragment hợp lệ."
+    },
+    {
+      "case_key": [
+        4,
+        9534
+      ],
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "fingerprint": "48c7154fa4cc00cc22218e4bb8b6a72d6941e3829dcdd5163cd1e09c0f5773bc",
+      "review_sha256": "dd3c1138317346b847ac5d9b63c81b05518ca37261d51dbf944243debb91b317",
+      "observation_verdict": "PARTIAL",
+      "allowed_triage_decisions": [
+        "keep_with_justification",
+        "pending"
+      ],
+      "decision_verdict": "UNSUPPORTED_CERTAINTY",
+      "needs_human_expected": true,
+      "notes": "Chênh đáy 8 px (~2,03% chiều cao). Cảnh che khuất và contour giản lược khiến kết luận cần tái sinh như lỗi rõ ràng chưa có đủ bằng chứng."
+    },
+    {
+      "case_key": [
+        2,
+        34269
+      ],
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "fingerprint": "45ace26c74dec6b88b737fb8e0b2b26868f8db4509413bbd44ef7accd6bba683",
+      "review_sha256": "aaf426f223fad3371ff76820dd52bbe9d34da52a20df9b8f778eb67900d8a129",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": true,
+      "notes": "Nhận xét đúng vùng cạnh trái lệch 45 px bị lon/mảnh bao bì đỏ che; pending và needs_human là cách xử lý phù hợp."
+    },
+    {
+      "case_key": [
+        3,
+        49657
+      ],
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "fingerprint": "70f4727bbf320c605ccc2857dacf7eab3fcf51dfd47ef9e665759f939408413c",
+      "review_sha256": "ca109a1089551f78670e5d3c125c938072ec27d20b5715b460eb0b3f3800b91c",
+      "observation_verdict": "SUPPORTED",
+      "allowed_triage_decisions": [
+        "regenerate",
+        "pending"
+      ],
+      "decision_verdict": "SUPPORTED_TRIAGE",
+      "needs_human_expected": false,
+      "notes": "Mô tả đúng cực trên lệch 20 px của gói dài chéo cạnh vật khác. Đề xuất kiểm tra/tái sinh chỉ có giá trị sàng lọc, không chứng nhận bbox sai theo owner-mask."
+    }
+  ]
+}

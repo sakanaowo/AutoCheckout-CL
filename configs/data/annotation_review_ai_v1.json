@@ -1,0 +1,18 @@
+{
+  "model": "gpt-6-luna",
+  "prompt_version": "rpc-bbox-polygon-review-v3",
+  "endpoint": "https://api.openai.com/v1/responses",
+  "reasoning_effort": "low",
+  "image_detail": "high",
+  "cutout_max_side": 512,
+  "max_output_tokens": 3000,
+  "pilot_cases": 10,
+  "workers": 4,
+  "require_visual_pilot_audit": true,
+  "apply_label_repairs": false,
+  "write_manual_decisions": false,
+  "pricing_checked_on": "2026-10-07",
+  "pricing_mode": "standard_short_context",
+  "usd_per_million_tokens": {"input": 0.1, "cached_input": 0.01, "cache_write": 0.125, "output": 0.5},
+  "documentation": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+}
