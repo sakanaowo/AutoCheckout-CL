@@ -1,0 +1,33 @@
+{
+  "model": "gpt-6.1-sol",
+  "prompt_version": "rpc-annotation-final-resolution-v1",
+  "reasoning_effort": "medium",
+  "image_detail": "high",
+  "images_per_case": 4,
+  "max_output_tokens": 4000,
+  "target_cases": 202,
+  "pricing_mode": "batch",
+  "endpoint": "/v1/responses",
+  "completion_window": "24h",
+  "max_jsonl_bytes": 190000000,
+  "poll_interval_seconds": 30,
+  "seed": 20261008,
+  "minimum_visible_fraction": 0.7,
+  "decisions": [
+    "keep_with_justification",
+    "regenerate"
+  ],
+  "uncertain_action": "regenerate",
+  "apply_resolutions": true,
+  "write_review_decisions": true,
+  "raw_data_writable": false,
+  "authorization": {
+    "date": "2026-10-08",
+    "request": "nếu bạn đã có thể đánh giá được thì api cũng có thể, xử lý phần data 202 ảnh đó đi"
+  },
+  "scope": "200 batch case keys + (4,57855) + (4,61176); leave the 20 pilot keys unchanged",
+  "documentation": [
+    "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "https://developers.openai.com/api/docs/guides/batch"
+  ]
+}
