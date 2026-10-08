@@ -165,6 +165,6 @@ Không đặt trước AP/cAcc như kết quả đã đạt. Chỉ công nhận 
 
 ## 11. Ba việc tiếp theo
 
-1. **S0–S1:** tạo notebook trong modeling để nghiệm thu processor 640/800, loader/collation, label masking và PDP nền trên real-only release; chuẩn bị environment model/Vast.ai. Không chạy legacy defaults GCP nguyên trạng.
+1. **S0–S1:** [notebook 01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đã tạo, chưa chạy. Sau khi tự cài environment, chạy gates processor 640/800, loader/collation, task GT separation và PDP nhỏ/optimizer/resume trên real-only release. Full pretrained PDP/GPU cần nghiệm thu tiếp riêng; không chạy legacy defaults GCP nguyên trạng.
 2. **Synthetic:** giữ bản 202 đã nghiệm thu thành augmentation version riêng; kiểm chứng loader/bbox/RLE và source roots trước tích hợp. Quyết định scope xử lý 20 pilot còn lại riêng; không phát hành toàn bộ 20.000 ảnh từ gate scope 202.
 3. **S2/E1:** ConvNeXt-V2 adapter và smoke feature/mask/projection, rồi pilot PDP nền/ConvNeXt trên cùng split ở RTX 4090 Vast.ai. LoRA/K=3/FSA/freeze bổ sung sau baseline.

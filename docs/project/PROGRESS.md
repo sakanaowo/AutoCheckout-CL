@@ -11,7 +11,7 @@ Cập nhật 08/10/2026. [Bàn giao](AGENT_HANDOFF.md) · [Kế hoạch](IMPLEME
 | Visual và AI review | 222 card/gallery, Luna 10 + Sol 10 + Batch 200; gate API đạt, gate nội dung lịch sử FAIL | Đọc reports như lịch sử đề xuất |
 | Resolution 202 | 202 ảnh/2.846 object/200 SKU; 9 giữ/193 tái ghép; owner-mask/RLE cho 2.721 object, task JSON và CSV acceptance PASS | Bản augmentation riêng; chưa tích hợp training |
 | Scope còn lại | 20 pilot còn pending; toàn bộ 20.000 synth chưa phát hành lại | Xác định scope xử lý bổ sung riêng |
-| PDP nền/processor | Code nền có sẵn, notebook model/640–800 chưa chạy | S0–S1: environment, loader/masking, bbox round-trip, loss/optimizer/resume |
+| PDP nền/processor | [Notebook 01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đã tạo, chưa chạy; có gates processor/loader 640–800 và PDP smoke/resume | S0–S1: environment, loader/masking, bbox round-trip, loss/optimizer/resume |
 | ConvNeXt-V2-Base | Chưa có adapter kiểm chứng | S2 sau PDP nền; feature maps/weights/forward/backward |
 | Vast.ai training/eval | Chưa train/đánh giá trên protocol mới | Pilot EXP-B1/B2 rồi 5 task, calibration chỉ trên val |
 | LoRA/K=3/FSA/freeze/overlap | Chưa triển khai các ablation mới | Sau baseline, mỗi thay đổi một run |

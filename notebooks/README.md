@@ -12,7 +12,7 @@ Cập nhật **08/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. M
 | [data_preprocessing/02_split_and_acceptance.ipynb](data_preprocessing/02_split_and_acceptance.ipynb) | Đã chạy; lần mới nhất 16:02:43–16:03:17 UTC+7, real-only split/task JSON, 9 gate đạt |
 | [data_preprocessing/03_annotation_review.ipynb](data_preprocessing/03_annotation_review.ipynb) | Visual 222 case, pilots và Batch 200; lịch sử đề xuất, gate nội dung FAIL |
 | [data_preprocessing/04_annotation_resolution.ipynb](data_preprocessing/04_annotation_resolution.ipynb) | Đã xử lý 202 case: 9 giữ/193 tái ghép; acceptance PASS ngày 08/10, 13:31:19–13:34:20 UTC+7 |
-| [modeling/](modeling/README.md) | Bước tiếp theo: processor/loader/PDP nền, rồi ConvNeXt-V2; chưa tạo/chạy notebook model |
+| [modeling/](modeling/README.md) | Notebook 01 processor/loader/PDP foundation đã tạo, chưa chạy; full baseline/ConvNeXt/GPU còn pending |
 | [training/](training/README.md) | Pilot và 5 task trên Vast.ai; chưa train |
 | [evaluation/](evaluation/README.md) | mAP/forgetting/counting; calibration trên val, test cố định; chưa chạy |
 | [references/](references) | Notebook thành viên nhóm, chỉ dùng tham khảo |
