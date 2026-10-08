@@ -5,7 +5,7 @@ rows per image, ranked over (query, class) pairs exactly like the original Defor
 post-processing, so COCO mAP stays comparable with the paper. Counting needs one label per
 physical object, which ``top1_per_query`` provides (the best class of each query).
 
-Conventions (see docs/formats.md):
+Conventions (see docs/data_preprocessing/formats.md):
 - ``label`` is the model label (0..num_slots-1), never the RPC category id;
 - ``boxes`` are ``[x1, y1, x2, y2]`` in absolute pixels of the image as stored in the
   annotation file that was evaluated (800x800 after resizing);

@@ -1,14 +1,33 @@
 # Định dạng dữ liệu và thư mục
 
+> Phạm vi 07/10/2026: protocol **5 task 100+4×25 đã chốt**. [Notebook split](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb) đã tạo release native v1 real-only và khóa validation/test. Các ví dụ `/data/rpc`/`checkout_800` phía dưới thuộc pipeline kế thừa; dùng hợp đồng native ở mục 0 cho run hiện tại. Xem [báo cáo split](reports/split-100-4x25-2026-10-07.md), [bàn giao](../project/AGENT_HANDOFF.md) và [kế hoạch](../project/IMPLEMENTATION_PLAN.md).
+
 Tài liệu này là "hợp đồng" giữa các phần code: công cụ dữ liệu (DL1–DL6), code PDP (`pdp/`), công cụ đánh giá (V1–V6) và baseline. Muốn đổi định dạng nào thì sửa ở đây trước, rồi sửa code và test tương ứng.
 
 Quy ước chung:
 
 - **Nhãn model** (`label`) là số nguyên 0..`num_slots-1`, xếp liền nhau theo thứ tự task. **`category_id` RPC** là 1..200. Hai loại số này không bao giờ được dùng lẫn cho nhau; muốn đổi thì dùng `TaskConfig` (`autocheckout/taskcfg.py`).
-- Tọa độ ảnh luôn theo **ảnh đã thu nhỏ 800×800** (sau DL2). Trong file COCO, bbox là `[x, y, w, h]`; trong file dự đoán là `[x1, y1, x2, y2]`.
+- Tọa độ COCO theo **width/height của ảnh được annotation**: release hiện tại giữ pixel gốc, pipeline legacy dùng 800×800. Processor có thể resize 640/800 nhưng dự đoán phải scale lại về cùng hệ tọa độ GT khi đánh giá. COCO bbox là `[x,y,w,h]`; prediction là `[x1,y1,x2,y2]`.
 - Mọi file JSON/npz đều ghi kiểu nguyên tử (ghi file tạm rồi đổi tên), dùng `autocheckout.io.save_json` và `autocheckout.predictions.save_predictions`.
 
-## 1. Thư mục dữ liệu trên VM (`$DATA=/data/rpc`)
+## 0. Release hiện hành: native pixels, 5 task, real-only
+
+```text
+data/archive/                         source giữ nguyên, image root của loader
+data/processed/rpc_100-4x25_seed0_native_v1/
+├── ann/checkout_native.json           30.000 ảnh/367.935 object, RPC IDs 1..200
+├── task_config.json                   snapshot 5 task + slot dự phòng
+├── splits/{train,val,test,train_pilot}.json
+├── split_config/rpc_checkout_seed0.json
+├── tasks/real/                        model labels 0..199, native coordinates
+└── release_manifest.json              checks, input hashes, test lock
+```
+
+`images.file_name` là `val2019/<name>` hoặc `test2019/<name>`; `width/height` giữ nguyên, ID mới không đụng nhau, `source/orig_id/orig_file_name/level` lưu nguồn. Annotation merged có `source/orig_id` để đối chiếu và bbox/area không bị scale/làm tròn. Task JSON remap category_id sang model label, các trường geometry/source giữ nguyên. Chỉ labels của task hiện tại có trong train; file `_gt_full` không được đưa vào loader training.
+
+Split mới: train 22.494, val 1.503, test 6.003, pilot 3.002; mọi group chứa val2019 ở train. Phần test2019 không vào holdout được dùng train, nên đây là split nghiên cứu riêng, không phải official test2019 nguyên vẹn. Config lock nằm ở `configs/data/rpc_100-4x25_seed0_native_v1.json`; data/tasks JSON sinh mới nằm trong gitignore. Synth chưa được đưa vào release này.
+
+## 1. Thư mục pipeline legacy trên VM (`$DATA=/data/rpc`)
 
 ```
 /data/rpc/

@@ -7,7 +7,7 @@ install); the score formulas below are a direct transcription of
 checked in ``tests/test_counting.py`` against a second transcription kept in the test file.
 
 Per image and class, the predicted count is the number of ``top1_per_query()`` rows with
-score >= threshold (one label per physical query/object, per docs/formats.md section 5);
+score >= threshold (one label per physical query/object, per docs/data_preprocessing/formats.md section 5);
 the GT count comes from the annotation. Only learned classes (label < seen_classes) are
 counted on both sides -- unlearned GT objects are ignored entirely, and mid-run cAcc is
 therefore always computed on the SKUs learned so far, never on the full 200.

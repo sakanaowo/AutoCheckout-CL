@@ -8,7 +8,7 @@ Usage::
 Reads ``RUN/task_<t>/pred_<split>.npz`` for every stage present (stages need not be
 contiguous: a joint-training upper bound run may only have its last stage, see
 ``autocheckout.cl_metrics.discover_stage_predictions``). Writes
-``RUN/metrics_cl_<split>.json`` (docs/formats.md section 6) and prints a markdown summary.
+``RUN/metrics_cl_<split>.json`` (docs/data_preprocessing/formats.md section 6) and prints a markdown summary.
 """
 
 from __future__ import annotations

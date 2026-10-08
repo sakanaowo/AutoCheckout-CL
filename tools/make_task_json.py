@@ -1,4 +1,4 @@
-"""DL5/DL6: per-task COCO files for the PDP code (docs/formats.md, section 4).
+"""DL5/DL6: per-task COCO files for the PDP code (docs/data_preprocessing/formats.md, section 4).
 
 For each data task t of the task config (all of them, or ``--tasks``):
 

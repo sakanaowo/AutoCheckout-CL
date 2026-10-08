@@ -8,15 +8,16 @@ __pycache__/
 venv/
 
 # Data, training outputs and secrets: never commit (dataset licence CC BY-NC-SA 4.0)
-data/
-runs/
+/data/
+/runs/
 *.pth
 *.ckpt
 *.npz
 kaggle.json
+.env
+.env.*
+!.env.example
 lightning_logs/
-
-# Large reference files kept locally only
 
 # OS / editors
 .DS_Store

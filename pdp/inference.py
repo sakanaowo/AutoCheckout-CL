@@ -4,7 +4,7 @@ Inference is the same everywhere (validation during training, predictions after 
 predict-only runs): a first pass without prompts gives the query, the second pass uses the prompts
 of every learned task. Per image, the top-100 (query, class) pairs over the learned classes are kept,
 like the post-processing of the original evaluation (which masked unlearned logits and dropped the
-unused last slot). Files follow docs/formats.md section 5.
+unused last slot). Files follow docs/data_preprocessing/formats.md section 5.
 """
 
 import numpy as np

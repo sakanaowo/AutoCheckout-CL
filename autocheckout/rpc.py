@@ -1,6 +1,6 @@
 """RPC checkout data conventions shared by the data tools: sources, clutter levels, raw layout.
 
-Raw layout (docs/formats.md, section 1)::
+Raw layout (docs/data_preprocessing/formats.md, section 1)::
 
     <raw>/val2019/*.jpg, <raw>/test2019/*.jpg
     <raw>/instances_val2019.json, <raw>/instances_test2019.json

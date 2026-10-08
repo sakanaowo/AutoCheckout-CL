@@ -12,7 +12,7 @@ Files (``DET`` = ``--det-dir`` with the detector's ``pred_<split>.npz``, one row
 
 - ``EMB/det_<split>.npz``: embedding of every row of ``DET/pred_<split>.npz``;
 - ``EMB/memory_task_<t>.npz``: embeddings, labels, image and annotation ids of task t's memory;
-- ``RUN/task_<t>/pred_<split>.npz``: docs/formats.md section 5, ``producer: "retrieval"``.
+- ``RUN/task_<t>/pred_<split>.npz``: docs/data_preprocessing/formats.md section 5, ``producer: "retrieval"``.
 
 A cached file stores the settings it was built with and is only reused with the same settings,
 so several ``RUN`` directories (e.g. prototype and kNN) can share one ``EMB``.
