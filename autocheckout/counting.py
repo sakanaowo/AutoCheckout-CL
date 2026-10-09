@@ -49,14 +49,15 @@ ZERO_GT_NOTE = (
 def dedup_detections(preds: Predictions, iou_threshold: float) -> Predictions:
     """One detection per physical object: class-agnostic greedy NMS per image on the top-1-per-query rows,
     highest score first (counting option, 30/09). DETR models are meant to need no NMS, but a model trained
-    on duplicate pseudo-labels reports some objects twice (F14). Rows below the lowest threshold of the grid
-    are dropped first: they never count and cannot suppress a higher-scoring row."""
+    on duplicate pseudo-labels reports some objects twice (F14). Keep all scores so a custom
+    calibration grid can include values below 0.05. Score ties prefer the smaller query, then label."""
+    if not np.isfinite(iou_threshold) or not 0 < iou_threshold <= 1:
+        raise ValueError("NMS IoU must be in (0, 1]")
     top1 = preds.top1_per_query()
-    top1 = top1.subset(top1.score >= THRESHOLD_GRID[0])
     if len(top1) == 0:
         return top1
     keep = np.zeros(len(top1), dtype=bool)
-    order = np.lexsort((-top1.score, top1.image_id))
+    order = np.lexsort((top1.label, top1.query, -top1.score, top1.image_id))
     image_ids = top1.image_id[order]
     starts = np.flatnonzero(np.r_[True, image_ids[1:] != image_ids[:-1]])
     for start, end in zip(starts, np.r_[starts[1:], len(order)], strict=True):
@@ -165,7 +166,10 @@ def select_threshold(
     """Grid search maximising cAcc (plan section 6.5, V3). Deterministic tie-break: the
     smallest threshold that reaches the maximum cAcc (thresholds are scanned ascending and
     only a strictly larger cAcc replaces the current best)."""
+    thresholds = validated_grid(thresholds, "threshold grid")
     image_ids = sorted(coco_gt.getImgIds())
+    if not image_ids:
+        raise ValueError("calibration needs a nonempty validation image set")
     gt = gt_counts(coco_gt, image_ids, labels)
     top1 = preds.top1_per_query()
     best_threshold, best_scores = None, None
@@ -174,6 +178,14 @@ def select_threshold(
         if best_scores is None or scores["cAcc"] > best_scores["cAcc"]:
             best_threshold, best_scores = float(threshold), scores
     return best_threshold, best_scores
+
+
+def validated_grid(values: Sequence[float], name: str) -> list[float]:
+    """Finite probability/IoU candidates in ascending order, with duplicates removed."""
+    grid = sorted(set(float(value) for value in values))
+    if not grid or not all(np.isfinite(value) and 0 <= value <= 1 for value in grid):
+        raise ValueError(f"{name} must be nonempty with finite values in [0, 1]")
+    return grid
 
 
 def scores_by_level(

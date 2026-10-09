@@ -7,8 +7,8 @@ physical object, which ``top1_per_query`` provides (the best class of each query
 
 Conventions (see docs/data_preprocessing/formats.md):
 - ``label`` is the model label (0..num_slots-1), never the RPC category id;
-- ``boxes`` are ``[x1, y1, x2, y2]`` in absolute pixels of the image as stored in the
-  annotation file that was evaluated (800x800 after resizing);
+- ``boxes`` are ``[x1, y1, x2, y2]`` in absolute pixels of the image dimensions stored in
+  the evaluated annotation file (native dimensions for the current release);
 - ``meta`` is a small JSON-serialisable dict (task id, seen classes, split, producer, ...).
 """
 
@@ -59,7 +59,7 @@ class Predictions:
         if len(self) == 0:
             return self.subset(np.zeros(0, dtype=bool))
         # Sort by (image, query, -score); the first row of each (image, query) run is its best class.
-        order = np.lexsort((-self.score, self.query, self.image_id))
+        order = np.lexsort((self.label, -self.score, self.query, self.image_id))
         image_id, query = self.image_id[order], self.query[order]
         first = np.ones(len(order), dtype=bool)
         first[1:] = (image_id[1:] != image_id[:-1]) | (query[1:] != query[:-1])

@@ -43,7 +43,7 @@ def _write_run(tmp_path):
 def test_evaluate_run_end_to_end(tmp_path):
     run_dir, val_path, test_path, cfg_path = _write_run(tmp_path)
     cfg = three_task_config()
-    result = eval_count.evaluate_run(run_dir, val_path, test_path, cfg)
+    result = eval_count.evaluate_run(run_dir, val_path, test_path, cfg, oracle=True)
     assert set(result["stages"]) == {1}
     stage = result["stages"][1]
     assert stage["test"]["overall"]["cAcc"] == pytest.approx(1.0)

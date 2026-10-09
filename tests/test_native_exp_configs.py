@@ -63,3 +63,25 @@ def test_native_runner_calls_real_entrypoint_with_resume_controls(tmp_path):
         and "--verify_resume 1" in command[0]
     )
     assert not any("tools.eval" in line for line in entries)
+
+
+def test_native_runner_uses_val_only_calibration_then_saved_policy(tmp_path):
+    result = run(tmp_path, config='source "$REPO/configs/exp/native/EXP-B1.sh"\n', EVALUATE="1")
+    assert result.returncode == 0, result.stderr
+    entries = calls(tmp_path)
+    counting = [line for line in entries if "tools.eval_count" in line]
+    assert len(counting) == 2
+    assert "--calibrate-only" in counting[0] and "--test-ann" not in counting[0]
+    assert "--policy-in" in counting[1] and "--val-ann" not in counting[1]
+    assert "--nms-grid 0.45" in counting[0]
+    assert all("--oracle" not in line for line in entries)
+
+
+def test_native_runner_reuses_an_existing_calibration_policy(tmp_path):
+    policy = tmp_path / "locked.json"
+    policy.write_text("{}")  # the CLI validates content; shell only chooses which mode to call
+    result = run(tmp_path, config='source "$REPO/configs/exp/native/EXP-B2.sh"\n',
+                 EVALUATE="1", CALIBRATION_POLICY=str(policy))
+    assert result.returncode == 0, result.stderr
+    counting = [line for line in calls(tmp_path) if "tools.eval_count" in line]
+    assert len(counting) == 1 and "--policy-in" in counting[0]

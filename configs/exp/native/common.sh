@@ -6,8 +6,13 @@ TASK_DIR=${TASK_DIR:-$RELEASE_ROOT/tasks/real}
 DETECTOR_DIR=${DETECTOR_DIR:-$REPO/runs/pretrained/hf-cache/models--SenseTime--deformable-detr/snapshots/83ecd26945199939cb82806f988debdb71e6f43e}
 RESOLUTION=${RESOLUTION:-640}
 N_TASKS=${N_TASKS:-1}
-# Calibration/pilot budget remain separate acceptance gates; do not invoke legacy evaluation here.
+# Smoke stays training-only; enable S6 evaluation with EVALUATE=1 for pilot/full runs.
+EVAL_MODE=calibrated
 SKIP_EVAL=1
+if [[ ${EVALUATE:-0} == 1 ]]; then
+    SKIP_EVAL=
+fi
+COUNT_NMS_GRID=${COUNT_NMS_GRID:-0.45}
 ARGS=(
     --task_config "$TASK_CFG" --n_classes 225 --task_ann_dir "$TASK_DIR"
     --train_img_dir "$RAW_ROOT" --test_img_dir "$RAW_ROOT"

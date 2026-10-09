@@ -65,6 +65,22 @@ for split in val test; do
     $PYTHON -m tools.eval_cl --run-dir "$RUN_DIR" --split "$split" --ann "$TASK_DIR/${split}_full.json" \
         --task-config "$TASK_CFG" > "$RUN_DIR/metrics_cl_$split.md"
 done
+if [[ ${EVAL_MODE:-legacy} == calibrated ]]; then
+    policy=${CALIBRATION_POLICY:-$RUN_DIR/calibration_count.json}
+    if [[ ! -f $policy ]]; then
+        calibration_args=(--nms-grid "${COUNT_NMS_GRID:-0.45}")
+        if [[ -n ${COUNT_THRESHOLD_GRID:-} ]]; then
+            calibration_args+=(--threshold-grid "$COUNT_THRESHOLD_GRID")
+        fi
+        $PYTHON -m tools.eval_count --run-dir "$RUN_DIR" --val-ann "$TASK_DIR/val_full.json" \
+            --task-config "$TASK_CFG" --calibrate-only --policy-out "$policy" "${calibration_args[@]}" \
+            > "$RUN_DIR/calibration_count.log"
+    fi
+    $PYTHON -m tools.eval_count --run-dir "$RUN_DIR" --test-ann "$TASK_DIR/test_full.json" \
+        --task-config "$TASK_CFG" --policy-in "$policy" > "$RUN_DIR/metrics_count_test.md"
+    echo "== $EXP finished ($(date '+%F %T'))"
+    exit 0
+fi
 $PYTHON -m tools.eval_count --run-dir "$RUN_DIR" --val-ann "$TASK_DIR/val_full.json" \
     --test-ann "$TASK_DIR/test_full.json" --task-config "$TASK_CFG" > "$RUN_DIR/metrics_count_test.md"
 # Also with one detection per object (class-agnostic NMS, see tools/eval_count.py): both are reported.
