@@ -63,3 +63,10 @@ python -m pytest tests/test_model_acceptance.py tests/test_full_baseline_accepta
 
 Các tests kiểm tra không gán PASS cho OOM/missing/interruption, reject pretrained core thiếu/sai,
 và khôi phục thật model/optimizer/scheduler/nonempty prototype state qua Lightning trên tiny fixture.
+
+
+## ConvNeXt-V2-Base — notebook 03
+
+[03_convnext_v2_base_acceptance.ipynb](03_convnext_v2_base_acceptance.ipynb) đã tạo, **chưa chạy**. Sau foundation/full ResNet smoke, notebook kiểm tra adapter metadata, pretrained ConvNeXt riêng, detector core warm-start có audit, feature maps/masks/projections 640/800, losses/gradient/optimizer, Lightning resume và cold model/config reload. Dùng snapshot revision đã khóa; khi thực chạy có thể tải/reuse weights public, không cài dependencies.
+
+Restart Conda kernel để nạp code mới. Cần baseline summary/gates thật từ máy đã chạy; dùng `AUTOCHECKOUT_BASELINE_SUMMARY` nếu không có marker latest ở máy hiện tại. Run ID/output nằm trong `runs/modeling/convnext_adapter/`; save notebook với outputs sau execution. PASS chỉ cho `PASS_CONVNEXT_ADAPTER_CUDA_SMOKE`, không chứng nhận train dài hay Vast.ai. [Điều kiện và training readiness](../../docs/project/CONVNEXT_READINESS.md).

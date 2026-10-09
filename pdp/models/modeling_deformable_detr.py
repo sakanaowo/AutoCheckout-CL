@@ -28,6 +28,7 @@ from torch import Tensor, nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from .prompt import Prompt
+from .backbones import build_feature_backbone
 
 from transformers.activations import ACT2FN
 from transformers.file_utils import (
@@ -412,17 +413,7 @@ class DeformableDetrConvEncoder(nn.Module):
 
         if config.use_timm_backbone:
             requires_backends(self, ["timm"])
-            kwargs = {}
-            if config.dilation:
-                kwargs["output_stride"] = 16
-            backbone = create_model(
-                config.backbone,
-                pretrained=config.use_pretrained_backbone,
-                features_only=True,
-                out_indices=(2, 3, 4) if config.num_feature_levels > 1 else (4,),
-                in_chans=config.num_channels,
-                **kwargs,
-            )
+            backbone, self.output_feature_indices, channels = build_feature_backbone(config, create_model)
         else:
             backbone = AutoBackbone.from_config(config.backbone_config)
 
@@ -431,7 +422,7 @@ class DeformableDetrConvEncoder(nn.Module):
             replace_batch_norm(backbone)
         self.model = backbone
         self.intermediate_channel_sizes = (
-            self.model.feature_info.channels() if config.use_timm_backbone else self.model.channels
+            channels if config.use_timm_backbone else self.model.channels
         )
 
         backbone_model_type = config.backbone if config.use_timm_backbone else config.backbone_config.model_type
@@ -448,6 +439,8 @@ class DeformableDetrConvEncoder(nn.Module):
     def forward(self, pixel_values: torch.Tensor, pixel_mask: torch.Tensor):
         # send pixel_values through the model to get list of feature maps
         features = self.model(pixel_values) if self.config.use_timm_backbone else self.model(pixel_values).feature_maps
+        if self.config.use_timm_backbone:
+            features = [features[i] for i in self.output_feature_indices]
 
         out = []
         for feature_map in features:

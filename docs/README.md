@@ -8,6 +8,7 @@ Cập nhật 09/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên *
 | [Kết luận processor/loader/PDP foundation](project/PDP_FOUNDATION_ACCEPTANCE.md) | Phạm vi notebook đã hoàn tất, evidence CPU/CUDA, giới hạn và 5 bước tiếp theo |
 | [Chỉ mục triển khai](project/IMPLEMENTATION_INDEX.md) | Code mới, config, notebook, tests và đầu ra của từng phần |
 | [Kế hoạch](project/IMPLEMENTATION_PLAN.md), [tiến độ](project/PROGRESS.md) | Phần đã đạt và thứ tự công việc tiếp theo |
+| [ConvNeXt và train readiness](project/CONVNEXT_READINESS.md) | Điều kiện notebook 03 và các gate còn thiếu trên Vast.ai |
 | [Dependencies/môi trường](environment/README.md) | Python 3.10, gói cần cài, lệnh CPU/CUDA và kiểm tra sau cài |
 | [Tiền xử lý](data_preprocessing/README.md), [hướng dẫn vận hành](data_preprocessing/OPERATIONS.md) | Cách đọc kết quả, chạy lại và tiếp tục pipeline |
 | [Schema](data_preprocessing/formats.md) | Tọa độ, COCO, task mapping và artifacts |

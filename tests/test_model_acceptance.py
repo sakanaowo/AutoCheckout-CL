@@ -94,3 +94,10 @@ class EvidenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_acceptance_status_can_identify_convnext_instead_of_claiming_resnet_baseline(tmp_path):
+    from autocheckout.model_acceptance import RunEvidence
+    run = RunEvidence(tmp_path/'convnext', {}, ['features'], pass_status='PASS_CONVNEXT_ADAPTER_CUDA_SMOKE')
+    run.record('features', {'status':'PASS'})
+    assert run.finish()['status']=='PASS_CONVNEXT_ADAPTER_CUDA_SMOKE'

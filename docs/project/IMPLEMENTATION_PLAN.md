@@ -174,3 +174,6 @@ Phạm vi notebook processor/loader/PDP nền đã hoàn tất; xem [kết luậ
 5. **E2:** full-model Task 1→2 teacher/PPG/prototype/current-task-only loader smoke, sau đó baseline đủ 5 task và metrics/counting/forgetting trên holdout cố định.
 
 Synthetic 202/20 pilot pending là track riêng; không chặn baseline real-only. LoRA/K=3/FSA/freeze bổ sung/generator overlap là ablation sau baseline, không là điều kiện bắt buộc để bắt đầu baseline E2.
+
+
+Cập nhật S2 ngày 09/10: [notebook 03 ConvNeXt-V2-Base](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) và adapter metadata/selective transfer đã tạo, có tests nhẹ; chưa thực chạy CUDA. [Đối chiếu điều kiện và Vast.ai readiness](CONVNEXT_READINESS.md) là trạng thái hiện hành cho bước này. S1 CLI/runner, S2 runtime và các gate environment/evaluation/pilot còn chờ; không đánh dấu full training sẵn sàng từ code/notebook đã viết.
