@@ -1,6 +1,6 @@
 # Tiến độ AutoCheckout-CL
 
-Cập nhật 08/10/2026. [Bàn giao](AGENT_HANDOFF.md) · [Kế hoạch](IMPLEMENTATION_PLAN.md) · [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) · [Nhật ký chi tiết](../timelines/history-2026-10-06-08.md).
+Cập nhật 09/10/2026. [Bàn giao](AGENT_HANDOFF.md) · [Kế hoạch](IMPLEMENTATION_PLAN.md) · [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) · [Nhật ký chi tiết](../timelines/history-2026-10-06-08.md).
 
 | Phần | Trạng thái / bằng chứng | Việc tiếp theo |
 |---|---|---|
@@ -11,6 +11,8 @@ Cập nhật 08/10/2026. [Bàn giao](AGENT_HANDOFF.md) · [Kế hoạch](IMPLEME
 | Visual và AI review | 222 card/gallery, Luna 10 + Sol 10 + Batch 200; gate API đạt, gate nội dung lịch sử FAIL | Đọc reports như lịch sử đề xuất |
 | Resolution 202 | 202 ảnh/2.846 object/200 SKU; 9 giữ/193 tái ghép; owner-mask/RLE cho 2.721 object, task JSON và CSV acceptance PASS | Bản augmentation riêng; chưa tích hợp training |
 | Scope còn lại | 20 pilot còn pending; toàn bộ 20.000 synth chưa phát hành lại | Xác định scope xử lý bổ sung riêng |
+| Dependency/Conda | Pin typing-extensions 4.13.2 và packaging 24.2 đã sửa; Torch/vision 2.2.2/0.17.2 đã khóa; user log từ Conda khác có Successfully installed nhưng còn conflict packaging cũ | Chờ pip check/imports sau sửa; không tự cài local |
+| Handoff 09/10 | [Snapshot agent tiếp theo](HANDOFF_2026-10-09.md) đã tạo | Đọc snapshot trước khi tiếp quản |
 | PDP nền/processor | [Notebook 01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đã tạo, chưa chạy; có gates processor/loader 640–800 và PDP smoke/resume | S0–S1: environment, loader/masking, bbox round-trip, loss/optimizer/resume |
 | ConvNeXt-V2-Base | Chưa có adapter kiểm chứng | S2 sau PDP nền; feature maps/weights/forward/backward |
 | Vast.ai training/eval | Chưa train/đánh giá trên protocol mới | Pilot EXP-B1/B2 rồi 5 task, calibration chỉ trên val |

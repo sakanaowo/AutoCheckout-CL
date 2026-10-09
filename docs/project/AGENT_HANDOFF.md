@@ -1,6 +1,8 @@
-# Bàn giao AutoCheckout-CL — nhánh investigation
+# Bàn giao AutoCheckout-CL — nhánh verification
 
-Cập nhật: **08/10/2026**. Tài liệu này ghi phạm vi hiện tại, trạng thái mã nguồn và cách tiếp quản công việc. Kế hoạch thực hiện và tiêu chí nghiệm thu nằm trong [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Các làm rõ ngày 07/10 của người dùng có ưu tiên hơn handoff gốc ngày 06/10.
+Cập nhật: **09/10/2026**. Tài liệu này ghi phạm vi hiện tại, trạng thái mã nguồn và cách tiếp quản công việc. Kế hoạch thực hiện và tiêu chí nghiệm thu nằm trong [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Các làm rõ ngày 07/10 của người dùng có ưu tiên hơn handoff gốc ngày 06/10.
+
+[**Handoff phiên mới nhất 09/10/2026**](HANDOFF_2026-10-09.md): snapshot branch/commits, sửa dependency, môi trường Conda của người dùng và notebook foundation chưa chạy. Đọc snapshot này trước khi tiếp quản; hướng nghiên cứu investigation giữ nguyên.
 
 ## 1. Phạm vi và thứ tự ưu tiên
 
@@ -33,6 +35,8 @@ Code nền đã khôi phục sau reset: 189 file được đối chiếu Git blo
 Phần mới đã triển khai: native merge và split 5 task; visual review; OpenAI pilot/cache/content audit và Batch; API chốt rồi áp dụng scope 202 bằng tái ghép/owner masks/RLE/task JSON. [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) chỉ rõ code, config, notebook, tests và output. [Hướng dẫn vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại.
 
 Code model nền nằm trong `pdp/main.py`, `engine.py`, `models/`, `ppg.py`, `checkpointing.py`, `inference.py`; metrics/mapping/provenance ở `autocheckout/`, evaluation CLI ở `tools/`, runner ở `scripts/`. Có mã và CPU tests không xác nhận model/GPU đã chạy. ConvNeXt adapter, LoRA và K=3 vẫn chưa triển khai/kiểm chứng.
+
+Notebook [processor/loader/PDP foundation](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đã tạo, chưa chạy; có gates 640/800 và smoke PDP nhỏ/optimizer/Lightning resume. Dependencies hiện gộp trong [requirements.txt](../../requirements.txt): Torch/vision 2.2.2/0.17.2, typing-extensions 4.13.2, packaging 24.2. [README môi trường](../environment/README.md) có lệnh Conda/pip. Log người dùng từ Conda khác đã cài các gói nhưng chưa có pip check sau sửa packaging; không coi environment/model/GPU đã nghiệm thu và không tự cài local.
 
 ## 4. Quyết định kiến trúc và điểm phải làm rõ khi code
 
