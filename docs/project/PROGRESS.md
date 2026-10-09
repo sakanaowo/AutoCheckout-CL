@@ -16,7 +16,7 @@ Cập nhật 09/10/2026. **Hoàn tất phạm vi notebook processor/loader/PDP n
 | PDP nền/processor | [Notebook 01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt PASS_LIMITED_PDP_FOUNDATION, 11 gate, CPU tiny smoke; regression 27/27, resume 1/1; [bằng chứng](../timelines/model-foundation-2026-10-09.md) | Phần notebook foundation đã hoàn tất; full CUDA smoke đạt ở hàng dưới; S1 còn CLI/runner/native kernel |
 | Full PDP baseline CUDA | [Notebook 02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb), run d967dc7b: PASS_FULL_PDP_CUDA_SMOKE trên RTX 3060, 640/800 batch 1 FP32; resume/state/predictions/frozen hashes đạt; peak allocated 3,49/4,22 GiB | Native kernel chưa đạt (PyTorch fallback); CLI/runner resolution và ConvNeXt còn chờ; không chứng nhận convergence |
 | Pretrained public | Script tải + notebook tự nhận cache path đã có; 3 files SenseTime detector tải thật, ~161 MB, pinned revision/SHA256, offline reuse đạt | Tái sử dụng cache/revision đã khóa; không cần tải lại để bắt đầu adapter |
-| ConvNeXt-V2-Base | Chưa có adapter kiểm chứng | S2 sau PDP nền; feature maps/weights/forward/backward |
+| ConvNeXt-V2-Base | [Notebook 03](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) và adapter metadata/warm-start đã tạo; contract tests có kiểm chứng, runtime CUDA chưa chạy | [Readiness](CONVNEXT_READINESS.md): chạy notebook S2, khép CLI/runner/native kernel/evaluation trước training |
 | Vast.ai training/eval | Chưa train/đánh giá trên protocol mới | Pilot EXP-B1/B2 rồi 5 task, calibration chỉ trên val |
 | LoRA/K=3/FSA/freeze/overlap | Chưa triển khai các ablation mới | Sau baseline, mỗi thay đổi một run |
 
@@ -30,5 +30,5 @@ Kiểm tra tổ chức tài liệu: **284 liên kết nội bộ hợp lệ**, *
 ## Bước tiếp theo
 
 Theo [kết luận nghiệm thu](PDP_FOUNDATION_ACCEPTANCE.md#công-việc-tiếp-theo-theo-thứ-tự):
-**S1 CLI/runner explicit resolution → S2 adapter ConvNeXt → môi trường native kernel Vast.ai + S6 calibration → pilot EXP-B1/B2 → full 5-task protocol**.
+**S2 notebook ConvNeXt đã chuẩn bị → nghiệm thu runtime S2 và S1 CLI/runner explicit resolution → môi trường kernel Vast.ai + S6 calibration → pilot EXP-B1/B2 → full 5-task protocol**.
 Phần notebook đã hoàn tất; S1 tổng thể và E1/E2 chưa hoàn tất. Synthetic pending/LoRA/K=3/FSA/freeze bổ sung là track sau baseline.

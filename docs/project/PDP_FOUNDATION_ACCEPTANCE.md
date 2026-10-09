@@ -48,3 +48,6 @@ Protocol giữ **100+4×25, seed 0, 224 slots/225 outputs**, real-only release v
 | **5 — E2, đủ 5 task** | Kiểm chứng full-model Task 1→2 teacher/PPG/prototype state và current-task-only loader trước khi chạy đủ protocol | Metrics sau mỗi task, forgetting/counting, policy val được áp cố định lên test và artifacts tái lập; chỉ từ đây mới có kết quả nghiên cứu đầy đủ |
 
 Synthetic 202/20 pilot pending xử lý ở track riêng, không chặn baseline real-only. LoRA/K=3/FSA/freeze shared bổ sung và generator overlap là ablation sau baseline, mỗi thay đổi có run riêng. [Kế hoạch](IMPLEMENTATION_PLAN.md) giữ tiêu chí từng milestone; [PROGRESS](PROGRESS.md) ghi trạng thái hiện hành.
+
+
+Notebook S2 [03 ConvNeXt-V2-Base](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) hiện đã tạo cùng adapter metadata và policy chuyển core weights; chưa chạy CUDA. [Đối chiếu điều kiện/train readiness](CONVNEXT_READINESS.md) ghi phạm vi và các gate còn lại; trạng thái này không thay đổi kết quả baseline đã đạt ở trên.

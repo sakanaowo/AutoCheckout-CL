@@ -13,9 +13,10 @@ def now():
 
 
 class RunEvidence:
-    def __init__(self, directory, config, required):
+    def __init__(self, directory, config, required, *, pass_status="PASS_FULL_PDP_CUDA_SMOKE"):
         self.directory = Path(directory)
         self.required = list(required)
+        self.pass_status = pass_status
         self.data = {
             "run_id": self.directory.name,
             "started_at": now(),
@@ -62,7 +63,7 @@ class RunEvidence:
             if "FAIL" in statuses
             else "INTERRUPTED"
             if "INTERRUPTED" in statuses
-            else "PASS_FULL_PDP_CUDA_SMOKE"
+            else self.pass_status
             if statuses and all(s == "PASS" for s in statuses)
             else "PARTIAL"
         )
