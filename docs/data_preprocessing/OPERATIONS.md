@@ -4,6 +4,8 @@ Cập nhật 08/10/2026. [Chỉ mục triển khai](../project/IMPLEMENTATION_IN
 
 ## Chuẩn bị và đọc kết quả
 
+Danh sách dependency và lệnh cài CPU/CUDA nằm ở [README môi trường](../environment/README.md). Người dùng tự cấu hình instance Vast.ai.
+
 Mở notebook từ repo, chọn kernel có Python, NumPy và Pillow. Các phần API dùng standard library, không cần OpenAI SDK. Notebook 03 có cells torch/CUDA do người dùng bổ sung: chạy các phần API độc lập nếu kernel CPU không có torch; không dùng Run All làm nghiệm thu GPU. Môi trường model riêng theo Python 3.10 của `pyproject.toml`, cần kiểm tra PyTorch/CUDA/deformable-attention trên Vast.ai trước train.
 
 Root input mặc định `data/archive`, có thể chỉ định `AUTOCHECKOUT_DATA_ROOT` trước setup cell. Root derived/output hiện cố định dưới repo. Copy `.env.example` thành `.env` local và đặt `OPENAI_API_KEY`, hoặc export key qua environment; environment được ưu tiên. Không in key hoặc đưa `.env` vào git. Không cần key khi chỉ đọc receipts đã có.

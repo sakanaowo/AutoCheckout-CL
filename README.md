@@ -5,7 +5,7 @@ Nghiên cứu nhận diện và đếm sản phẩm tại quầy thanh toán b�
 - **Protocol chính:** 5 task **100+4×25 SKU**, seed 0; nguồn nhập 4 task chỉ dùng tham khảo.
 - **Dữ liệu:** release ảnh thật đã nghiệm thu: **22.494 train / 1.503 val / 6.003 test**. Split nghiên cứu độc lập; một phần test2019 nguồn được dùng train, nên không gọi là official RPC test2019 benchmark.
 - **Synthetic:** bản riêng 202 ảnh đã nghiệm thu: 9 giữ / 193 tái ghép thật với owner masks, provenance và mapping 5 task. CSV còn 20 pilot pending; chưa thêm vào release ảnh thật hoặc phát hành lại toàn bộ nguồn synth.
-- **GPU train:** RTX 4090 24 GB trên **Vast.ai**. Processor 640/800 và model/GPU chưa được nghiệm thu; LoRA, K=3, FSA và freeze bổ sung là ablation sau baseline.
+- **Nghiệm thu model:** processor/loader 640/800 và full pretrained PDP Task 1 CUDA smoke đã đạt trên RTX 3060 (PyTorch fallback); [kết luận](docs/project/PDP_FOUNDATION_ACCEPTANCE.md). GPU train là RTX 4090 24 GB **Vast.ai**, native kernel/ConvNeXt/pilot còn chờ; LoRA/K=3/FSA/freeze bổ sung là ablation sau baseline.
 - **Quy trình:** mỗi bước dữ liệu/model/train/eval có notebook ghi mục tiêu, config, output và thời điểm chạy thật. Kết quả tháng 09 giữ làm lịch sử.
 
 ## Điểm vào
@@ -32,7 +32,7 @@ docs/
   timelines/           nhật ký theo thời điểm thực nghiệm
 notebooks/
   data_preprocessing/  audit → nghiệm thu → split → review → resolution
-  modeling/            kiểm chứng PDP nền và backbone (chưa chạy)
+  modeling/            foundation CPU/CUDA đã đạt; backbone ConvNeXt còn chờ
   training/            pilot/full protocol trên Vast.ai (chưa chạy)
   evaluation/          đánh giá detector và đếm (chưa chạy)
   references/          notebook thành viên nhóm
@@ -53,7 +53,9 @@ Các file kế hoạch/tiến độ/hướng dẫn GCP ở root là đường d�
 
 ## Kiểm chứng và bước tiếp theo
 
-CPU tests dữ liệu/cấu hình/visual/API/resolution có kiểm chứng riêng; xem [tiến độ](docs/project/PROGRESS.md) và [lệnh kiểm tra](docs/data_preprocessing/OPERATIONS.md). Chưa chạy toàn bộ suite/model/GPU. Release giữ nguyên pixel gốc; bước tiếp theo là notebook kiểm chứng processor, loader, label masking và PDP nền, đồng thời quyết định scope 20 pilot còn lại và tích hợp bản synth đã nghiệm thu vào config augmentation riêng.
+Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) ghi run IDs, artifacts và giới hạn; full suite/convergence/native kernel/Vast.ai chưa nghiệm thu.
+
+Bước tiếp: CLI/runner explicit resolution → adapter ConvNeXt-V2-Base → môi trường train/native kernel và calibration val-only → pilot PDP ResNet/ConvNeXt cùng split/budget → đủ 5 task. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
 
 `pyproject.toml` hiện yêu cầu Python 3.10; dependencies model trong repo là cấu hình kế thừa. Chuẩn bị môi trường riêng trên Vast.ai và kiểm tra PyTorch/CUDA/deformable-attention kernel trước pilot. Không bật `--shutdown` của runner như cơ chế kết thúc thuê instance.
 

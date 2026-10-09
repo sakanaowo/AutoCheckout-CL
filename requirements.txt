@@ -1,21 +1,67 @@
-# Pinned runtime dependencies shared by the VM (CUDA) and the Mac (CPU tests).
-# PyTorch is installed separately because the wheel index differs:
-#   VM : pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
-#   Mac: pip install torch==2.2.2 torchvision==0.17.2
-# Versions follow pdp/requirement.txt where the PDP code depends on them.
-numpy==1.24.4
-scipy==1.10.1
-pillow==10.2.0
-matplotlib==3.7.4
-tqdm==4.66.1
-pycocotools==2.0.7
-scikit-learn==1.3.2
-transformers==4.37.2
-tokenizers==0.15.1
+# Runtime, development, and notebook dependencies for Python 3.10.
+# Install PyTorch first from the CPU/CUDA wheel index in docs/environment/README.md.
+# The pins below also prevent transitive dependencies from selecting newer Torch versions.
+aiohttp==3.9.3
+aiosignal==1.3.1
+appdirs==1.4.4
+async-timeout==4.0.3
+attrs==23.2.0
+certifi==2023.11.17
+charset-normalizer==3.3.2
+cityscapesScripts==2.2.2
+coco-eval==0.0.4
+coloredlogs==15.0.1
+contourpy==1.1.1
+cycler==0.12.1
+dicttoxml==1.7.16
+filelock==3.13.1
+fonttools==4.47.2
+frozenlist==1.4.1
+fsspec==2023.12.2
+future==1.0.0
 huggingface-hub==0.20.3
-safetensors==0.4.2
-timm==0.9.12
+humanfriendly==10.0
+idna==3.6
+importlib-resources==6.1.1
+ipykernel==7.3.0
+kiwisolver==1.4.5
 lightning==2.1.3
+lightning-utilities==0.10.1
+matplotlib==3.7.4
+multidict==6.0.4
+nbclient==0.10.0
+nbformat==5.10.4
+# Newer wheel metadata avoids the malformed Tag headers in 1.11.1.1 on pip check.
+ninja==1.13.0
+numpy==1.24.4
+opencv-python==4.9.0.80
+packaging==24.2
+pillow==10.2.0
+pycocotools==2.0.7
+pyparsing==3.1.1
+pyquaternion==0.9.9
+pytest==8.3.3
+python-dateutil==2.8.2
 pytorch-lightning==2.1.3
+PyYAML==6.0.1
+regex==2023.12.25
+requests==2.31.0
+ruff==0.6.9
+safetensors==0.4.2
+scikit-learn==1.3.2
+scipy==1.10.1
+six==1.16.0
+supervision==0.3.0
+timm==0.9.12
+tokenizers==0.15.1
+torch==2.2.2
 torchmetrics==1.3.0.post0
-ninja==1.11.1.1
+torchvision==0.17.2
+tqdm==4.66.1
+transformers==4.37.2
+typing==3.7.4.3
+typing-extensions==4.13.2
+urllib3==2.2.0
+xmltodict==0.13.0
+yarl==1.9.4
+zipp==3.17.0

@@ -1,6 +1,6 @@
 # Notebook thực nghiệm AutoCheckout-CL
 
-Cập nhật **08/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. Mỗi bước dữ liệu, model, train và đánh giá phải có notebook ghi rõ **làm gì và chạy lúc nào**. GPU training là **RTX 4090 trên Vast.ai**; môi trường local dùng cho kiểm tra CPU phù hợp.
+Cập nhật **09/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. Mỗi bước dữ liệu, model, train và đánh giá phải có notebook ghi rõ **làm gì và chạy lúc nào**. GPU training là **RTX 4090 trên Vast.ai**; local RTX 3060 đã đạt foundation CPU và full pretrained Task 1 CUDA smoke 640/800 bằng PyTorch fallback; native kernel/môi trường Vast.ai còn chờ.
 
 ## Cấu trúc và thứ tự
 
@@ -12,7 +12,7 @@ Cập nhật **08/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. M
 | [data_preprocessing/02_split_and_acceptance.ipynb](data_preprocessing/02_split_and_acceptance.ipynb) | Đã chạy; lần mới nhất 16:02:43–16:03:17 UTC+7, real-only split/task JSON, 9 gate đạt |
 | [data_preprocessing/03_annotation_review.ipynb](data_preprocessing/03_annotation_review.ipynb) | Visual 222 case, pilots và Batch 200; lịch sử đề xuất, gate nội dung FAIL |
 | [data_preprocessing/04_annotation_resolution.ipynb](data_preprocessing/04_annotation_resolution.ipynb) | Đã xử lý 202 case: 9 giữ/193 tái ghép; acceptance PASS ngày 08/10, 13:31:19–13:34:20 UTC+7 |
-| [modeling/](modeling/README.md) | Bước tiếp theo: processor/loader/PDP nền, rồi ConvNeXt-V2; chưa tạo/chạy notebook model |
+| [modeling/](modeling/README.md) | Notebook 01 đạt limited foundation (CPU, máy RTX 3060); notebook 02 full pretrained CUDA 640/800 smoke PASS trên 3060 (PyTorch fallback); ConvNeXt còn pending |
 | [training/](training/README.md) | Pilot và 5 task trên Vast.ai; chưa train |
 | [evaluation/](evaluation/README.md) | mAP/forgetting/counting; calibration trên val, test cố định; chưa chạy |
 | [references/](references) | Notebook thành viên nhóm, chỉ dùng tham khảo |
