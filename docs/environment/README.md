@@ -16,8 +16,8 @@ Dùng **Python 3.10**, theo `requires-python` trong [pyproject.toml](../../pypro
 | Backbone | `timm==0.9.12` | requirements.txt |
 | Training/metrics | `lightning==2.1.3`, `pytorch-lightning==2.1.3`, `torchmetrics==1.3.0.post0` | requirements.txt |
 | Build CUDA extension | `ninja==1.11.1.1` | requirements.txt; toolchain hệ thống bên dưới |
-| Tests/lint | `pytest==8.3.3`, `ruff==0.6.9` | [requirements-dev.txt](../../requirements-dev.txt) |
-| Notebook | `ipykernel==7.3.0`, `nbclient==0.10.0`, `nbformat==5.10.4` | [requirements-notebooks.txt](../../requirements-notebooks.txt) |
+| Tests/lint | `pytest==8.3.3`, `ruff==0.6.9` | [requirements.txt](../../requirements.txt) |
+| Notebook | `ipykernel==7.3.0`, `nbclient==0.10.0`, `nbformat==5.10.4` | [requirements.txt](../../requirements.txt) |
 
 `ipykernel` dùng để chọn kernel trong IDE; `nbclient`/`nbformat` dùng khi thực thi và lưu notebook bằng code. JupyterLab/server là tùy chọn nếu làm việc qua VS Code. Các helper OpenAI hiện dùng standard library, không bắt buộc cài OpenAI SDK. API key ở environment hoặc `.env` local; xem [OPERATIONS](../data_preprocessing/OPERATIONS.md).
 
@@ -50,8 +50,7 @@ python -m pip install torch==2.2.2 torchvision==0.17.2 \
 Sau đó cài dependencies chung, công cụ phát triển/notebook và package repo:
 
 ```bash
-python -m pip install -r requirements.txt -r requirements-dev.txt \
-  -r requirements-notebooks.txt
+python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 

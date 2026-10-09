@@ -1,5 +1,0 @@
-# Notebook execution on the project's Python 3.10 environment.
-# VS Code can use .venv/bin/python directly; a Jupyter server is optional.
-ipykernel==7.3.0
-nbclient==0.10.0
-nbformat==5.10.4
