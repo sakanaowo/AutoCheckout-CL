@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import gc
-import hashlib
 import json
 import os
 import sys
@@ -27,29 +26,7 @@ from autocheckout.io import (  # noqa: E402 - direct CLI needs the repo root
 from autocheckout.model_acceptance import now, validate_loading_info  # noqa: E402
 
 
-def state_digest(value):
-    """Compare complete nested checkpoint state, including optimizer moments and PDP memory."""
-    import torch
-
-    digest = hashlib.sha256()
-
-    def visit(item):
-        if isinstance(item, torch.Tensor):
-            tensor = item.detach().cpu().contiguous()
-            digest.update(str((tensor.dtype, tuple(tensor.shape))).encode())
-            digest.update(tensor.numpy().tobytes())
-        elif isinstance(item, dict):
-            for key in sorted(item, key=str):
-                digest.update(str(key).encode())
-                visit(item[key])
-        elif isinstance(item, (list, tuple)):
-            for child in item:
-                visit(child)
-        else:
-            digest.update(repr(item).encode())
-
-    visit(value)
-    return digest.hexdigest()
+from autocheckout.model_state import state_digest
 
 
 def exercise_baseline(module, loader, args, output):
@@ -435,12 +412,13 @@ def run_resolution(config, resolution, output):
         args.log_file = model_log
         # Scoped adapters only change full config source and request the HF loading report.
         # No tiny test factory; engine.local_trainer/common_step/optimizer remain the real code.
-        with patch.object(
-            engine, "DeformableDetrConfig", lambda: profile
-        ), patch.object(
-            engine.DeformableDetrForObjectDetection,
-            "from_pretrained",
-            side_effect=audited_load,
+        with (
+            patch.object(engine, "DeformableDetrConfig", lambda: profile),
+            patch.object(
+                engine.DeformableDetrForObjectDetection,
+                "from_pretrained",
+                side_effect=audited_load,
+            ),
         ):
             module = engine.local_trainer(
                 loader, None, None, args, SimpleNamespace(), task_id=1
@@ -511,11 +489,11 @@ def main():
         import torch
 
         record.update(
-            status="OOM"
-            if isinstance(error, torch.cuda.OutOfMemoryError)
-            else "INTERRUPTED"
-            if isinstance(error, KeyboardInterrupt)
-            else "FAIL",
+            status=(
+                "OOM"
+                if isinstance(error, torch.cuda.OutOfMemoryError)
+                else "INTERRUPTED" if isinstance(error, KeyboardInterrupt) else "FAIL"
+            ),
             error_type=type(error).__name__,
             error=str(error),
             traceback=traceback.format_exc(),

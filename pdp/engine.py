@@ -22,6 +22,7 @@ from models.configuration_deformable_detr import DeformableDetrConfig
 from models.modeling_deformable_detr import DeformableDetrForObjectDetection
 from ppg import prototype_matrix, select_candidates, select_pseudo_labels
 from inference import predict_batch
+import runtime
 
 PRIOR_PROB = 0.01  # focal-loss prior of the classifier (Deformable DETR / RetinaNet)
 
@@ -49,7 +50,7 @@ class local_trainer(pl.LightningModule):
 		if not hasattr(args, 'bg_thres_topk'):
 			args.bg_thres_topk = 5  
 
-		detr_config = DeformableDetrConfig()
+		detr_config = runtime.model_config(args, DeformableDetrConfig)
 		detr_config.num_labels = args.n_classes #+ 1
 		detr_config.PREV_INTRODUCED_CLS = args.task_map[task_id][1]
 		detr_config.CUR_INTRODUCED_CLS = args.task_map[task_id][2]
@@ -70,22 +71,15 @@ class local_trainer(pl.LightningModule):
 		self.invalid_cls_logits = list(range(seen_classes, args.n_classes-1)) #unknown class indx will not be included in the invalid class range
 		self.seen_classes = seen_classes
 
-		if args.repo_name:
-			self.model =  DeformableDetrForObjectDetection.from_pretrained(args.repo_name,config=detr_config,
-																	ignore_mismatched_sizes=True,
-																	default=not(args.mask_gradients), log_file=args.log_file)
-			self.processor = DeformableDetrImageProcessor.from_pretrained(args.repo_name)
-		else:
-			self.model = DeformableDetrForObjectDetection(detr_config, default=not(args.mask_gradients),
-												 log_file=args.log_file)
-			
-			self.processor = DeformableDetrImageProcessor()
+		self.model, self.loading_report = runtime.build_model(args, detr_config, DeformableDetrForObjectDetection)
+		self.processor = getattr(args, '_processor', None) or runtime.processor(args, DeformableDetrImageProcessor)
+		self.runtime = runtime.runtime_record(args, self.model, self.processor)
 
 		# F13: Hugging Face's weight initialisation (post_init, and the re-initialisation of the classifier
 		# when the class count differs from the checkpoint) zeroes the classifier bias, overriding the
 		# focal-loss prior set in DeformableDetrForObjectDetection.__init__: every class then starts at
 		# p = 0.5 on every query. Restore the prior unless the classifier comes from the checkpoint.
-		if args.prior_init_classifier and not classifier_from_checkpoint(args.repo_name, args.n_classes):
+		if args.prior_init_classifier and not self.loading_report['classifier_loaded']:
 			for head in self.model.class_embed:
 				nn.init.constant_(head.bias, -math.log((1 - PRIOR_PROB) / PRIOR_PROB))
 		
@@ -589,6 +583,9 @@ class local_trainer(pl.LightningModule):
 						self.evaluator.vizualize(id=id)
 	
 	def on_save_checkpoint(self, checkpoint):
+		self.runtime.update(model_config=self.model.config.to_dict(), processor_config=self.processor.to_dict())
+		checkpoint['runtime'] = self.runtime
+		checkpoint['training_contract'] = runtime.training_contract(self.args)
 		# R1: the prototype memory is not a parameter; keep it in resume checkpoints (the teacher is not
 		# saved: it is rebuilt from the previous task's task_final.pth).
 		checkpoint['pdp_state'] = {
@@ -599,6 +596,8 @@ class local_trainer(pl.LightningModule):
 		}
 
 	def on_load_checkpoint(self, checkpoint):
+		if 'training_contract' in checkpoint and checkpoint['training_contract'] != runtime.training_contract(self.args):
+			raise ValueError('Resume training contract differs from the checkpoint (batch, data or optimization policy)')
 		state = checkpoint['pdp_state']
 		self.class_query_cache = state['class_query_cache']
 		self.class_prototypes = state['class_prototypes']
@@ -612,7 +611,9 @@ class local_trainer(pl.LightningModule):
 		This file initialises the next task and becomes its teacher. Written to a temporary file
 		first, then renamed, so an interruption never leaves a truncated file behind.
 		"""
+		self.runtime.update(model_config=self.model.config.to_dict(), processor_config=self.processor.to_dict())
 		save_dict = {
+			'runtime': self.runtime,
 			'model': self.model.state_dict(),
 			'task_id': self.task_id,
 			'class_query_cache': self.class_query_cache,
@@ -628,7 +629,8 @@ class local_trainer(pl.LightningModule):
 		print('\n Resuming model for task ', self.task_id, ' from : ',load_path, file=self.args.log_file)
 		if load_path:
 			checkpoint = torch.load(load_path, map_location='cpu')
-			missing_keys, unexpected_keys = self.model.load_state_dict(checkpoint['model'], strict=False)
+			runtime.validate_runtime(self.args, checkpoint.get('runtime'))
+			missing_keys, unexpected_keys = self.model.load_state_dict(checkpoint['model'], strict='runtime' in checkpoint)
 
 			if 'class_query_cache' in checkpoint:
 				self.class_query_cache = checkpoint['class_query_cache']

@@ -6,6 +6,13 @@ import random
 import time
 from pathlib import Path
 import os
+import sys
+
+# Direct execution from pdp/ (shell runner) also works without an editable package install.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,10 +25,10 @@ from datasets.coco_eval import CocoEvaluator
 from engine import local_trainer, Evaluator
 from inference import write_predictions
 from augment import TrainAugment
-from checkpointing import ResumeCheckpoint, remove_resume_checkpoints, resume_path
+from checkpointing import ResumeCheckpoint, PlannedTrainingStop, ResumeAudit, remove_resume_checkpoints, resume_path
+import runtime
 from autocheckout.runinfo import RunInfo
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 # from transformers import AutoImageProcessor
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch import seed_everything
@@ -67,6 +74,15 @@ def get_args_parser():
                         help='Frequency of printing training information (in steps)')
     parser.add_argument('--repo_name', default="SenseTime/deformable-detr", type=str, 
                         help='Repository name for the model')
+    parser.add_argument('--backbone', default='', help='Explicit timm backbone; empty preserves detector config')
+    parser.add_argument('--backbone_pretrained_file', default='', help='Local timm backbone weights for cross-backbone transfer')
+    parser.add_argument('--model_config', default='', help='Bootstrap model config (checkpoint runtime wins on restart)')
+    parser.add_argument('--image_size', type=int, default=None, help='Processor shortest edge; also longest unless overridden')
+    parser.add_argument('--max_image_size', type=int, default=None, help='Processor longest edge')
+    parser.add_argument('--stop_after_steps', type=int, default=0,
+                        help='Save and exit 75 at this optimizer step; rerun with 0 to continue')
+    parser.add_argument('--verify_resume', type=int, default=0,
+                        help='Hash-check restored model, optimizer, scheduler and PDP memory')
 
     # Learning rate schedule
     parser.add_argument('--lr_drop', default=40, type=int, 
@@ -318,10 +334,11 @@ def task_dir(output_root, task_id):
 
 def make_pl_trainer(args):
     return pl.Trainer(devices=args.n_gpus, accelerator=args.accelerator, max_epochs=args.epochs,
-                      gradient_clip_val=0.1,
-                      accumulate_grad_batches=max(1, int(args.eff_batch_size/(args.n_gpus*args.batch_size))),
+                      gradient_clip_val=args.clip_max_norm, precision='32-true',
+                      accumulate_grad_batches=runtime.accumulation_steps(args),
                       check_val_every_n_epoch=args.eval_epochs, enable_checkpointing=False,
-                      callbacks=[ResumeCheckpoint(args.output_dir, args.ckpt_every_minutes)],
+                      callbacks=[ResumeAudit(bool(args.verify_resume)),
+                                 ResumeCheckpoint(args.output_dir, args.ckpt_every_minutes, args.stop_after_steps)],
                       log_every_n_steps=args.print_freq, num_sanity_val_steps=0,
                       logger=CSVLogger(save_dir=args.output_dir, name="lightning_logs"))
 
@@ -335,7 +352,7 @@ def write_task_predictions(args, trainer, task_id, processor):
                           out_file=os.path.join(args.output_dir, f'pred_{split}.npz'), task_id=task_id,
                           seen_classes=trainer.seen_classes, split=split, processor=processor, device=device)
 
-def run_task(args, task_id, output_root, processor):
+def run_task(args, task_id, output_root, processor=None):
     """Train task `task_id` (F8), then write its predictions (F9).
 
     Writes <output_root>/task_<t>/task_final.pth and pred_{val,test}.npz. With --predict_only 1 the
@@ -347,6 +364,14 @@ def run_task(args, task_id, output_root, processor):
     print('Logging: args ', args, file=args.log_file)
     args.task = str(task_id)
     final_path = os.path.join(args.output_dir, 'task_final.pth')
+    ckpt_path = resume_path(args.output_dir) if not args.predict_only else None
+    prev_ckpt = (args.prev_ckpt if task_id == args.start_task and args.prev_ckpt else
+                 os.path.join(task_dir(output_root, task_id-1), 'task_final.pth')) if task_id > 1 and not args.joint else None
+    construction_checkpoint = final_path if args.predict_only else ckpt_path or prev_ckpt
+    args._runtime_snapshot = runtime.checkpoint_runtime(construction_checkpoint)
+    runtime.validate_runtime(args, args._runtime_snapshot)
+    processor = processor or runtime.processor(args, DeformableDetrImageProcessor)
+    args._processor = processor
     train_name = f'train_joint{args.train_suffix}.json' if args.joint else f'train_task_{task_id}{args.train_suffix}.json'
     tr_ann = os.path.join(args.task_ann_dir, train_name)
     val_ann = os.path.join(args.task_ann_dir, 'val_full.json' if args.joint else f'val_task_{task_id}.json')
@@ -358,7 +383,6 @@ def run_task(args, task_id, output_root, processor):
         'val_full': os.path.join(args.pred_ann_dir or args.task_ann_dir, 'val_full.json'),
         'test_full': os.path.join(args.pred_ann_dir or args.task_ann_dir, 'test_full.json'),
         'prev_ckpt': args.prev_ckpt if task_id == args.start_task else None})
-    ckpt_path = None
 
     val_dataset = CocoDetection(img_folder=args.test_img_dir, ann_file=val_ann, processor=processor)
     val_dataloader = DataLoader(val_dataset, collate_fn=val_dataset.collate_fn, batch_size=args.batch_size,
@@ -376,6 +400,10 @@ def run_task(args, task_id, output_root, processor):
                                 task_name='cur')
     trainer = local_trainer(train_loader=train_dataloader, val_loader=val_dataloader, test_dataset=val_dataset,
                             args=args, local_evaluator=local_evaluator, task_id=task_id)
+    runtime.save_runtime(args.output_dir, trainer.runtime, trainer.loading_report)
+    budget = dict(physical_batch=args.batch_size, effective_batch=args.eff_batch_size,
+                  accumulate_grad_batches=runtime.accumulation_steps(args),
+                  train_batches=0 if train_dataloader is None else len(train_dataloader))
 
     if args.use_prompts:
         print('previous task : ', trainer.model.model.prompts.task_count, file=args.log_file)
@@ -388,8 +416,6 @@ def run_task(args, task_id, output_root, processor):
         # F8: task t starts from the final weights of task t-1 (explicit --prev_ckpt, or the previous
         # task of this run); task 1 starts from --repo_name. resume() also applies --freeze.
         if task_id > 1 and not args.joint:
-            prev_ckpt = args.prev_ckpt if task_id == args.start_task and args.prev_ckpt else \
-                os.path.join(task_dir(output_root, task_id-1), 'task_final.pth')
             trainer.resume(prev_ckpt)
         else:
             trainer.resume()
@@ -406,10 +432,20 @@ def run_task(args, task_id, output_root, processor):
 
         # R1: continue an interrupted task from its last.ckpt (weights, optimizer, scheduler, loop
         # state, prototype memory); the steps above are cheap and keep the teacher correct.
-        ckpt_path = resume_path(args.output_dir)
         if ckpt_path:
             print(f'Resuming task {task_id} from {ckpt_path}', file=args.log_file)
-        make_pl_trainer(args).fit(trainer, train_dataloader, val_dataloader, ckpt_path=ckpt_path)
+        lightning = make_pl_trainer(args)
+        try:
+            lightning.fit(trainer, train_dataloader, val_dataloader, ckpt_path=ckpt_path)
+        except PlannedTrainingStop:
+            run_info.finish(mode='interrupted', resumed_from=ckpt_path,
+                            optimizer_steps=lightning.global_step,
+                            resume_verification=trainer.resume_verification, **budget)
+            args.log_file.close()
+            raise SystemExit(75)
+        budget.update(optimizer_steps=lightning.global_step,
+                      optimizer_steps_this_session=lightning.global_step-trainer.resume_verification['restored_step'],
+                      resume_verification=trainer.resume_verification)
         trainer.save_task_final(final_path)
         remove_resume_checkpoints(args.output_dir)
         if args.save_hf:
@@ -418,7 +454,8 @@ def run_task(args, task_id, output_root, processor):
             processor.save_pretrained(hf_dir)
 
     write_task_predictions(args, trainer, task_id, processor)
-    run_info.finish(mode='predict' if args.predict_only else 'train', resumed_from=ckpt_path)
+    run_info.finish(mode='predict' if args.predict_only else 'train', resumed_from=ckpt_path,
+                    backbone=trainer.model.config.backbone, processor_size=processor.size, **budget)
     args.log_file.close()
 
 def main(args):
@@ -426,14 +463,11 @@ def main(args):
         raise SystemExit('--eval is replaced by --predict_only 1 (predictions are written after each task, F9)')
     seed_everything(args.seed, workers=True)
     torch.set_float32_matmul_precision('high' if args.tf32 else 'highest')
+    torch.backends.cudnn.allow_tf32 = bool(args.tf32)
     check_kernel(args)
     args.iou_types = ['bbox']
     setup_task_info(args)
-
-    if args.repo_name:
-        processor = DeformableDetrImageProcessor.from_pretrained(args.repo_name)
-    else:
-        processor = DeformableDetrImageProcessor()
+    runtime.accumulation_steps(args)
 
     if args.joint:
         # B1/E0: task n_tasks covers every data class of tasks 1..n_tasks (PREV = 0), trained at once
@@ -443,7 +477,7 @@ def main(args):
 
     output_root = args.output_dir
     for task_id in range(args.start_task, args.n_tasks+1):
-        run_task(args, task_id, output_root, processor)
+        run_task(args, task_id, output_root)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Deformable DETR training and evaluation script', parents=[get_args_parser()])
