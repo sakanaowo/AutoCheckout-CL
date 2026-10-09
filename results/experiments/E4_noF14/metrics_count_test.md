@@ -1,4 +1,4 @@
-# Counting metrics: /data/runs/E4 (test, threshold picked on val)
+# Counting metrics: /data/runs/E4_noF14 (test, threshold picked on val)
 
 | stage | threshold | val cAcc | test cAcc | test ACD | test mCCD | test mCIoU | oracle cAcc | oracle threshold |
 |---|---|---|---|---|---|---|---|---|
@@ -8,4 +8,14 @@
 | 4 | 0.4500 | 0.2468 | 0.2101 | 2.2569 | 0.2136 | 0.8136 | 0.2139 | 0.4400 |
 | 5 | 0.4100 | 0.1144 | 0.1000 | 4.4066 | 0.3529 | 0.7325 | 0.1000 | 0.4100 |
 
-Wrote /data/runs/E4/metrics_count_test.json
+Old / new classes (test, same threshold; mCCS 1 = counts as many as there are):
+
+| stage | mCCD old | mCCD new | mCCS old | mCCS new |
+|---|---|---|---|---|
+| 1 | nan | 0.0551 | nan | 0.9855 |
+| 2 | 0.0694 | 0.3623 | 1.0167 | 0.9429 |
+| 3 | 0.1348 | 0.3529 | 1.0106 | 0.7234 |
+| 4 | 0.2021 | 0.2832 | 1.0224 | 0.7790 |
+| 5 | 0.3539 | 0.3462 | 1.1610 | 0.7828 |
+
+Wrote /data/runs/E4_noF14/metrics_count_test.json

@@ -4,6 +4,7 @@ import pytest
 from autocheckout.cl_metrics import load_coco
 from autocheckout.counting import (
     THRESHOLD_GRID,
+    class_group_scores,
     counting_scores,
     dedup_detections,
     gt_counts,
@@ -176,3 +177,16 @@ def test_dedup_detections_keeps_the_best_row_per_object_across_classes_within_an
     # another image; (1, 3): below the lowest threshold of the grid
     assert sorted(zip(kept.image_id.tolist(), kept.query.tolist(), strict=True)) == [(1, 0), (1, 2), (2, 0)]
     assert len(dedup_detections(kept.subset(kept.score > 1), 0.5)) == 0
+
+
+def test_class_group_scores_mccs_and_mccd_by_hand():
+    # class 0: GT 2+2=4, predicted 1+1=2 -> CCS 0.5, CD 2/4; class 1: GT 1, predicted 2 -> CCS 2, CD 1;
+    # class 2 has no GT and is excluded.
+    gt = np.array([[2, 1, 0], [2, 0, 0]])
+    pred = np.array([[1, 1, 3], [1, 1, 0]])
+    scores = class_group_scores(pred, gt)
+    assert scores["mCCS"] == pytest.approx((0.5 + 2.0) / 2)
+    assert scores["mCCD"] == pytest.approx((0.5 + 1.0) / 2)
+    assert scores["mCCD"] == pytest.approx(counting_scores(pred, gt)["mCCD"])
+    assert (scores["K"], scores["K_eff"]) == (3, 2)
+    assert np.isnan(class_group_scores(pred[:, 2:], gt[:, 2:])["mCCS"])

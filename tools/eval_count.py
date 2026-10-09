@@ -18,18 +18,23 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from pycocotools.coco import COCO
+
 from autocheckout.cl_metrics import check_ann_md5, check_stage_meta, discover_stage_predictions, load_coco
 from autocheckout.counting import (
     THRESHOLD_GRID,
     TIE_BREAK_NOTE,
     ZERO_GT_NOTE,
+    class_group_scores,
     dedup_detections,
+    gt_counts,
     oracle_by_level,
+    pred_counts,
     scores_by_level,
     select_threshold,
 )
 from autocheckout.io import load_json, md5_file, save_json
-from autocheckout.predictions import load_predictions
+from autocheckout.predictions import Predictions, load_predictions
 from autocheckout.taskcfg import TaskConfig
 
 
@@ -65,6 +70,7 @@ def evaluate_run(run_dir: Path, val_ann_path: Path, test_ann_path: Path, cfg: Ta
             "threshold": {"value": threshold, "cAcc_val": val_scores["cAcc"]},
             "test": scores_by_level(coco_test, test_preds, labels, threshold),
             "oracle": oracle_by_level(coco_test, test_preds, labels),
+            "test_by_task": scores_by_task_group(coco_test, test_preds, cfg, stage, threshold),
         }
 
     return {
@@ -80,6 +86,21 @@ def evaluate_run(run_dir: Path, val_ann_path: Path, test_ann_path: Path, cfg: Ta
         "nms_iou": nms_iou,
         "stages": stages,
     }
+
+
+def scores_by_task_group(coco_gt: COCO, preds: Predictions, cfg: TaskConfig, stage: int,
+                         threshold: float) -> dict[str, dict[str, float]]:
+    """mCCD/mCCS on all test images for the classes of each task learned so far, plus "new" (the classes of
+    this stage's task) and "old" (all classes learned before it; absent at stage 1), as in IncreACO's Table 3."""
+    image_ids = coco_gt.getImgIds()
+    labels = list(range(cfg.seen_classes(stage)))
+    pred = pred_counts(preds, image_ids, labels, threshold)
+    gt = gt_counts(coco_gt, image_ids, labels)
+    groups = {f"task_{t}": list(cfg.task(t).labels) for t in range(1, stage + 1)}
+    groups["new"] = groups[f"task_{stage}"]
+    if stage > 1:
+        groups["old"] = list(range(cfg.seen_classes(stage - 1)))
+    return {name: class_group_scores(pred[:, cols], gt[:, cols]) for name, cols in groups.items()}
 
 
 def _fmt(x: float) -> str:
@@ -100,6 +121,14 @@ def to_markdown(result: dict[str, Any]) -> str:
             f"{_fmt(t['cAcc'])} | {_fmt(t['ACD'])} | {_fmt(t['mCCD'])} | {_fmt(t['mCIoU'])} | "
             f"{_fmt(o['cAcc'])} | {_fmt(o['threshold'])} |"
         )
+    lines += ["", "Old / new classes (test, same threshold; mCCS 1 = counts as many as there are):", "",
+              "| stage | mCCD old | mCCD new | mCCS old | mCCS new |", "|---|---|---|---|---|"]
+    for stage in sorted(result["stages"]):
+        groups = result["stages"][stage]["test_by_task"]
+        old = groups.get("old", {"mCCD": float("nan"), "mCCS": float("nan")})
+        new = groups["new"]
+        lines.append(f"| {stage} | {_fmt(old['mCCD'])} | {_fmt(new['mCCD'])} | "
+                     f"{_fmt(old['mCCS'])} | {_fmt(new['mCCS'])} |")
     return "\n".join(lines)
 
 

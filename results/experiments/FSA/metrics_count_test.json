@@ -100,6 +100,7 @@
  ],
  "tie_break": "ties broken by the smallest threshold that reaches the maximum cAcc",
  "zero_gt_class_handling": "classes with zero GT in the evaluated image subset are excluded from the mCCD/mCIoU class averages (divided by K_eff, not K); cAcc and ACD are unaffected",
+ "nms_iou": 0.0,
  "stages": {
   "1": {
    "task_id": 1,
@@ -176,6 +177,20 @@
      "ACD": 0.6243830207305034,
      "mCCD": 0.0752881924167732,
      "mCIoU": 0.9274377128415615,
+     "K": 100,
+     "K_eff": 100
+    }
+   },
+   "test_by_task": {
+    "task_1": {
+     "mCCD": 0.0729845550042443,
+     "mCCS": 0.9747991554112638,
+     "K": 100,
+     "K_eff": 100
+    },
+    "new": {
+     "mCCD": 0.0729845550042443,
+     "mCCS": 0.9747991554112638,
      "K": 100,
      "K_eff": 100
     }

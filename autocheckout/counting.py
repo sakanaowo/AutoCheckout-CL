@@ -144,6 +144,21 @@ def counting_scores(pred: np.ndarray, gt: np.ndarray) -> dict[str, float]:
     return {"cAcc": cacc, "ACD": acd, "mCCD": mccd, "mCIoU": mciou, "K": k, "K_eff": k_eff}
 
 
+def class_group_scores(pred: np.ndarray, gt: np.ndarray) -> dict[str, float]:
+    """mCCD and mCCS over the classes (columns) given, as IncreACO (WACV 2021, eq. 11-12) reports them
+    separately for old and new classes. mCCS = per class sum(pred) / sum(gt), averaged: 1 means as many
+    objects counted as there are; below 1, the model counts too few. Classes with zero GT are excluded,
+    as in ``counting_scores``."""
+    class_gt = gt.sum(axis=0)
+    has_gt = class_gt > 0
+    k_eff = int(has_gt.sum())
+    if not k_eff:
+        return {"mCCD": float("nan"), "mCCS": float("nan"), "K": gt.shape[1], "K_eff": 0}
+    mccd = float(np.mean(np.abs(pred - gt).sum(axis=0)[has_gt] / class_gt[has_gt]))
+    mccs = float(np.mean(pred.sum(axis=0)[has_gt] / class_gt[has_gt]))
+    return {"mCCD": mccd, "mCCS": mccs, "K": gt.shape[1], "K_eff": k_eff}
+
+
 def select_threshold(
     coco_gt: COCO, preds: Predictions, labels: Sequence[int], thresholds: Sequence[float] = THRESHOLD_GRID
 ) -> tuple[float, dict[str, float]]:
