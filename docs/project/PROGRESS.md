@@ -17,7 +17,8 @@ Cập nhật 10/10/2026. **Hoàn tất local foundation, adapter ConvNeXt và CL
 | Full PDP baseline CUDA | [Notebook 02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb), run d967dc7b: PASS_FULL_PDP_CUDA_SMOKE trên RTX 3060, 640/800 batch 1 FP32; resume/state/predictions/frozen hashes đạt; peak allocated 3,49/4,22 GiB | Native kernel chưa đạt (PyTorch fallback); ConvNeXt và CLI/runner đã có nghiệm thu riêng; không chứng nhận convergence |
 | Pretrained public | Script tải + notebook tự nhận cache path đã có; 3 files SenseTime detector tải thật, ~161 MB, pinned revision/SHA256, offline reuse đạt | Tái sử dụng cache/revision đã khóa; không cần tải lại để bắt đầu adapter |
 | ConvNeXt-V2-Base | [Notebook 03](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) PASS 8/8 gates, 29 tests; run aeeb770b trên 3060, 640/800 peak 3,683/4,416 GiB | [Readiness](CONVNEXT_READINESS.md); native kernel, evaluator và pilot còn chờ |
-| CLI/runner native | [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb) PASS 10/10 gates, 78 tests; ResNet/ConvNeXt 640/800, step 1→4, checkpoint metadata/resume/predict-only/bbox native | [Báo cáo](TRAINING_RUNTIME_ACCEPTANCE.md); S6 + môi trường training rồi pilot |
+| CLI/runner native | [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb) PASS 10/10 gates, 78 tests; ResNet/ConvNeXt 640/800, step 1→4, checkpoint metadata/resume/predict-only/bbox native | [Báo cáo](TRAINING_RUNTIME_ACCEPTANCE.md); S6 đạt kỹ thuật; môi trường training rồi pilot |
+| S6 calibration/evaluation | [Evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb) PASS 7/7 gates; grid/NMS, val-only policy, test-only reload, oracle tắt; [báo cáo](COUNT_CALIBRATION_ACCEPTANCE.md) | Đã nghiệm thu CPU; sinh policy từ val checkpoint pilot thật |
 | Vast.ai training/eval | Chưa train/đánh giá trên protocol mới | Pilot EXP-B1/B2 rồi 5 task, calibration chỉ trên val |
 | LoRA/K=3/FSA/freeze/overlap | Chưa triển khai các ablation mới | Sau baseline, mỗi thay đổi một run |
 
@@ -30,6 +31,6 @@ Kiểm tra tổ chức tài liệu: **284 liên kết nội bộ hợp lệ**, *
 
 ## Bước tiếp theo
 
-Theo [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md):
-**S6 calibration + môi trường training → pilot EXP-B1/B2 cùng budget → full teacher Task 1→2 smoke → đủ 5 task**.
+Theo [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md) và [S6 acceptance](COUNT_CALIBRATION_ACCEPTANCE.md):
+**Môi trường training/throughput → pilot EXP-B1/B2 cùng budget và policy val → full teacher Task 1→2 smoke → đủ 5 task**.
 Local notebooks 01–04 đã có bằng chứng; full training/E1/E2 chưa hoàn tất. Synthetic pending/LoRA/K=3/FSA/freeze bổ sung là track sau baseline.

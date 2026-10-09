@@ -10,6 +10,7 @@ Cập nhật 10/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên *
 | [Kế hoạch](project/IMPLEMENTATION_PLAN.md), [tiến độ](project/PROGRESS.md) | Phần đã đạt và thứ tự công việc tiếp theo |
 | [ConvNeXt và train readiness](project/CONVNEXT_READINESS.md) | Notebook 03 đã đạt CUDA; các gate training còn thiếu |
 | [CLI/runner acceptance](project/TRAINING_RUNTIME_ACCEPTANCE.md) | Notebook 04: ResNet/ConvNeXt, resolution, checkpoint, resume và bbox native |
+| [S6 calibration/evaluation acceptance](project/COUNT_CALIBRATION_ACCEPTANCE.md) | Evaluation 01: policy val lưu riêng, test-only reload, oracle tắt, không cần GPU |
 | [Dependencies/môi trường](environment/README.md) | Python 3.10, gói cần cài, lệnh CPU/CUDA và kiểm tra sau cài |
 | [Tiền xử lý](data_preprocessing/README.md), [hướng dẫn vận hành](data_preprocessing/OPERATIONS.md) | Cách đọc kết quả, chạy lại và tiếp tục pipeline |
 | [Schema](data_preprocessing/formats.md) | Tọa độ, COCO, task mapping và artifacts |

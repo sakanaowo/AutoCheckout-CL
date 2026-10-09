@@ -27,7 +27,7 @@ Run dùng **PyTorch CUDA fallback**; native kernel chưa đạt, log environment
 ## Việc tiếp theo
 
 - [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb) kiểm chứng cấu hình này qua CLI/runner thật, interruption/resume, predict-only và bbox native. Đọc [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy kết quả mới nhất.
-- Hoàn thiện S6: threshold/NMS chọn trên val, lưu/nạp policy cho test, oracle tắt trong pipeline nghiên cứu.
+- [S6 kỹ thuật đã đạt](COUNT_CALIBRATION_ACCEPTANCE.md): threshold/NMS chọn trên val, lưu/nạp policy cho test, oracle mặc định tắt. Sinh policy mới từ val của checkpoint pilot thật.
 - Kiểm chứng GPU/toolchain của instance training; native kernel phải có forward/backward equivalence hoặc ghi rõ fallback và đo hiệu năng.
 - Pilot EXP-B1 ResNet/EXP-B2 ConvNeXt cùng split/resolution/optimizer-step budget/evaluator, rồi kiểm chứng full teacher/PPG Task 1→2 trước 5 task.
 

@@ -34,7 +34,7 @@ notebooks/
   data_preprocessing/  audit → nghiệm thu → split → review → resolution
   modeling/            foundation + ConvNeXt CUDA; notebook 04 kiểm chứng CLI/runner
   training/            pilot/full protocol trên Vast.ai (chưa chạy)
-  evaluation/          đánh giá detector và đếm (chưa chạy)
+  evaluation/          S6 calibration/raw mAP đã nghiệm thu CPU; metrics pilot còn chờ
   references/          notebook thành viên nhóm
 configs/               task mapping, data release lock và cấu hình thí nghiệm
 pdp/                   lõi PDP/Deformable DETR, teacher và PPG
@@ -55,7 +55,7 @@ Các file kế hoạch/tiến độ/hướng dẫn GCP ở root là đường d�
 
 Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) ghi run IDs, artifacts và giới hạn; full suite/convergence/native kernel/Vast.ai chưa nghiệm thu.
 
-Bước tiếp sau [nghiệm thu runtime](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md): môi trường train/native kernel và calibration val-only → pilot PDP ResNet/ConvNeXt cùng split/budget → đủ 5 task. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
+Bước tiếp sau [nghiệm thu runtime](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) và [S6 calibration/evaluation](docs/project/COUNT_CALIBRATION_ACCEPTANCE.md): môi trường train/native kernel hoặc fallback có đo throughput → pilot PDP ResNet/ConvNeXt cùng split/budget và policy val → đủ 5 task. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
 
 `pyproject.toml` hiện yêu cầu Python 3.10; dependencies model trong repo là cấu hình kế thừa. Chuẩn bị môi trường riêng trên Vast.ai và kiểm tra PyTorch/CUDA/deformable-attention kernel trước pilot. Không bật `--shutdown` của runner như cơ chế kết thúc thuê instance.
 

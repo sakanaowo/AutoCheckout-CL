@@ -17,3 +17,4 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 [Nhật ký chi tiết 06–08/10](history-2026-10-06-08.md) · [Tiến độ dự án](../project/PROGRESS.md) · [Notebook review](../../notebooks/data_preprocessing/03_annotation_review.ipynb).
 
 - [Nghiệm thu CLI/runner và notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md): run `ac818116-ceb0-4ce8-9c1e-979c6f54788a`, 78 tests, 4 CUDA cases, 10/10 gates; xem báo cáo cho timestamps thực chạy và giới hạn.
+- [S6 calibration/evaluation](../project/COUNT_CALIBRATION_ACCEPTANCE.md): evaluation 01 đã PASS trên CPU, val-only policy/test-only reload/raw mAP và 4 cases predictions notebook 04; báo cáo giữ run ID/timestamps và giới hạn metrics subset.

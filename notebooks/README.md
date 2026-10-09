@@ -14,7 +14,7 @@ Cập nhật **10/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. M
 | [data_preprocessing/04_annotation_resolution.ipynb](data_preprocessing/04_annotation_resolution.ipynb) | Đã xử lý 202 case: 9 giữ/193 tái ghép; acceptance PASS ngày 08/10, 13:31:19–13:34:20 UTC+7 |
 | [modeling/](modeling/README.md) | Notebook 01 đạt limited foundation (CPU, máy RTX 3060); notebook 02 full pretrained CUDA 640/800 smoke PASS trên 3060 (PyTorch fallback); notebook 03 ConvNeXt PASS; notebook 04 kiểm chứng CLI/runner thật |
 | [training/](training/README.md) | Pilot và 5 task trên Vast.ai; chưa train |
-| [evaluation/](evaluation/README.md) | mAP/forgetting/counting; calibration trên val, test cố định; chưa chạy |
+| [evaluation/](evaluation/README.md) | Notebook 01 S6 PASS trên CPU: val-only policy, test-only reload và raw mAP; metrics pilot chưa có |
 | [references/](references) | Notebook thành viên nhóm, chỉ dùng tham khảo |
 
 [Báo cáo split và test lock](../docs/data_preprocessing/reports/split-100-4x25-2026-10-07.md), [tài liệu tiền xử lý](../docs/data_preprocessing/README.md). Release chính chỉ gồm ảnh thật; bản synth 202 riêng đã nghiệm thu geometry/provenance/mapping, còn 20 pilot pending. Kiểm chứng loader/processor trước khi tích hợp augmentation. Xem [hướng dẫn vận hành](../docs/data_preprocessing/OPERATIONS.md).

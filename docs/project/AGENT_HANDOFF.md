@@ -3,7 +3,7 @@
 Cập nhật: **10/10/2026**. Notebook 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
 [ConvNeXt notebook 03](CONVNEXT_READINESS.md) đã đạt 8/8 gates, 29 tests trên RTX 3060 (run aeeb770b).
 CLI/runner và notebook 04 có triển khai/kiểm chứng riêng tại [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md).
-Các run local dùng PyTorch fallback; native kernel, calibration, pilot và full 5-task training chưa nghiệm thu.
+Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md) đã nghiệm thu kỹ thuật bằng CPU, policy val và test-only reload. Native kernel, calibration checkpoint pilot, pilot và full 5-task training chưa nghiệm thu.
 
 [Snapshot đầu ngày 09/10](HANDOFF_2026-10-09.md) giữ bằng chứng dependency/branch tại lúc viết, trước các run model đã đạt;
 đọc cùng kết luận hiện hành, không dùng các đoạn “chưa chạy” trong snapshot làm trạng thái model mới nhất.
@@ -101,7 +101,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
 4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
-5. **Môi trường train + S6 → E1/E2:** kiểm chứng native kernel trên RTX 4090 Vast.ai và calibration val-only; pilot PDP ResNet/ConvNeXt cùng split/budget trước full 5 task. Mọi bước có notebook/timestamps; LoRA/K=3/FSA/freeze bổ sung sau baseline trong run riêng.
+5. **Môi trường train → E1/E2:** S6 kỹ thuật đã PASS [evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb); configs native có `EVALUATE=1`, tạo policy val lần đầu rồi giữ policy khi rerun. Kiểm chứng kernel hoặc fallback có đo throughput trên RTX 4090 Vast.ai; pilot ResNet/ConvNeXt cùng split/budget và policy val checkpoint thật trước full 5 task. Mọi bước có notebook/timestamps; LoRA/K=3/FSA/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
 

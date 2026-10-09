@@ -1,6 +1,6 @@
 # Kết luận nghiệm thu processor/loader và PDP nền
 
-Cập nhật **09/10/2026**, timezone **Asia/Bangkok**. **Hoàn tất phạm vi tạo notebook, kiểm chứng processor/loader/PDP nền và full pretrained CUDA smoke.** Báo cáo này ghi phạm vi notebook 01–02. Phần tiếp nối đã có [nghiệm thu ConvNeXt](CONVNEXT_READINESS.md) và [CLI/runner notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md); dùng hai báo cáo đó cho trạng thái mới nhất.
+Cập nhật **09/10/2026**, timezone **Asia/Bangkok**. **Hoàn tất phạm vi tạo notebook, kiểm chứng processor/loader/PDP nền và full pretrained CUDA smoke.** Báo cáo này ghi phạm vi notebook 01–02. Phần tiếp nối đã có [nghiệm thu ConvNeXt](CONVNEXT_READINESS.md), [CLI/runner notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) và [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md); dùng các báo cáo đó cho trạng thái mới nhất.
 
 ## Bằng chứng đã đạt
 

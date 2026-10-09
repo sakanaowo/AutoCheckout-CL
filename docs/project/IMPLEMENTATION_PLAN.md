@@ -6,7 +6,7 @@ Sau khi kiểm tra reset, đã khôi phục 189 file bị xóa từ HEAD: test/f
 
 Thứ tự ưu tiên: **notebook audit dữ liệu → xác nhận protocol/split → notebook kiểm chứng PDP nền → notebook tích hợp backbone → pilot Vast.ai → đánh giá**. Đợt đầu giữ các thành phần PDP theo paper; LoRA, prototype K=3, freeze shared bổ sung, FSA và generator khay đầy đủ là mở rộng/ablation sau baseline, không tự bật cùng backbone.
 
-**Đã chốt protocol 5 task và nghiệm thu release ảnh thật ngày 07/10.** [Notebook split/acceptance](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb) đã sinh 22.494 train / 1.503 val / 6.003 test và 5 task JSON, có checksum/test lock. [Notebook review nhãn](../../notebooks/data_preprocessing/03_annotation_review.ipynb) độc lập cho 222 case synth; nguồn đó chưa được thêm vào release. Notebook 04 đã xử lý riêng 202 case (9 giữ/193 tái ghép, task/geometry/CSV PASS); còn 20 pilot pending. Processor/loader/PDP nền đã nghiệm thu notebook 01 và full CUDA smoke notebook 02; tiếp theo CLI/runner explicit resolution và adapter ConvNeXt. Bản augmentation mới chưa tích hợp training. [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) và [runbook](../data_preprocessing/OPERATIONS.md) là điểm vào code/operations.
+**Đã chốt protocol 5 task và nghiệm thu release ảnh thật ngày 07/10.** [Notebook split/acceptance](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb) đã sinh 22.494 train / 1.503 val / 6.003 test và 5 task JSON, có checksum/test lock. [Notebook review nhãn](../../notebooks/data_preprocessing/03_annotation_review.ipynb) độc lập cho 222 case synth; nguồn đó chưa được thêm vào release. Notebook 04 đã xử lý riêng 202 case (9 giữ/193 tái ghép, task/geometry/CSV PASS); còn 20 pilot pending. Modeling notebooks 01–04 đã nghiệm thu foundation, ConvNeXt và CLI/runner; [evaluation 01](COUNT_CALIBRATION_ACCEPTANCE.md) nghiệm thu S6 kỹ thuật. Bản augmentation mới chưa tích hợp training. [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) và [runbook](../data_preprocessing/OPERATIONS.md) là điểm vào code/operations.
 
 ## 0. Quy trình notebook bắt buộc
 
@@ -40,9 +40,9 @@ Notebook là điểm vào ghi chép và điều phối; thuật toán dùng lạ
 | S3 | Ablation freeze shared/private bổ sung, kiểm soát optimizer | E1; freeze nền kiểm tra ở S1 | T3: tham số/slice cũ bất biến, tham số mới có gradient | Có bằng fixture; thực nghiệm sau baseline |
 | S4 | LoRA decoder cross-attention, config và vòng đời adapter | E1, S3 | T4: zero-init equivalence, đúng target, gradient và reload | Có bằng fixture; thực nghiệm sau baseline |
 | S5 | Spherical K-Means K=3 và PPG multi-prototype | E1, S3; tương thích S4 nếu bật | T5: cluster, similarity, thiếu prototype, resume, ranh giới task | Có bằng fixture; thực nghiệm sau baseline |
-| S6 | Mở rộng CLI mAP/đếm đã có: cấu hình grid/NMS, lưu/nạp policy val, tắt oracle mặc định | S0, S1 | T6: chỉ số biết trước, NMS chéo lớp, ngưỡng val được cố định cho test | Có bằng dự đoán giả |
+| S6 | Grid/NMS, policy val riêng, test-only reload, oracle opt-in; [nghiệm thu](COUNT_CALIBRATION_ACCEPTANCE.md) | S0, S1 | T6 đạt fixture + 4 cases notebook 04; policy cố định, checksum và raw mAP; calibration pilot còn chờ checkpoint thật | CPU, không cần GPU |
 | S7 | Generator đầy đủ/overlap; compositor resolution đã có trong tools/annotation_resolution.py | S0; data/masks thật cho sản xuất | T7: mask/bbox/area, overlap, seed, tách nguồn split | Chỉ phần ghép với mask giả |
-| E1 | Notebook pilot EXP-B1 PDP ResNet / EXP-B2 ConvNeXt trên Vast.ai; đo steps/VRAM/convergence | S1 runtime, S2, S6, D1, GPU train | T9: metrics val, latency/VRAM, run artifacts tái lập | Local foundation/adapter/runtime có evidence; chờ evaluator/train GPU và pilot budget |
+| E1 | Notebook pilot EXP-B1 PDP ResNet / EXP-B2 ConvNeXt trên Vast.ai; đo steps/VRAM/convergence | S1 runtime, S2, S6, D1, GPU train | T9: metrics val, latency/VRAM, run artifacts tái lập | Local foundation/adapter/runtime/S6 có evidence; chờ train GPU, pilot budget và val checkpoint thật |
 | E2 | Baseline đủ 5 task rồi ablation riêng S3/S4/S5/S7 | E1; S3–S5/S7 chỉ là phụ thuộc của ablation tương ứng | T10: metrics sau mỗi task, độ quên, policy calibration và ngân sách memory; full teacher/PPG transition smoke trước protocol | Chờ E1 |
 
 Kết quả audit tài nguyên: [notebook 01b](../../notebooks/data_preprocessing/01b_preprocessing_acceptance.ipynb) full decode/hash 57.710 file đạt, đã phát hiện 222 mask/bbox case. Sau đó notebook 04 khép 202 case bằng bản riêng có owner masks/provenance/task mapping; còn 20 pilot và mục tiêu che khuất riêng. **Release ảnh thật đã nghiệm thu** trong notebook 02 sau quyết định 5 task, xem [báo cáo split](../data_preprocessing/reports/split-100-4x25-2026-10-07.md). Không chặn release real-only vì lỗi synth, và không đánh dấu synth/processor sẵn sàng chỉ vì split đạt.
@@ -58,7 +58,7 @@ Nền tảng đã khôi phục từ HEAD. Release split/task JSON và scope reso
 - Tái sử dụng `tests/coco_helpers.py`, `tests/synth_rpc.py`, `tests/pdp_helpers.py` và test suites taskcfg/predictions/counting/CL/runner/PDP. Thêm ca kiểm thử còn thiếu cho thay đổi mới; không viết lại fixture tương đương.
 - Chạy regression nền trước khi đổi kiến trúc; thêm kiểm tra giao thức 100+4×25 với config hiện có, chỉ thay catalog/mapping khi data mới được xác nhận.
 - `configs/tasks_100-4x25_seed0.json` đã đối chiếu catalog và seed, snapshot trong release. Dùng 5 task dữ liệu, 224 slots/225 outputs; bổ sung EXP-B1/EXP-B2 trỏ tới release hiện tại, không lấy paths/split configs GCP cũ.
-- Điều chỉnh `scripts/run_exp.sh` thay vì viết lại: hiện hỗ trợ DATA/RUNS/PYTHON, skip task hoàn tất, chỉ chạy lại prediction còn thiếu và resume qua main. Gọi runner từ notebook trên Vast.ai; không bật `--shutdown` vì tùy chọn này không phải cơ chế kết thúc thuê instance Vast.ai. `configs/exp/common.sh` giữ paths/policy cũ để truy nguồn. Dùng `configs/exp/native/EXP-B1.sh` / `EXP-B2.sh` cho release native, resolution explicit và pretrained tương ứng; configs mới bỏ qua evaluator legacy cho đến khi S6 đạt.
+- Điều chỉnh `scripts/run_exp.sh` thay vì viết lại: hiện hỗ trợ DATA/RUNS/PYTHON, skip task hoàn tất, chỉ chạy lại prediction còn thiếu và resume qua main. Gọi runner từ notebook trên Vast.ai; không bật `--shutdown` vì tùy chọn này không phải cơ chế kết thúc thuê instance Vast.ai. `configs/exp/common.sh` giữ paths/policy cũ để truy nguồn. Dùng `configs/exp/native/EXP-B1.sh` / `EXP-B2.sh` cho release native, resolution explicit và pretrained tương ứng; `EVALUATE=1` bật mAP và calibration val/test bằng policy cố định. Smoke mặc định bỏ evaluation.
 - Giữ scripts GCP và `results/` cũ để truy nguồn; không chạy chúng hoặc nhập metrics cũ vào kết quả nghiên cứu mới.
 
 ### Processor và training budget
@@ -128,7 +128,7 @@ T5: vector normalize, cluster có hướng biết trước, seed tái lập, ít
 
 ## 8. S6: evaluation và calibration độc lập
 
-Mở rộng `tools/eval_count.py` và tái sử dụng `tools/eval_cl.py` hiện có. CLI counting đã chọn threshold trên val, áp sang test, hỗ trợ `--nms-iou` và ghi metadata, nhưng dùng grid cố định 0.05–0.95 và luôn tính oracle. Cần thêm cấu hình grid, artifact calibration riêng và khả năng nạp policy đã khóa; oracle phải tắt trên đường nghiên cứu chính.
+Đã mở rộng `tools/eval_count.py` và tái sử dụng `tools/eval_cl.py`. [Notebook evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb) nghiệm thu calibration val-only và test dùng policy đã khóa. CLI có grid score/NMS, artifact riêng và `--policy-in`; oracle mặc định tắt, diagnostic opt-in ghi file riêng. [Báo cáo S6](COUNT_CALIBRATION_ACCEPTANCE.md) ghi run, tests và giới hạn; calibration trên val pilot thật sẽ diễn ra sau training.
 
 - Input: dự đoán `.npz`, COCO GT, task config, `seen_classes`, hậu xử lý config. Kiểm tra image IDs/label range, annotation checksum và tọa độ trước khi tính chỉ số.
 - Nhánh mAP: dùng output detector thô theo quy ước top-k hiện tại, không áp NMS đếm âm thầm.
@@ -168,7 +168,7 @@ Không đặt trước AP/cAcc như kết quả đã đạt. Chỉ công nhận 
 Phạm vi notebook processor/loader/PDP nền đã hoàn tất; xem [kết luận nghiệm thu](PDP_FOUNDATION_ACCEPTANCE.md).
 
 1. **S1/S2 local:** đọc [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md) và [ConvNeXt acceptance](CONVNEXT_READINESS.md); giữ artifacts/notebooks 01–04, không tạo lại adapter hoặc pipeline song song.
-2. **Môi trường train + S6:** kiểm chứng toolchain/kernel hoặc fallback có đo throughput trên máy training; calibration policy chọn trên val, lưu/nạp cho test, oracle tắt ở pipeline chính.
+2. **Môi trường train:** S6 kỹ thuật đã nghiệm thu CPU; kiểm chứng toolchain/kernel hoặc fallback có đo throughput trên máy training. Sinh policy từ val checkpoint pilot rồi áp cố định sang test; không dùng policy subset nghiệm thu.
 3. **E1:** pilot EXP-B1/EXP-B2 Task 1 cùng real-only split/resolution/optimizer-step budget/evaluator; ghi loss/val curves, VRAM, latency và run artifacts. Budget smoke 4 steps không phải budget pilot.
 4. **E2:** full-model Task 1→2 teacher/PPG/prototype/current-task-only loader smoke, sau đó baseline đủ 5 task và metrics/counting/forgetting trên holdout cố định.
 
