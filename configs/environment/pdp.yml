@@ -1,0 +1,11 @@
+# Create from the repo root. Runtime dependencies have one source: requirements.txt.
+# After activation, install Torch from the CPU/cu121 index, then requirements.txt.
+name: pdp
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+variables:
+  PYTHONNOUSERSITE: "1"
+  USE_TF: "0"

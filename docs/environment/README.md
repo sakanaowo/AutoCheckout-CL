@@ -15,7 +15,7 @@ Dùng **Python 3.10**, theo `requires-python` trong [pyproject.toml](../../pypro
 | Hugging Face | `transformers==4.37.2`, `tokenizers==0.15.1`, `huggingface-hub==0.20.3`, `safetensors==0.4.2` | requirements.txt |
 | Backbone | `timm==0.9.12` | requirements.txt |
 | Training/metrics | `lightning==2.1.3`, `pytorch-lightning==2.1.3`, `torchmetrics==1.3.0.post0` | requirements.txt |
-| Build CUDA extension | `ninja==1.11.1.1` | requirements.txt; toolchain hệ thống bên dưới |
+| Build CUDA extension | `ninja==1.13.0` | requirements.txt; wheel manylinux2014 có Tag headers hợp lệ; toolchain hệ thống bên dưới |
 | Tests/lint | `pytest==8.3.3`, `ruff==0.6.9` | [requirements.txt](../../requirements.txt) |
 | Packaging/build compatibility | `packaging==24.2` | requirements.txt; đáp ứng wheel ≥24.0 và Lightning ≥20.0,<25.0 |
 | Typing compatibility | `typing-extensions==4.13.2` | requirements.txt; đáp ứng Jupyter Client ≥4.13.0 và Lightning <6.0 |
@@ -38,6 +38,18 @@ python -m pip --version
 ```
 
 `sys.executable` và đường dẫn pip phải cùng thuộc environment `pdp`. Không cần tạo thêm `.venv` bên trong Conda.
+
+Để tạo môi trường mới từ cấu hình của project, chạy từ repo root:
+
+```bash
+conda env create -f configs/environment/pdp.yml
+conda activate pdp
+```
+
+[pdp.yml](../../configs/environment/pdp.yml) chỉ khai báo Python 3.10/pip và biến môi trường;
+runtime vẫn dùng một nguồn [requirements.txt](../../requirements.txt). Sau activation, cài Torch từ đúng
+CPU/cu121 index bên dưới rồi requirements. Môi trường `pdp` đã có thì dùng activation và phần sửa Ninja,
+không cần tạo lại hoặc chạy solver cập nhật toàn bộ Conda.
 
 Nếu dùng venv, tạo `.venv` nếu chưa có; với môi trường đã có, kiểm tra interpreter là Python 3.10 trước khi cài:
 
@@ -124,6 +136,45 @@ python -m pip check
 
 Đồng thời dùng requirements đã cập nhật để lần cài sau không hạ packaging lại về 23.2. Không dùng upgrade packaging không giới hạn vì phiên bản ≥25.0 không đáp ứng constraint của Lightning 2.1.3. Chỉ khi `pip check` không còn conflict mới tiếp tục import và nghiệm thu notebook; log cài thành công chưa chứng nhận model/GPU.
 
+## Cấu hình project và lỗi Ninja ở notebook 02
+
+Giữ stack model phù hợp mã PDP vendored: Python 3.10, torch/torchvision 2.2.2/0.17.2,
+Transformers 4.37.2, timm 0.9.12, Lightning 2.1.3 và numpy 1.24.4. Đây là cấu hình project
+đã có bằng chứng limited foundation; không tuyên bố toàn bộ pins là môi trường benchmark paper nguyên bản.
+Không nâng cả stack chỉ để xử lý công cụ build. Packaging giữ **24.2** để đáp ứng constraint Lightning <25.
+
+Ngày 09/10, đã tái hiện `pip check` exit 1 trong Conda `pdp` (Linux x86_64, Python 3.10.22,
+pip 26.2.1): `ninja 1.11.1.1 is not supported on this platform`.
+File WHEEL của bản đã cài có dòng trống trước các Tag headers; parser của pip đọc được **0 Tag**.
+Binary `ninja --version` vẫn chạy; chuỗi tags nhiều linux của wheel thực tế có giao với supported tags.
+Lỗi quan sát được là metadata wheel, không phải bằng chứng RTX 3060/CUDA không tương thích.
+
+Project đổi riêng **ninja==1.13.0**. [PyPI Ninja 1.13.0](https://pypi.org/project/ninja/1.13.0/)
+có Python ≥3.8 và Linux x86_64 manylinux2014/glibc ≥2.17. Đã tải wheel để kiểm tra metadata/checksum
+trong `/tmp`, không cài: WHEEL có Tag headers hợp lệ và khớp platform Conda hiện tại.
+Việc này chưa chứng nhận kernel CUDA build/forward/backward thành công.
+
+Trong environment hiện có, người dùng chạy:
+
+```bash
+conda activate pdp
+python -m pip install --no-cache-dir --force-reinstall --only-binary=:all: ninja==1.13.0
+python -m pip check
+ninja --version
+```
+
+Không sửa tay WHEEL trong site-packages, không bỏ assertion `pip check`, không nâng packaging ≥25.
+Sau khi pip check exit 0, restart kernel Conda `pdp` và chạy notebook 02 từ setup với run ID mới;
+giữ run cũ FAIL làm lịch sử. Notebook tự tải checkpoint public khi `CONFIG['pretrained_dir']` rỗng; đường dẫn local là override tùy chọn.
+Có thể chuẩn bị trước bằng `python -m tools.download_pdp_pretrained` từ repo root, không cần chép đường dẫn.
+Nếu thiếu toolkit/compiler, mặc định `require_custom_kernel=False` cho phép CUDA PyTorch fallback;
+native-kernel acceptance vẫn False. Với True, cần toolchain CUDA tương thích và gate kernel đạt.
+
+Full baseline có thể kiểm tra trên RTX 3060 batch 1/FP32 nếu đủ VRAM; không bắt buộc 4090 cho smoke.
+OOM ở 800 giữ kết quả 640 và tổng hợp PARTIAL. GPU RTX 4090 Vast.ai vẫn là môi trường pilot/training chính.
+Xem [notebook 02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) và
+[hướng dẫn modeling](../../notebooks/modeling/README.md).
+
 ## Kiểm tra sau khi bạn cài
 
 Kiểm tra xung đột dependencies và các imports chính:
@@ -147,4 +198,4 @@ python -m pytest tests/test_native_checkout.py tests/test_resize.py \
 
 Sau đó chạy các test PDP/metrics/runner phù hợp với môi trường đã chuẩn bị; ghi kết quả thực tế, không tính các test CUDA bị skip là đã nghiệm thu GPU. Cài xong dependency chưa chứng nhận processor 640/800, loader, ConvNeXt adapter hoặc convergence.
 
-Bước triển khai tiếp theo: notebook kiểm chứng môi trường/processor/loader/PDP nền theo [kế hoạch](../project/IMPLEMENTATION_PLAN.md). Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; tài liệu này chỉ là hướng dẫn cài.
+Local Conda pdp/processor/loader và full pretrained CUDA smoke đã đạt trên RTX 3060 bằng PyTorch fallback; [kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md). Bước tiếp: S1 CLI/runner, adapter ConvNeXt và kiểm chứng native kernel/toolchain trên môi trường train Vast.ai theo [kế hoạch](../project/IMPLEMENTATION_PLAN.md). Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; tài liệu này chỉ là hướng dẫn cài.

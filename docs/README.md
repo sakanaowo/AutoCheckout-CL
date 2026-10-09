@@ -4,7 +4,8 @@ Cập nhật 09/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên *
 
 | Điểm vào | Mục đích |
 |---|---|
-| [Bàn giao](project/AGENT_HANDOFF.md), [snapshot 09/10](project/HANDOFF_2026-10-09.md) | Quyết định và trạng thái tiếp quản mới nhất |
+| [Bàn giao](project/AGENT_HANDOFF.md), [snapshot đầu ngày 09/10](project/HANDOFF_2026-10-09.md) | Bàn giao hiện hành và snapshot lịch sử trước kiểm chứng model |
+| [Kết luận processor/loader/PDP foundation](project/PDP_FOUNDATION_ACCEPTANCE.md) | Phạm vi notebook đã hoàn tất, evidence CPU/CUDA, giới hạn và 5 bước tiếp theo |
 | [Chỉ mục triển khai](project/IMPLEMENTATION_INDEX.md) | Code mới, config, notebook, tests và đầu ra của từng phần |
 | [Kế hoạch](project/IMPLEMENTATION_PLAN.md), [tiến độ](project/PROGRESS.md) | Phần đã đạt và thứ tự công việc tiếp theo |
 | [Dependencies/môi trường](environment/README.md) | Python 3.10, gói cần cài, lệnh CPU/CUDA và kiểm tra sau cài |
