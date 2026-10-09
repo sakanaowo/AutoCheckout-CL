@@ -17,6 +17,7 @@ Dùng **Python 3.10**, theo `requires-python` trong [pyproject.toml](../../pypro
 | Training/metrics | `lightning==2.1.3`, `pytorch-lightning==2.1.3`, `torchmetrics==1.3.0.post0` | requirements.txt |
 | Build CUDA extension | `ninja==1.11.1.1` | requirements.txt; toolchain hệ thống bên dưới |
 | Tests/lint | `pytest==8.3.3`, `ruff==0.6.9` | [requirements.txt](../../requirements.txt) |
+| Packaging/build compatibility | `packaging==24.2` | requirements.txt; đáp ứng wheel ≥24.0 và Lightning ≥20.0,<25.0 |
 | Typing compatibility | `typing-extensions==4.13.2` | requirements.txt; đáp ứng Jupyter Client ≥4.13.0 và Lightning <6.0 |
 | Notebook | `ipykernel==7.3.0`, `nbclient==0.10.0`, `nbformat==5.10.4` | [requirements.txt](../../requirements.txt) |
 
@@ -108,6 +109,20 @@ python -m pip check
 ```
 
 Các lệnh trên để người dùng chạy trên environment của mình; chưa xác nhận cài/import/model thành công chỉ từ sửa requirements. Xem [pip dependency resolution](https://pip.pypa.io/en/stable/topics/dependency-resolution/#dealing-with-dependency-conflicts).
+
+## Xung đột wheel/packaging sau khi cài thành công
+
+Log có `Successfully installed` nhưng còn báo `wheel 0.47.0 requires packaging>=24.0` vì requirements cũ đã hạ packaging xuống 23.2. [Wheel 0.47.0](https://pypi.org/pypi/wheel/0.47.0/json) cần packaging ≥24.0; [Lightning 2.1.3](https://pypi.org/pypi/lightning/2.1.3/json) yêu cầu ≥20.0,<25.0. Pin hiện hành **packaging==24.2** nằm trong cả hai giới hạn và hỗ trợ Python 3.10.
+
+Trong Conda environment đã cài các gói, chỉ cần cập nhật gói này rồi kiểm tra:
+
+```bash
+conda activate pdp
+python -m pip install packaging==24.2
+python -m pip check
+```
+
+Đồng thời dùng requirements đã cập nhật để lần cài sau không hạ packaging lại về 23.2. Không dùng upgrade packaging không giới hạn vì phiên bản ≥25.0 không đáp ứng constraint của Lightning 2.1.3. Chỉ khi `pip check` không còn conflict mới tiếp tục import và nghiệm thu notebook; log cài thành công chưa chứng nhận model/GPU.
 
 ## Kiểm tra sau khi bạn cài
 
