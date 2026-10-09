@@ -1,6 +1,6 @@
 # Kết luận nghiệm thu processor/loader và PDP nền
 
-Cập nhật **09/10/2026**, timezone **Asia/Bangkok**. **Hoàn tất phạm vi tạo notebook, kiểm chứng processor/loader/PDP nền và full pretrained CUDA smoke.** Phần notebook của S1 đã đạt; toàn bộ S1 còn các việc CLI/runner và môi trường training bên dưới.
+Cập nhật **09/10/2026**, timezone **Asia/Bangkok**. **Hoàn tất phạm vi tạo notebook, kiểm chứng processor/loader/PDP nền và full pretrained CUDA smoke.** Báo cáo này ghi phạm vi notebook 01–02. Phần tiếp nối đã có [nghiệm thu ConvNeXt](CONVNEXT_READINESS.md) và [CLI/runner notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md); dùng hai báo cáo đó cho trạng thái mới nhất.
 
 ## Bằng chứng đã đạt
 
@@ -37,7 +37,7 @@ Kết luận này chứng nhận foundation và full pretrained **Task 1 smoke**
 
 Protocol giữ **100+4×25, seed 0, 224 slots/225 outputs**, real-only release và holdout đã khóa. Đây là split nghiên cứu có cross-task image reuse với current-task GT; không đổi protocol/split để chạy tiếp.
 
-## Công việc tiếp theo theo thứ tự
+## Công việc tiếp nối được xác định khi kết thúc notebook 02
 
 | Thứ tự | Công việc | Điều kiện nghiệm thu |
 |---|---|---|
@@ -50,4 +50,4 @@ Protocol giữ **100+4×25, seed 0, 224 slots/225 outputs**, real-only release v
 Synthetic 202/20 pilot pending xử lý ở track riêng, không chặn baseline real-only. LoRA/K=3/FSA/freeze shared bổ sung và generator overlap là ablation sau baseline, mỗi thay đổi có run riêng. [Kế hoạch](IMPLEMENTATION_PLAN.md) giữ tiêu chí từng milestone; [PROGRESS](PROGRESS.md) ghi trạng thái hiện hành.
 
 
-Notebook S2 [03 ConvNeXt-V2-Base](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) hiện đã tạo cùng adapter metadata và policy chuyển core weights; chưa chạy CUDA. [Đối chiếu điều kiện/train readiness](CONVNEXT_READINESS.md) ghi phạm vi và các gate còn lại; trạng thái này không thay đổi kết quả baseline đã đạt ở trên.
+Notebook S2 [03 ConvNeXt-V2-Base](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) đã đạt CUDA 640/800, 8/8 gates và 29 tests trong run aeeb770b. CLI/runner tiếp nối được ghi trong [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md). [Đối chiếu điều kiện/train readiness](CONVNEXT_READINESS.md) ghi phạm vi và các gate còn lại; trạng thái này không thay đổi kết quả baseline đã đạt ở trên.

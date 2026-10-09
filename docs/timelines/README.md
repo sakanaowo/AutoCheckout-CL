@@ -15,3 +15,5 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 | 09/10/2026 | Khép phạm vi notebook processor/loader/PDP nền; cập nhật docs hiện hành và thứ tự bước tiếp theo | [Kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md) |
 
 [Nhật ký chi tiết 06–08/10](history-2026-10-06-08.md) · [Tiến độ dự án](../project/PROGRESS.md) · [Notebook review](../../notebooks/data_preprocessing/03_annotation_review.ipynb).
+
+- [Nghiệm thu CLI/runner và notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md): run `ac818116-ceb0-4ce8-9c1e-979c6f54788a`, 78 tests, 4 CUDA cases, 10/10 gates; xem báo cáo cho timestamps thực chạy và giới hạn.

@@ -1,6 +1,6 @@
 # Kiểm chứng model
 
-**Hoàn tất phạm vi notebook processor/loader/PDP nền và full CUDA smoke.** [Kết luận nghiệm thu](../../docs/project/PDP_FOUNDATION_ACCEPTANCE.md) ghi bằng chứng, phần S1 runtime còn lại và thứ tự công việc tiếp theo.
+**Hoàn tất phạm vi notebook processor/loader/PDP nền và full CUDA smoke.** [Kết luận nghiệm thu](../../docs/project/PDP_FOUNDATION_ACCEPTANCE.md) ghi bằng chứng foundation; [runtime notebook 04](../../docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi nghiệm thu tiếp nối và bước tiếp theo.
 
 [01_processor_loader_pdp_acceptance.ipynb](01_processor_loader_pdp_acceptance.ipynb) đã đạt **`PASS_LIMITED_PDP_FOUNDATION`** trong run `65687942-4332-40db-a82e-76ae0429c100`, ngày 09/10/2026, 15:12:32–15:13:43 Asia/Bangkok. Máy có RTX 3060; model smoke thực chạy CPU. Artifacts ghi đủ 11 gate PASS, regression 27/27 và resume 1/1; xem [báo cáo](../../docs/timelines/model-foundation-2026-10-09.md). Chọn kernel Python 3.10 sau khi tự cài [dependencies](../../docs/environment/README.md), sửa `AUTOCHECKOUT_DATA_ROOT`/`AUTOCHECKOUT_RELEASE_ROOT` nếu cần, rồi chạy từ setup đến cell kết thúc.
 
@@ -17,7 +17,7 @@ Smoke dùng random ResNet18, encoder 1/decoder 2, prompt 4×2, 300 queries/256 d
 
 Output ở `runs/modeling/processor_loader_pdp/<run_id>/`: config, run/summary/gates JSON, logs và JUnit XML. Run timestamps được sinh khi thực chạy. Lưu notebook có outputs sau khi chạy, có thể lưu thêm bản theo run ID vào `runs/notebook_versions/`. Notebook không cài dependencies, không tải pretrained/API, không tạo lại split hay dùng full GT/test holdout để train.
 
-Input: release real-only đã nghiệm thu trong [tiền xử lý](../data_preprocessing/README.md). Synthetic 202 chưa tích hợp trong notebook này. Full pretrained CUDA smoke đã đạt ở notebook 02. Bước sau: nối/kiểm chứng processor trong đường CLI/runner training, rồi adapter ConvNeXt-V2-Base, native kernel/evaluator và pilot Vast.ai; xem [kế hoạch](../../docs/project/IMPLEMENTATION_PLAN.md).
+Input: release real-only đã nghiệm thu trong [tiền xử lý](../data_preprocessing/README.md). Synthetic 202 chưa tích hợp trong notebook này. Full pretrained CUDA smoke đã đạt ở notebook 02. Notebook 03 đã nghiệm thu adapter ConvNeXt; notebook 04 kiểm chứng CLI/runner, sau đó đến native kernel/evaluator và pilot Vast.ai; xem [kế hoạch](../../docs/project/IMPLEMENTATION_PLAN.md).
 
 
 ## Full baseline CUDA — notebook 02
@@ -67,6 +67,15 @@ và khôi phục thật model/optimizer/scheduler/nonempty prototype state qua L
 
 ## ConvNeXt-V2-Base — notebook 03
 
-[03_convnext_v2_base_acceptance.ipynb](03_convnext_v2_base_acceptance.ipynb) đã tạo, **chưa chạy**. Sau foundation/full ResNet smoke, notebook kiểm tra adapter metadata, pretrained ConvNeXt riêng, detector core warm-start có audit, feature maps/masks/projections 640/800, losses/gradient/optimizer, Lightning resume và cold model/config reload. Dùng snapshot revision đã khóa; khi thực chạy có thể tải/reuse weights public, không cài dependencies.
+[03_convnext_v2_base_acceptance.ipynb](03_convnext_v2_base_acceptance.ipynb) đã đạt **PASS_CONVNEXT_ADAPTER_CUDA_SMOKE**, run `aeeb770b-7e25-4ad2-92bd-053c1bacf6e6`, 23:16:09–23:17:32 UTC+7 ngày 09/10. 8/8 gates, 29 tests đạt; 3060 batch 1 FP32, peak allocated 3,683/4,416 GiB ở 640/800. Sau foundation/full ResNet smoke, notebook kiểm tra adapter metadata, pretrained ConvNeXt riêng, detector core warm-start có audit, feature maps/masks/projections 640/800, losses/gradient/optimizer, Lightning resume và cold model/config reload. Dùng snapshot revision đã khóa; khi thực chạy có thể tải/reuse weights public, không cài dependencies.
 
 Restart Conda kernel để nạp code mới. Cần baseline summary/gates thật từ máy đã chạy; dùng `AUTOCHECKOUT_BASELINE_SUMMARY` nếu không có marker latest ở máy hiện tại. Run ID/output nằm trong `runs/modeling/convnext_adapter/`; save notebook với outputs sau execution. PASS chỉ cho `PASS_CONVNEXT_ADAPTER_CUDA_SMOKE`, không chứng nhận train dài hay Vast.ai. [Điều kiện và training readiness](../../docs/project/CONVNEXT_READINESS.md).
+
+
+## CLI/runner — notebook 04
+
+[04_training_runtime_acceptance.ipynb](04_training_runtime_acceptance.ipynb) đã đạt **10/10 gates, 78 tests** trên RTX 3060, run `ac818116-ceb0-4ce8-9c1e-979c6f54788a`. Notebook gọi `scripts/run_exp.sh` và `pdp/main.py` bằng tiến trình thật, dùng [EXP-B1](../../configs/exp/native/EXP-B1.sh) / [EXP-B2](../../configs/exp/native/EXP-B2.sh). Chọn Conda pdp, restart kernel, Run All; mặc định dùng cache offline và roots hiện tại. [Báo cáo runtime](../../docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi kết quả mới nhất.
+
+Bốn cases: ResNet/ConvNeXt × 640/800, 4 ảnh train Task 1 và 2 ảnh mỗi tập val/test, batch 1/effective 2, FP32. Kiểm chứng optimizer step 1→4 qua interruption và resume, tái tạo từ metadata checkpoint khi bootstrap paths không còn, predict-only tương đương, bbox native và skip task hoàn tất. Source/release/holdout/weights phải giữ nguyên. Lưu outputs sau khi chạy. PASS không chứng nhận convergence, full teacher Task 2+, calibration hay môi trường Vast.ai.
+
+Outputs: `runs/modeling/training_runtime/<run_id>/`; mỗi case có logs, runtime/load reports, run_info, checkpoint và predictions. Cấu hình native bỏ qua evaluator legacy; các chỉ số subset trong training là diagnostics, không đưa vào bảng nghiên cứu.

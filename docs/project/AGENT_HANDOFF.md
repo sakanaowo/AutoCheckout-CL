@@ -1,9 +1,9 @@
-# Bàn giao AutoCheckout-CL — nhánh verification
+# Bàn giao AutoCheckout-CL
 
-Cập nhật: **09/10/2026**. [Kết luận nghiệm thu processor/loader/PDP nền](PDP_FOUNDATION_ACCEPTANCE.md) là trạng thái model hiện hành:
-notebook 01 đạt 11/11 gates, notebook 02 đạt full pretrained CUDA smoke 640/800 trên RTX 3060,
-run d967dc7b, PyTorch fallback; native kernel chưa đạt. Phạm vi notebook đã hoàn tất; S1 còn CLI/runner
-và môi trường train, ConvNeXt/pilot/full protocol chưa chạy. [Kế hoạch](IMPLEMENTATION_PLAN.md) ghi tiêu chí tiếp theo.
+Cập nhật: **10/10/2026**. Notebook 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
+[ConvNeXt notebook 03](CONVNEXT_READINESS.md) đã đạt 8/8 gates, 29 tests trên RTX 3060 (run aeeb770b).
+CLI/runner và notebook 04 có triển khai/kiểm chứng riêng tại [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md).
+Các run local dùng PyTorch fallback; native kernel, calibration, pilot và full 5-task training chưa nghiệm thu.
 
 [Snapshot đầu ngày 09/10](HANDOFF_2026-10-09.md) giữ bằng chứng dependency/branch tại lúc viết, trước các run model đã đạt;
 đọc cùng kết luận hiện hành, không dùng các đoạn “chưa chạy” trong snapshot làm trạng thái model mới nhất.
@@ -40,7 +40,7 @@ Code nền đã khôi phục sau reset: 189 file được đối chiếu Git blo
 
 Phần mới đã triển khai: native merge và split 5 task; visual review; OpenAI pilot/cache/content audit và Batch; API chốt rồi áp dụng scope 202 bằng tái ghép/owner masks/RLE/task JSON. [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) chỉ rõ code, config, notebook, tests và output. [Hướng dẫn vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại.
 
-Code model nền nằm trong `pdp/main.py`, `engine.py`, `models/`, `ppg.py`, `checkpointing.py`, `inference.py`; metrics/mapping/provenance ở `autocheckout/`, evaluation CLI ở `tools/`, runner ở `scripts/`. Notebook 02 đã kiểm chứng full pretrained Task 1 CUDA smoke trên 3060; điều đó chưa nghiệm thu full 5-task training hoặc toolchain Vast.ai. ConvNeXt adapter, LoRA và K=3 vẫn chưa triển khai/kiểm chứng.
+Code model nền nằm trong `pdp/main.py`, `engine.py`, `models/`, `ppg.py`, `checkpointing.py`, `inference.py`; metrics/mapping/provenance ở `autocheckout/`, evaluation CLI ở `tools/`, runner ở `scripts/`. Notebook 02 đã kiểm chứng full pretrained Task 1 CUDA smoke trên 3060; điều đó chưa nghiệm thu full 5-task training hoặc toolchain Vast.ai. ConvNeXt adapter đã đạt CUDA smoke; LoRA và K=3 bổ sung vẫn là phần sau baseline.
 
 Notebook [01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt limited foundation trong run 65687942; [02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) đạt full CUDA smoke trong run d967dc7b. Conda pdp Python 3.10/pip check đạt, Torch/vision 2.2.2/0.17.2, typing-extensions 4.13.2, packaging 24.2, Ninja 1.13.0. [Downloader public](../../tools/download_pdp_pretrained.py) tự nhận cache path và lưu revision/hash. [README môi trường](../environment/README.md) giữ hướng dẫn cài; không tự cài local. Full model smoke đạt với PyTorch fallback, chưa chứng nhận native kernel/convergence/Vast.ai.
 
@@ -48,7 +48,7 @@ Notebook [01](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb)
 
 ### Backbone
 
-Handoff chọn **ConvNeXt-V2-Base**, tên pretrained mong muốn `convnextv2_base.fcmae_ft_in22k_in1k`. Tạo adapter ở `pdp/models/backbones.py`, lấy metadata kênh/stride từ model thực tế và nối vào `input_proj` của Deformable DETR. Code hiện tại dùng `out_indices=(2,3,4)` theo ResNet; không áp nguyên cấu hình đó cho ConvNeXt bốn stage.
+**ConvNeXt-V2-Base**, tên `convnextv2_base.fcmae_ft_in22k_in1k`, đã có adapter metadata ở `pdp/models/backbones.py`. Factory chọn 3 stage cuối từ provider, nối masks/projections cho Deformable DETR; notebook 03 đã kiểm chứng 640/800, pretrained preservation và cold reload.
 
 Giữ đường chạy backbone hiện tại để so sánh trên cùng dữ liệu mới. Kiểm tra tên model với bản `timm` cài đặt trước khi thay dependencies; không mặc định pretrained ResNet và ConvNeXt có thể nạp chung toàn bộ checkpoint.
 
@@ -100,7 +100,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 1. Đọc tài liệu này, [chỉ mục triển khai](IMPLEMENTATION_INDEX.md), [hướng dẫn vận hành](../data_preprocessing/OPERATIONS.md), rồi [kế hoạch hiện tại](IMPLEMENTATION_PLAN.md).
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
-4. **S1 runtime → S2:** nối explicit resolution/checkpoint config vào CLI/runner và kiểm chứng đường chạy thật; sau đó adapter ConvNeXt-V2-Base với notebook shapes/masks/weights/forward/backward/reload. Foundation notebook đã hoàn tất, không cần tạo lại.
+4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
 5. **Môi trường train + S6 → E1/E2:** kiểm chứng native kernel trên RTX 4090 Vast.ai và calibration val-only; pilot PDP ResNet/ConvNeXt cùng split/budget trước full 5 task. Mọi bước có notebook/timestamps; LoRA/K=3/FSA/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
