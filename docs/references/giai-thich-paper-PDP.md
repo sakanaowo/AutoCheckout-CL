@@ -1,7 +1,7 @@
 # Hiểu paper PDP từ con số 0
 
 **Paper:** *Beyond Prompt Degradation: Prototype-guided Dual-pool Prompting for Incremental Object Detection*, Yaoteng Zhang, Qing Zhou, Junyu Gao, Qi Wang. CVPR 2026. File PDF nằm ở thư mục gốc của repo.
-**Code gốc:** [github.com/zyt95579/PDP_IOD](https://github.com/zyt95579/PDP_IOD), commit `7702d91`. Mọi đường dẫn "Code" trong tài liệu này trỏ tới đúng commit đó. Bản đã sửa lỗi của nhóm nằm trong [`pdp/`](../pdp/).
+**Code gốc:** [github.com/zyt95579/PDP_IOD](https://github.com/zyt95579/PDP_IOD), commit `7702d91`. Mọi đường dẫn "Code" trong tài liệu này trỏ tới đúng commit đó. Bản đã sửa lỗi của nhóm nằm trong [`pdp/`](../../pdp).
 
 **Dành cho ai:** người chưa có nhiều kinh nghiệm AI, cần hiểu paper đủ sâu để code, chạy thí nghiệm và bảo vệ đồ án.
 
@@ -15,7 +15,7 @@
 **Quy ước:**
 
 - Khối **"Code:"** cho biết khái niệm đang nói nằm ở đâu trong code gốc.
-- Khối **"Lưu ý:"** đánh dấu chỗ code gốc khác paper. Các chỗ này đã được kiểm chứng bằng cách chạy code; bản sửa được mô tả trong [IMPLEMENTATION_PLAN.md §6.3](../IMPLEMENTATION_PLAN.md) (mã F1–F13).
+- Khối **"Lưu ý:"** đánh dấu chỗ code gốc khác paper. Các chỗ này đã được kiểm chứng bằng cách chạy code; bản sửa được mô tả trong [IMPLEMENTATION_PLAN.md §6.3](../archive/IMPLEMENTATION_PLAN_2026-09.md) (mã F1–F13).
 - Ví dụ số có ghi "số tự đặt" là ví dụ minh họa, không lấy từ paper.
 - Sơ đồ vẽ bằng Mermaid hiển thị được trên GitHub. Trong VS Code, cần cài extension *Markdown Preview Mermaid Support*. Các sơ đồ quan trọng nhất được vẽ bằng ký tự nên xem được ở mọi nơi.
 
@@ -363,7 +363,7 @@ Cơ chế cụ thể trong code:
 
 ### 4.1 Hình tổng quan (hình 2 của paper)
 
-![Hình 2 của paper: tổng quan PDP](../pdp/overall.png)
+![Hình 2 của paper: tổng quan PDP](../../pdp/overall.png)
 
 *Nguồn: hình 2 của paper, lấy từ repo tác giả (`pdp/overall.png`).*
 
@@ -835,7 +835,7 @@ Những điểm nên biết khi trình bày trước hội đồng. Các điểm
 
 ## 10. Đối chiếu paper và code
 
-Đường dẫn trỏ tới code gốc (commit `7702d91`). Cột cuối cho biết mã bản sửa của nhóm trong [IMPLEMENTATION_PLAN.md §6.3](../IMPLEMENTATION_PLAN.md).
+Đường dẫn trỏ tới code gốc (commit `7702d91`). Cột cuối cho biết mã bản sửa của nhóm trong [IMPLEMENTATION_PLAN.md §6.3](../archive/IMPLEMENTATION_PLAN_2026-09.md).
 
 | Khái niệm | Paper | Code gốc | Sửa |
 |---|---|---|---|
@@ -868,13 +868,13 @@ Những điểm nên biết khi trình bày trước hội đồng. Các điểm
 | Prototype | "Chân dung trung bình" của từng SKU |
 | Suy luận không cần task ID | Ở quầy, camera không biết sản phẩm thuộc đợt nhập nào |
 
-Khác biệt lớn so với COCO/VOC: RPC có nhiều SKU **rất giống nhau** (cùng hãng, khác vị hoặc dung tích), trung bình khoảng 12 vật mỗi ảnh, chụp từ trên xuống trên nền trắng. Pilot của nhóm (xem [PROGRESS.md](../PROGRESS.md)) cho thấy điều này ảnh hưởng thế nào:
+Khác biệt lớn so với COCO/VOC: RPC có nhiều SKU **rất giống nhau** (cùng hãng, khác vị hoặc dung tích), trung bình khoảng 12 vật mỗi ảnh, chụp từ trên xuống trên nền trắng. Pilot của nhóm (xem [PROGRESS.md](../archive/PROGRESS_2026-09.md)) cho thấy điều này ảnh hưởng thế nào:
 
 - PDP đúng như paper (detector đóng băng từ COCO) chỉ đạt val mAP50 khoảng **0,11** ở task 1. Mô hình định vị được sản phẩm nhưng không phân biệt được SKU.
 - Fine-tune toàn bộ detector ở task 1 đạt **0,675** trong cùng cấu hình pilot, và **0,984** khi train đủ (6.000 ảnh × 6 epoch).
 - PDP dựng trên nền đã fine-tune đó (cách "First Session Adaptation": fine-tune toàn bộ ở task 1 rồi mới đóng băng) đạt 0,83 cho lớp cũ và 0,67 cho lớp mới sau task 2, gần như không quên.
 
-Vì vậy thí nghiệm chính của nhóm dùng PDP trên nền đã fine-tune ở task 1, và vẫn giữ một thí nghiệm đúng như paper để so sánh. Chi tiết ở [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) và [PROGRESS.md](../PROGRESS.md).
+Vì vậy thí nghiệm chính của nhóm dùng PDP trên nền đã fine-tune ở task 1, và vẫn giữ một thí nghiệm đúng như paper để so sánh. Chi tiết ở [IMPLEMENTATION_PLAN.md](../archive/IMPLEMENTATION_PLAN_2026-09.md) và [PROGRESS.md](../archive/PROGRESS_2026-09.md).
 
 ---
 
@@ -1027,4 +1027,4 @@ Không. Đã kiểm chứng: L_DDL bị tắt; kho riêng của task ≥ 2 toàn
 - MD-DETR: Bhatt và cộng sự, ECCV 2024, [github.com/GauravBh1010tt/MD-DETR](https://github.com/GauravBh1010tt/MD-DETR).
 - Deformable DETR: Zhu và cộng sự, arXiv 2010.04159.
 - CODA-Prompt: Smith và cộng sự, CVPR 2023. L2P: Wang và cộng sự, CVPR 2022. DualPrompt: Wang và cộng sự, ECCV 2022.
-- Các lỗi của code gốc và cách sửa: [IMPLEMENTATION_PLAN.md §6.3](../IMPLEMENTATION_PLAN.md). Số liệu pilot trên RPC: [PROGRESS.md](../PROGRESS.md).
+- Các lỗi của code gốc và cách sửa: [IMPLEMENTATION_PLAN.md §6.3](../archive/IMPLEMENTATION_PLAN_2026-09.md). Số liệu pilot trên RPC: [PROGRESS.md](../archive/PROGRESS_2026-09.md).

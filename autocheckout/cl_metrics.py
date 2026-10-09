@@ -1,7 +1,7 @@
 """Class-incremental detection metrics (V2, plan section 6.5).
 
 Two protocols, both computed from a single ``pred_<split>.npz`` per stage plus the full
-split annotation file (``val_full.json`` / ``test_full.json``, see docs/formats.md):
+split annotation file (``val_full.json`` / ``test_full.json``, see docs/data_preprocessing/formats.md):
 
 - **M1** (paper protocol): mAP@C/P/A, reproduced from the original PDP code
   (``pdp/main.py`` builds a separate COCO ground-truth file per task group and runs
@@ -16,7 +16,7 @@ split annotation file (``val_full.json`` / ``test_full.json``, see docs/formats.
 
 Label space: everywhere here ``category_id`` (ground truth) and ``label`` (predictions)
 are both *model labels* (0..num_slots-1) -- ``tasks/<name>/*_full.json`` stores the model
-label directly in ``category_id`` (docs/formats.md section 4), so no RPC-id mapping is
+label directly in ``category_id`` (docs/data_preprocessing/formats.md section 4), so no RPC-id mapping is
 needed for these metrics.
 """
 

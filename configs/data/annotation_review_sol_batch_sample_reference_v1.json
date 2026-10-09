@@ -1,0 +1,220 @@
+{
+  "reference_version": "batch-sol-200-sample12-v1",
+  "reviewer": "Codex visual inspection",
+  "reviewed_at": "2026-10-08T00:34:19+07:00",
+  "manifest_fingerprint": "ef0711797f55283082fe2c13c7998073208cd53b4aa48eae1e442f2a4cd31260",
+  "api_run_id": "d6e7f488-9df7-49ae-8a01-4f7b9706efbd",
+  "batch_ids": [
+    "batch_6ac67e913d288190aa1dae5115275f17"
+  ],
+  "owner_masks_available": false,
+  "sampling_method": "12 nonrandom source-task/decision strata: lowest IoU within each stratum; not a random accuracy estimate",
+  "full_200_content_acceptance": false,
+  "ground_truth_accuracy": null,
+  "case_audits": [
+    {
+      "case_key": [
+        1,
+        27871
+      ],
+      "fingerprint": "05f62058d885f2146404a99d250d31d0b8c27503340fad759ab8e32176ad50b3",
+      "review_sha256": "0624585dd1bf1d31c75594ef28f42d1a8e7261cc443fabdcadafa1290cf82a0c",
+      "decision": "keep_with_justification",
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Chai hồng nghiêng, cổ bị chai xám che và phần đáy sát cực phải/dưới đúng native. Chênh trái 10 px, trên 8 px nhỏ; model dùng diễn giải plausibly và contour có thể bỏ chi tiết, giữ có giải trình phù hợp để sàng lọc; chưa xác minh owner-mask.",
+      "image_sha256": "e4c34586acaf4472d0fc5dd94472b5bfa334490ad08127fcd349b0c111cddc03",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann27871_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann27871_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann27871_card.png"
+    },
+    {
+      "case_key": [
+        1,
+        31027
+      ],
+      "fingerprint": "9e5885ec792d27d7c8132b80576c17c62fcc76a45c159514fb9e83f924a8a5c2",
+      "review_sha256": "84f87e538964f2d2bffe83febf73f47a0bfe94d591d4f1dbb9ae4b1106485e80",
+      "decision": "pending",
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Viền tối nhỏ gần chỗ cổ chai hồng bị chai xanh che có thật trong native/cutout. Model thừa nhận ownership chưa rõ, chọn pending/human thay vì thu bbox về cyan; xử lý gap phải 20 px và dưới 16 px phù hợp.",
+      "image_sha256": "3abc8442090dca095ffb83f5eb7bc75dd9e6163a5ff35f1d2eb2dd47abb04897",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann31027_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann31027_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann31027_card.png"
+    },
+    {
+      "case_key": [
+        1,
+        1582
+      ],
+      "fingerprint": "73b9fa97872588f8dbe3186d918d1d9cd9f5b307aada612205e3ba29b420cfb7",
+      "review_sha256": "7d03d9058e347421063293d77363c323c7f1e8d4778c2e5a5f74924a58bb5db4",
+      "decision": "regenerate",
+      "source_sha256": "447f320003d49e3c6ea8721a39d3694e7554d737ed8ee489c5fd80764f50f7ff",
+      "grounded": false,
+      "observation_verdict": "PARTIAL",
+      "notes": "Mô tả bao đỏ-vàng, hộp xám che trên phải và gap phải 38 px đúng. Kết luận mọi mảnh mục tiêu đều dừng trước cạnh phải và lỗi rõ chưa được xác minh ở mép che/chi tiết bao trong suốt. Regenerate 0.91, human=false cần review trước khi kết luận geometry hoặc tái sinh.",
+      "image_sha256": "c48cb00afa18a1fbef1b57f41cae910a97623440221c37421e3a9a88cefe1665",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann1582_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann1582_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task1_ann1582_card.png"
+    },
+    {
+      "case_key": [
+        2,
+        27639
+      ],
+      "fingerprint": "20ebe21c0a154ae30d993e2cc7063ee88ca3922913afb36529415ec6553d1e75",
+      "review_sha256": "7032c255c56e2edb075299184212d314612fea7c47c8384f94dafed9a86f70ac",
+      "decision": "keep_with_justification",
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "grounded": false,
+      "observation_verdict": "PARTIAL",
+      "notes": "Hướng bao vàng-xanh và các vật che được mô tả đúng; giữ có giải trình có thể là một đề xuất. Tuy nhiên native và zoom phải chưa xác nhận đầu vàng kéo vượt cyan 27 px đến cực phải bbox; vùng này có bao đỏ trên và gói bạc phía dưới. Khẳng định fragment giải thích cực phải mạnh hơn bằng chứng, cần notes ở mức khả năng/ownership review.",
+      "image_sha256": "3178a898885a493127ad657bbf6a8e655360568a86a65f5ad38a94e0d7e8242e",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann27639_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann27639_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann27639_card.png"
+    },
+    {
+      "case_key": [
+        2,
+        6171
+      ],
+      "fingerprint": "3d7522a2343be1cbd34162b4f20ef4649e455bd032e8ac3687f14d719dc5e182",
+      "review_sha256": "c98323c1cbafec019aa29f5dec0d282c161a52b9297860475917e9a17a5219b4",
+      "decision": "pending",
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Gói xanh-be có các mảng xám như cutout và chai nâu che bên trái đúng ảnh. Model nhận thấy gap trái 110 px nhưng không quy ownership chắc cho mảng xám/trắng, chọn pending+human; phù hợp rubric bất định.",
+      "image_sha256": "f0fd752a16eb89ef59eb34bb8a26e1137c83aaa5184b780f8de594f296ed78db",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann6171_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann6171_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann6171_card.png"
+    },
+    {
+      "case_key": [
+        2,
+        40827
+      ],
+      "fingerprint": "8ba2cb699db4bd2b0457d7e7e5aa11e8efd18cc7854cf6dbf1c140de3cb59229",
+      "review_sha256": "0603086c37095b613762bc79791c107741f76816872e175935dd5b630d01b528",
+      "decision": "regenerate",
+      "source_sha256": "a160d6583383d4b7dd47ddb965775bad7dc6241f68a169cee85388318f1639b3",
+      "grounded": false,
+      "observation_verdict": "PARTIAL",
+      "notes": "Đĩa/gói trắng, gói xanh-vàng che đáy và gap dưới 72 px được mô tả đúng. Không có final owner-mask để xác minh các mảnh nhỏ ở ranh giới chồng lấp; regenerate được mô tả thành lỗi rõ, confidence 0.94 và không bật human. Đây là case cần đối chiếu tiếp, không chứng minh bbox sai.",
+      "image_sha256": "fa3416453f85148f4ebb91f02287b187c64718c3071f586d8b7604c60043a944",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann40827_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann40827_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task2_ann40827_card.png"
+    },
+    {
+      "case_key": [
+        3,
+        29403
+      ],
+      "fingerprint": "c3105fbcfd6d7e07c3b9cb19b08f1fe0d26010bd725bfbdad5ffc3e7f4191d0c",
+      "review_sha256": "6c198ca13a2942843a1efe49b4e8153fa2acc4c2dc87a8d91a7194f20e75e159",
+      "decision": "keep_with_justification",
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Gói AStick bị thanh xanh che bên trái, mảnh nâu bên trái thanh và mép kem gần gói Dove đúng crop/cutout. Gap trên 12 px nhỏ; model diễn giải có vẻ/phù hợp chi tiết contour và đề xuất giữ có giải trình hợp lý, không tuyên bố có mask xác minh.",
+      "image_sha256": "ecc7877b666fd3ed9f9b181fb5c562e091a71b005934d636399926c2e96866f5",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann29403_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann29403_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann29403_card.png"
+    },
+    {
+      "case_key": [
+        3,
+        41607
+      ],
+      "fingerprint": "059303358a9560e3dc9bf2afd788b23cbb5020e121db734c495358a3ee08ab79",
+      "review_sha256": "89aa4d6c6c4d33d668691ff9f02be71c11609ca60f346e9ce1c6c24553d0de09",
+      "decision": "pending",
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Bao Snickers đỏ, vùng gói xanh/bao đỏ khác che phía trên phải và gap trên 23 px/phải 5 px đúng native. Pending+human và thừa nhận không thấy rõ fragment ở cực trên phù hợp; chưa ép regenerate/keep.",
+      "image_sha256": "04fdadb6d3af5631813c7ce5584e7578d5d11b9f981cb12c3285f8eabf2acb38",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann41607_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann41607_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann41607_card.png"
+    },
+    {
+      "case_key": [
+        3,
+        40559
+      ],
+      "fingerprint": "d183d3bc46946613c7f73fdf3008ec10e1e83986f7f1ca2c3af616e7d576b4d2",
+      "review_sha256": "bfcd39b46b7b702339f25b726762a61e8ec61e4dabfa09d7b80dd7038b5e2157",
+      "decision": "regenerate",
+      "source_sha256": "b7099a5f6d7ef8f007447783fdc2c9c9556e6e0088e2bcba3218ecf1dae4fa53",
+      "grounded": false,
+      "observation_verdict": "PARTIAL",
+      "notes": "Vị trí gói đỏ dưới gói nâu, khoảng phải trước sản phẩm tím, gap trên 21 px/phải 36 px đúng. Có dấu hiệu đáng kiểm tra nhưng chưa xác minh toàn bộ fragment/ownership ở vùng che. Model regenerate/human=false với khẳng định các cực không có pixel mục tiêu; cần review thay vì coi đây là nhãn sai đã chứng minh.",
+      "image_sha256": "20c197d21bebb34211fbc6d8148fd0e7c4a1888cdd09e1576bca8e93bd8c651c",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann40559_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann40559_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task3_ann40559_card.png"
+    },
+    {
+      "case_key": [
+        4,
+        27405
+      ],
+      "fingerprint": "e673f4f6f5a529fbc9d342fc306ff48456d05c54062379581262ba74b9c4b8b2",
+      "review_sha256": "2a421e2dd38953629f8cdef45d7529e291a1d38dc0e9fa2291ba98b0a70b1871",
+      "decision": "keep_with_justification",
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Vật tròn xanh tím hiện đầy đủ và viền xám tương ứng cutout đúng native. Lệch 1 px trên/phải/dưới, góc trống hình tròn hợp lệ; giữ có giải trình phù hợp sàng lọc và không suy diễn mask đã sửa.",
+      "image_sha256": "51cddffe1170064a366cd37b3d04a8f60d845dfa095831eeecd794fb1a421f93",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27405_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27405_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27405_card.png"
+    },
+    {
+      "case_key": [
+        4,
+        27484
+      ],
+      "fingerprint": "126667ee336bc5840003f6002126c7fb6004bc1d2b2212d504f21ab7f2e5b906",
+      "review_sha256": "d3a1ea5a64ae81c16869d961076ae1a8f76ce5c1f4759f262aef94ef7f0b820e",
+      "decision": "pending",
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "grounded": true,
+      "observation_verdict": "SUPPORTED",
+      "notes": "Tấm xanh có tay cầm/đuôi xanh-đen trong cutout, bị gói đen che phía dưới trái đúng ảnh. Model nhận diện khả năng mảnh đuôi lẫn họa tiết gói và chọn pending+human cho gap đáy 106 px; phù hợp xử lý bất định.",
+      "image_sha256": "bb28a74de5630c98fe6018432b4c08ca05da2ba577c6342d5698d94dc75b7cb2",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27484_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27484_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann27484_card.png"
+    },
+    {
+      "case_key": [
+        4,
+        39454
+      ],
+      "fingerprint": "226e7758e5916cf485846d15fed9aa18f70293a08b170d0c13acc672e929ae76",
+      "review_sha256": "576f35bba7c0e26aa0f998b1e620f784fd56b4a3d3553e8129dda9c4701ad4a3",
+      "decision": "regenerate",
+      "source_sha256": "907dd3b9be7241a2d3b5761f50fde9eb7be195a159f2005c5a3175f4871653d6",
+      "grounded": false,
+      "observation_verdict": "PARTIAL",
+      "notes": "Hộp xanh dài bị blister trắng che đầu trên, gap trên 72 px đúng ảnh. Vùng che có viền mảnh và bề mặt blister sáng; chưa có ownership map để loại mọi fragment tại cực. Regenerate 0.94/human=false và kết luận không có mảnh hỗ trợ cần đối chiếu tiếp, chưa phải lỗi nhãn đã chứng minh.",
+      "image_sha256": "bc5f129d0c72b72ea8ad7f9700b31b65aab3a0a6859de41d4179d64f40648895",
+      "native": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann39454_native.png",
+      "edge_zoom": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann39454_edge.png",
+      "comparison_with_cutout": "runs/data_preprocessing/sol_batch/d6e7f488-9df7-49ae-8a01-4f7b9706efbd/content_sample_visuals/task4_ann39454_card.png"
+    }
+  ]
+}

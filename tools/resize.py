@@ -3,7 +3,7 @@
 - All val2019 and test2019 images go to one flat folder, JPEG quality 95. Each image is written
   to a temporary file and renamed, and outputs that already exist with the right size are
   skipped, so the tool can simply be re-run after an interruption.
-- The merged annotation follows docs/formats.md, section 2. Images are numbered 1..N in the
+- The merged annotation follows docs/data_preprocessing/formats.md, section 2. Images are numbered 1..N in the
   order (source: val2019 then test2019, original file name); annotations 1..M in the order
   (new image id, original annotation id). Boxes are scaled by SIZE / original width in x and
   SIZE / original height in y, areas by the product. A file name used by both sources is prefixed with its source
@@ -35,8 +35,8 @@ from autocheckout.rpc import LEVELS, SOURCES, raw_ann_path, raw_image_dir
 # Largest allowed |width - height| / max(width, height): RPC has one 1860x1859 image (DL1 audit).
 MAX_ASPECT_GAP = 0.01
 
-def merge_annotations(cocos: dict[str, dict[str, Any]], size: int) -> dict[str, Any]:
-    """Merge the raw annotation files of all sources into one COCO dict for SIZE x SIZE images."""
+def merge_annotations(cocos: dict[str, dict[str, Any]], size: int | None) -> dict[str, Any]:
+    """Merge sources, optionally resizing geometry; None keeps native pixels and source-relative paths."""
     categories = cocos[SOURCES[0]]["categories"]
     names: dict[str, set[str]] = {}
     for source in SOURCES:
@@ -63,12 +63,13 @@ def merge_annotations(cocos: dict[str, dict[str, Any]], size: int) -> dict[str, 
         if img.get("level") not in LEVELS:
             raise ValueError(f"{source}/{file_name}: level {img.get('level')!r} not in {LEVELS}; "
                              "check the DL1 audit (tools/audit_rpc.py)")
-        sx, sy = size / width, size / height
+        sx, sy = (size / width, size / height) if size is not None else (1.0, 1.0)
         images.append({
             "id": new_id,
-            "file_name": f"{source}_{file_name}" if file_name in shared else file_name,
-            "width": size,
-            "height": size,
+            "file_name": (f"{source}/{file_name}" if size is None else
+                          f"{source}_{file_name}" if file_name in shared else file_name),
+            "width": size if size is not None else width,
+            "height": size if size is not None else height,
             "source": source,
             "orig_id": img["id"],
             "orig_file_name": file_name,
@@ -83,9 +84,11 @@ def merge_annotations(cocos: dict[str, dict[str, Any]], size: int) -> dict[str, 
                 "id": len(annotations) + 1,
                 "image_id": new_id,
                 "category_id": ann["category_id"],
-                "bbox": [round(v * s, 2) for v, s in zip(ann["bbox"], (sx, sy, sx, sy), strict=True)],
-                "area": round(ann["area"] * sx * sy, 2),
+                "bbox": (list(ann["bbox"]) if size is None else
+                         [round(v * s, 2) for v, s in zip(ann["bbox"], (sx, sy, sx, sy), strict=True)]),
+                "area": ann["area"] if size is None else round(ann["area"] * sx * sy, 2),
                 "iscrowd": int(ann.get("iscrowd", 0)),
+                **({"orig_id": ann["id"], "source": source} if size is None else {}),
             })
     return {"images": images, "annotations": annotations, "categories": categories}
 

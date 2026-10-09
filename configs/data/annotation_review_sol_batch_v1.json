@@ -1,0 +1,37 @@
+{
+  "model": "gpt-6.1-sol",
+  "prompt_version": "rpc-bbox-polygon-review-v3",
+  "endpoint": "/v1/responses",
+  "completion_window": "24h",
+  "pricing_mode": "batch_short_context",
+  "pricing_multiplier_vs_standard": 0.5,
+  "usd_per_million_tokens": {
+    "input": 1.0,
+    "cached_input": 0.05,
+    "cache_write": 1.25,
+    "output": 5.0
+  },
+  "reasoning_effort": "low",
+  "image_detail": "high",
+  "cutout_max_side": 512,
+  "max_output_tokens": 3000,
+  "target_cases": 200,
+  "selection": "Exactly 200 remaining photos ordered by source_task/annotation_id; exclude both pilots and list 2 deferred photos",
+  "max_jsonl_bytes": 190000000,
+  "max_requests_per_shard": 50000,
+  "poll_interval_seconds": 30,
+  "apply_label_repairs": false,
+  "write_manual_decisions": false,
+  "authorization": {
+    "date": "2026-10-08",
+    "explicit_user_request": "chạy nốt 200 ảnh với batch api, viết vào notebook và có chạy kiểm tra nghiệm thu trong notebook",
+    "suggestions_authorized_despite_failed_pilot": true,
+    "pilot_gate_status_preserved": "FAIL",
+    "scope": "Exactly 200 photos; automatic approval review rejected 202, no 202-photo upload occurred"
+  },
+  "pricing_checked_on": "2026-10-08",
+  "documentation": [
+    "https://developers.openai.com/api/docs/guides/batch",
+    "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
+  ]
+}

@@ -7,7 +7,7 @@ ordered by task, so the classes learned up to and including task t are exactly t
 they have no RPC category id. The classifier has ``num_slots + 1`` outputs; the extra last
 slot is never a training target (see IMPLEMENTATION_PLAN.md, section 4.4).
 
-File format: see docs/formats.md.
+File format: see docs/data_preprocessing/formats.md.
 """
 
 from __future__ import annotations

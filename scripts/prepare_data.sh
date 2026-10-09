@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Data preparation DL1-DL6 on the VM (IMPLEMENTATION_PLAN.md, section 6.2; paths: docs/formats.md, section 1).
+# Data preparation DL1-DL6 on the VM (IMPLEMENTATION_PLAN.md, section 6.2; paths: docs/data_preprocessing/formats.md, section 1).
 # Run from the repo root with the project venv active. Every step can be re-run: DL2 skips images
 # already resized, the other steps rewrite the same files byte for byte.
 # Outputs in the repo to review and commit: results/data_audit/, configs/splits/, configs/tasks_*.json.

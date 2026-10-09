@@ -90,7 +90,7 @@ def task_info_voc(split_point=10):
     return task_map, task_label2name
 
 def task_info_rpc(task_config_path):
-    """Task map for RPC read from a task config file (configs/tasks_*.json, see docs/formats.md).
+    """Task map for RPC read from a task config file (configs/tasks_*.json, see docs/data_preprocessing/formats.md).
 
     Same return format as task_info_coco: task_map[task_id] = (class names, first label, number of
     classes). It covers every task of the config, including reserved ones, so the private prompt

@@ -6,7 +6,7 @@
   in proportion to their SKUs not assigned yet (largest remainder, ties by supercategory name).
   Task totals are exact and each supercategory is spread over the tasks like the task sizes.
 - Within a supercategory the SKUs are shuffled with ``--seed`` and dealt to the tasks in order;
-  inside a task, classes are ordered by RPC category id. Labels follow docs/formats.md, section 3.
+  inside a task, classes are ordered by RPC category id. Labels follow docs/data_preprocessing/formats.md, section 3.
 
     python -m tools.make_task_config \\
         --categories /data/rpc/raw/retail_product_checkout/instances_test2019.json \\

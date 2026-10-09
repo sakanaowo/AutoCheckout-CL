@@ -23,7 +23,7 @@ fi
 source "$VENV/bin/activate"
 pip install -q --upgrade pip
 pip install -q torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
-pip install -q -r "$REPO/requirements.txt" -r "$REPO/requirements-dev.txt"
+pip install -q -r "$REPO/requirements.txt"
 pip install -q -e "$REPO"
 
 export CUDA_HOME=/usr/local/cuda TORCH_CUDA_ARCH_LIST=8.9

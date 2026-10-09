@@ -1,3 +1,0 @@
-# Development tools (tests and lint), on top of requirements.txt.
-pytest==8.3.3
-ruff==0.6.9
