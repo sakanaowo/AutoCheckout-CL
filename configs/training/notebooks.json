@@ -1,0 +1,20 @@
+{
+  "campaign_id": "native-seed0-640-v1",
+  "artifact_root": "data/training",
+  "dry_run": true,
+  "experiments": ["EXP-B1", "EXP-B2"],
+  "raw_root": "data/archive",
+  "release_root": "data/processed/rpc_100-4x25_seed0_native_v1",
+  "pretrained_root": "data/pretrained/hf-cache",
+  "resolution": 640,
+  "batch_size": 1,
+  "effective_batch": 2,
+  "num_workers": 4,
+  "pilot_epochs": 2,
+  "transition_epochs": 1,
+  "transition_samples": 16,
+  "baseline_epochs": null,
+  "checkpoint_every_minutes": 2,
+  "count_nms_grid": "0.45",
+  "test_interruption": true
+}
