@@ -28,3 +28,12 @@ def test_sessions_accumulate_with_provenance(tmp_path):
     assert first["files"] == {"train": {"path": str(data), "md5": md5_file(data)}}
     assert saved["sessions"][1]["resumed_from"] == "last.ckpt"
     assert saved["total_seconds"] == round(sum(s["seconds"] for s in saved["sessions"]), 1)
+
+
+def test_session_timestamps_use_explicit_utc_plus_seven(tmp_path):
+    info = RunInfo(tmp_path / 'info.json')
+    info.start({}, files={}, repo_root=REPO_ROOT)
+    info.finish(mode='fixture')
+    session = json.loads(info.path.read_text())['sessions'][0]
+    assert session['started'].endswith('+07:00')
+    assert session['finished'].endswith('+07:00')

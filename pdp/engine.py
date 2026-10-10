@@ -23,6 +23,8 @@ from models.modeling_deformable_detr import DeformableDetrForObjectDetection
 from ppg import prototype_matrix, select_candidates, select_pseudo_labels
 from inference import predict_batch
 import runtime
+from autocheckout.io import save_json
+from autocheckout.model_acceptance import now
 
 PRIOR_PROB = 0.01  # focal-loss prior of the classifier (Deformable DETR / RetinaNet)
 
@@ -145,6 +147,7 @@ class local_trainer(pl.LightningModule):
 	def teacher_outputs(self, pixel_values, pixel_mask):
 		"""Teacher inference as at evaluation time: a first pass gives the query, the second pass
 		uses the prompts (F5). --teacher_prompts 0 restores the original single pass without prompts."""
+		self.teacher_forward_calls = getattr(self, 'teacher_forward_calls', 0) + 1
 		self.teacher.eval()
 		outputs = self.teacher(pixel_values=pixel_values, pixel_mask=pixel_mask, train=False, task_id=self.task_id - 1)
 		if not (self.args.use_prompts and self.args.teacher_prompts):
@@ -332,6 +335,7 @@ class local_trainer(pl.LightningModule):
 				gt_boxes=target['boxes'], gt_iou=self.args.pseudo_gt_iou, dedup_iou=self.args.pseudo_dedup_iou)
 			target['class_labels'] = torch.cat([target['class_labels'], new_labels.to(target['class_labels'].dtype)])
 			target['boxes'] = torch.cat([target['boxes'], new_boxes.to(target['boxes'].dtype)])
+			self.ppg_pseudo_labels_total = getattr(self, 'ppg_pseudo_labels_total', 0) + len(new_labels)
 		return labels
 
 	def common_step(self, batch, batch_idx, return_outputs=None):
@@ -575,6 +579,12 @@ class local_trainer(pl.LightningModule):
 			stats = self.coco_evaluator.coco_eval[self.args.iou_types[0]].stats
 
 			if self.trainer.global_rank == 0:
+				metrics = {name: float(stats[i]) for i, name in enumerate(('AP', 'AP50', 'AP75'))}
+				save_json(os.path.join(self.args.output_dir, f'val_epoch_{self.current_epoch:04d}.json'),
+					{'timestamp': now(), 'epoch': self.current_epoch, 'optimizer_step': self.trainer.global_step,
+					 'scope': 'val_task', 'metrics': metrics}, indent=2)
+				for name, value in metrics.items():
+					self.log('val_' + name, value, on_step=False, on_epoch=True)
 				self.evaluator.print_coco_stats(self.current_epoch, stats, self.print_count)
 				self.print_count = 1
 				if self.args.viz:

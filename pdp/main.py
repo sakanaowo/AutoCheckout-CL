@@ -25,7 +25,7 @@ from datasets.coco_eval import CocoEvaluator
 from engine import local_trainer, Evaluator
 from inference import write_predictions
 from augment import TrainAugment
-from checkpointing import ResumeCheckpoint, PlannedTrainingStop, ResumeAudit, remove_resume_checkpoints, resume_path
+from checkpointing import ResumeCheckpoint, PlannedTrainingStop, ResumeAudit, TrainingProgress, remove_resume_checkpoints, resume_path
 import runtime
 from autocheckout.runinfo import RunInfo
 
@@ -338,6 +338,7 @@ def make_pl_trainer(args):
                       accumulate_grad_batches=runtime.accumulation_steps(args),
                       check_val_every_n_epoch=args.eval_epochs, enable_checkpointing=False,
                       callbacks=[ResumeAudit(bool(args.verify_resume)),
+                                 TrainingProgress(args.output_dir),
                                  ResumeCheckpoint(args.output_dir, args.ckpt_every_minutes, args.stop_after_steps)],
                       log_every_n_steps=args.print_freq, num_sanity_val_steps=0,
                       logger=CSVLogger(save_dir=args.output_dir, name="lightning_logs"))
@@ -360,7 +361,7 @@ def run_task(args, task_id, output_root, processor=None):
     """
     args.output_dir = task_dir(output_root, task_id)
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    args.log_file = open(os.path.join(args.output_dir, 'train.log'), 'a')
+    args.log_file = open(os.path.join(args.output_dir, 'train.log'), 'a', buffering=1)
     print('Logging: args ', args, file=args.log_file)
     args.task = str(task_id)
     final_path = os.path.join(args.output_dir, 'task_final.pth')
@@ -437,12 +438,20 @@ def run_task(args, task_id, output_root, processor=None):
         lightning = make_pl_trainer(args)
         try:
             lightning.fit(trainer, train_dataloader, val_dataloader, ckpt_path=ckpt_path)
+            if getattr(lightning, 'interrupted', False):
+                raise PlannedTrainingStop('Lightning interrupted; continue from the last saved checkpoint')
         except PlannedTrainingStop:
             run_info.finish(mode='interrupted', resumed_from=ckpt_path,
                             optimizer_steps=lightning.global_step,
-                            resume_verification=trainer.resume_verification, **budget)
+                            resume_verification=getattr(trainer, 'resume_verification', {}), **budget)
             args.log_file.close()
             raise SystemExit(75)
+        except BaseException as error:
+            run_info.finish(mode='interrupted' if isinstance(error, KeyboardInterrupt) else 'failed',
+                            error_type=type(error).__name__, error=str(error), resumed_from=ckpt_path,
+                            optimizer_steps=lightning.global_step, **budget)
+            args.log_file.close()
+            raise
         budget.update(optimizer_steps=lightning.global_step,
                       optimizer_steps_this_session=lightning.global_step-trainer.resume_verification['restored_step'],
                       resume_verification=trainer.resume_verification)

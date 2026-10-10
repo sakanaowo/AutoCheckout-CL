@@ -21,11 +21,15 @@ ARGS=(
     --accelerator gpu --n_gpus 1 --require_kernel "${REQUIRE_KERNEL:-0}"
     --batch_size "${BATCH_SIZE:-1}" --eff_batch_size "${EFFECTIVE_BATCH:-2}"
     --num_workers "${NUM_WORKERS:-0}" --tf32 0 --seed 0 --augment 0
-    --epochs "${EPOCHS:-2}" --eval_epochs 1 --shuffle "${SHUFFLE:-1}" --print_freq 1
+    --epochs "${EPOCHS:-2}" --eval_epochs "${EVAL_EPOCHS:-1}" --shuffle "${SHUFFLE:-1}" --print_freq "${PRINT_FREQ:-1}"
     --lr 0.0001 --lr_old 0.00001 --optim_groups prompt
     --use_prompts 1 --local_query 1 --num_prompts 100 --prompt_len 10
     --lambda_query 0.1 --ddl_lambda 0.15 --query_loss_grad 1
     --freeze backbone,encoder,decoder --new_params class_embed,prompts
     --freeze_shared_after_task1 0 --pseudo_dedup_iou 0
     --stop_after_steps "${STOP_AFTER_STEPS:-0}" --verify_resume "${VERIFY_RESUME:-0}"
+    --ckpt_every_minutes "${CKPT_EVERY_MINUTES:-2}"
 )
+if [[ -n ${PREV_CKPT:-} ]]; then
+    ARGS+=(--prev_ckpt "$PREV_CKPT")
+fi

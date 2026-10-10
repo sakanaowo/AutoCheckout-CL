@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from autocheckout.io import load_json, md5_file, save_json
+from autocheckout.model_acceptance import now
 
 
 def git_state(repo_root: str | os.PathLike) -> dict[str, Any]:
@@ -55,7 +56,7 @@ class RunInfo:
         """Record a new session: arguments, code, environment and the md5 of the data files used."""
         self._t0 = time.monotonic()
         self.data["sessions"].append({
-            "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "started": now(),
             "args": {k: v for k, v in args.items() if _jsonable(v)},
             "git": git_state(repo_root),
             "environment": environment(),
@@ -69,7 +70,7 @@ class RunInfo:
         import torch
 
         session = self.data["sessions"][-1]
-        session["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        session["finished"] = now()
         session["seconds"] = round(time.monotonic() - self._t0, 1)
         if torch.cuda.is_available():
             session["peak_gpu_memory_gb"] = round(torch.cuda.max_memory_allocated() / 2**30, 2)
