@@ -3,14 +3,15 @@
 Cập nhật: **10/10/2026**. Notebook 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
 [ConvNeXt notebook 03](CONVNEXT_READINESS.md) đã đạt 8/8 gates, 29 tests trên RTX 3060 (run aeeb770b).
 CLI/runner và notebook 04 có triển khai/kiểm chứng riêng tại [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md).
-Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md) đã nghiệm thu kỹ thuật bằng CPU, policy val và test-only reload. Native kernel, calibration checkpoint pilot, pilot và full 5-task training chưa nghiệm thu.
+Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md) đã nghiệm thu kỹ thuật bằng CPU, policy val và test-only reload.
+[Pilot Task 1 RTX 4090](TASK1_PILOT_4090_REVIEW.md) đã COMPLETED ngày 10/10 lúc 18:14:57 UTC+7: đủ hai models, 21.752 steps/model, 100/100 prototypes, policy val và test metrics. B1/B2 test M1 AP 26,88%/73,54%, cAcc 3,50%/30,57%. Convergence, chuyển Task 1→2 và full 5-task training chưa nghiệm thu; bước tiếp là notebook training 02, baseline_epochs vẫn null.
 
 [Snapshot đầu ngày 09/10](HANDOFF_2026-10-09.md) giữ bằng chứng dependency/branch tại lúc viết, trước các run model đã đạt;
 đọc cùng kết luận hiện hành, không dùng các đoạn “chưa chạy” trong snapshot làm trạng thái model mới nhất.
 [Nhật ký model](../timelines/model-foundation-2026-10-09.md) giữ chi tiết runs PASS/FAIL và các sửa lỗi.
 Các làm rõ của người dùng có ưu tiên hơn handoff gốc.
 Quyết định 10/10/2026: bỏ notebook nghiệm thu môi trường Vast.ai riêng; bước tiếp là chuẩn bị pilot local và thực chạy pilot/chuyển Task 1→2/baseline 5 task trên RTX 4090. Ghi metadata/VRAM/thời gian trong các run đó; fixture/debug nhỏ tiếp tục dùng CPU/3060 local.
-Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; chưa có real pilot/full training 4090.
+Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; real pilot 4090 đã hoàn tất trong campaign `vast4090-seed0-640-v1`, full training còn chờ. Dùng `data/training/settings_4090.json` cho notebook 02, tránh template mặc định dry_run=true.
 
 [Conda cài sạch 10/10](CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên local RTX 3060: Python 3.10.22,
 105 tests, ResNet/ConvNeXt 640 step 1→4 và notebook pilot CPU dry run. Requirements bổ sung **setuptools==81.0.0**:
@@ -23,7 +24,7 @@ Không chuyển project sang Python 3.9/3.12; trên máy thuê dùng env Conda P
 - Bài toán: phát hiện và đếm sản phẩm trên khay checkout; mục tiêu RPC gồm 200 SKU.
 - **Đã chốt 07/10: 5 task 100+4×25 SKU**, seed mapping 0, phân tầng đủ 17 nhóm hàng mỗi task. Nguồn 4 task `[48,68,47,37]` giữ làm tham khảo/đối chứng. 24 slot dự phòng hiện có không phải task dữ liệu. Ràng buộc replay-free giữ nguyên: loader train chỉ đọc task hiện tại, không bổ sung replay ảnh/GT task cũ; được giữ trọng số, prompt và prototype embedding.
 - [Notebook so sánh protocol](../../notebooks/data_preprocessing/01c_protocol_comparison.ipynb) ghi phân tích trước quyết định; output lịch sử được giữ. Người dùng đã chọn 5 task sau lần chạy đó, không phải kết luận protocol này chắc chắn có cAcc cao hơn.
-- GPU training mục tiêu là **RTX 4090 24 GB trên Vast.ai**, không phải GPU local. Máy phát triển và instance train là hai môi trường khác nhau; GPU/driver/runtime trên instance chưa được kiểm tra trong phiên này.
+- GPU training mục tiêu là **RTX 4090 24 GB trên Vast.ai**, không phải GPU local. Máy phát triển và instance train là hai môi trường khác nhau; instance đã có Conda pdp Python 3.10.22/Torch cu121 và real pilot dùng CUDA kernel. Xem báo cáo pilot để lấy metadata/VRAM; không suy ra Task 2/5-task convergence từ Task 1.
 - Độ phân giải mục tiêu: **640×640** cho cấu hình chính; **800×800** cho cấu hình đối sánh. Cần cấu hình processor và kiểm tra biến đổi bbox, không chỉ đổi kích thước file ảnh.
 - Mục tiêu đợt đầu: **tái dựng PDP theo paper rồi thay backbone ConvNeXt-V2-Base**. Giữ losses/prompt/teacher/PPG và prototype nền để đối chiếu; LoRA, K=3, FSA và freeze shared bổ sung là mở rộng/ablation sau baseline.
 - Dữ liệu đã nhập tại **`data/archive`**. **Audit data trước** khi chuẩn bị split và train; không tiếp tục ghi là chờ dữ liệu.
@@ -109,7 +110,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
 4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
-5. **E1/E2 trên RTX 4090:** người dùng đã bỏ bước environment Vast.ai riêng. S6 kỹ thuật đã PASS [evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb); configs native có `EVALUATE=1`, tạo policy val lần đầu rồi giữ policy khi rerun. Chuẩn bị notebook/config local, chạy pilot ResNet/ConvNeXt cùng split/budget và policy val checkpoint thật trên 4090; kiểm chứng full-model Task 1→2 trên cùng máy rồi full 5 task. Ghi GPU/versions/kernel mode, steps/VRAM/thời gian trong run. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
+5. **E1/E2 trên RTX 4090:** người dùng đã bỏ bước environment Vast.ai riêng. S6 kỹ thuật và [real pilot Task 1](TASK1_PILOT_4090_REVIEW.md) đã hoàn tất; giữ policies val hiện hành. Chạy notebook 02 cùng campaign để kiểm chứng full-model Task 1→2. Subset mặc định chỉ 16 ảnh/7 lớp mới, 8 steps/model; không dùng metrics smoke để kết luận forgetting/convergence. Trước notebook 03 cần quét batch riêng và chọn budget từ val; cả hai models vẫn tăng AP ở epoch 2. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
 
