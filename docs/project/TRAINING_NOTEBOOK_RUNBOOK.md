@@ -9,6 +9,8 @@ Ngày 10/10/2026. Chuẩn bị code/notebooks tại local, chạy thực nghiệ
 3. [03_five_task_baseline.ipynb](../../notebooks/training/03_five_task_baseline.ipynb): Task 1 mới từ pretrained theo budget đã chọn rồi Task 2–5, evaluator và snapshot metrics ngay sau mỗi task.
 
 Dùng Python 3.10 của Conda `pdp` đã chuẩn bị. Cần `nbclient`, `nbformat`, `ipykernel`, dependencies PDP và `tmux`. Executor tự tạo kernelspec dưới data với chính `sys.executable`; không cần đăng ký kernel tên pdp. Không cài package hoặc tải weights trong notebook. Gói/environment setup hiện có ở [README môi trường](../environment/README.md).
+Nếu tạo env mới `pdp310` theo [cài Conda sạch](CONDA_CLEAN_INSTALL_ACCEPTANCE.md), dùng `conda activate pdp310`
+thay tên pdp trong ví dụ dưới. Requirements cần có pin setuptools 81 để Lightning import được.
 
 Copy template thành cấu hình vận hành nằm trong data:
 

@@ -1,6 +1,6 @@
 # Dependencies và chuẩn bị môi trường
 
-Tài liệu này liệt kê các gói cần cài cho AutoCheckout-CL. Người dùng tự cài trên máy/instance muốn sử dụng và tự cấu hình Vast.ai. Việc bổ sung tài liệu chưa nghiệm thu môi trường model hoặc GPU.
+Tài liệu này liệt kê các gói cần cài cho AutoCheckout-CL. [Cài Conda sạch ngày 10/10](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên RTX 3060 local với Python 3.10; instance Vast.ai/4090 được chuẩn bị và ghi metadata khi thực chạy pilot.
 
 ## Python và bộ phiên bản
 
@@ -18,6 +18,7 @@ Dùng **Python 3.10**, theo `requires-python` trong [pyproject.toml](../../pypro
 | Build CUDA extension | `ninja==1.13.0` | requirements.txt; wheel manylinux2014 có Tag headers hợp lệ; toolchain hệ thống bên dưới |
 | Tests/lint | `pytest==8.3.3`, `ruff==0.6.9` | [requirements.txt](../../requirements.txt) |
 | Packaging/build compatibility | `packaging==24.2` | requirements.txt; đáp ứng wheel ≥24.0 và Lightning ≥20.0,<25.0 |
+| Setuptools runtime compatibility | `setuptools==81.0.0` | requirements.txt; cung cấp pkg_resources cho lightning-utilities 0.10.1 |
 | Typing compatibility | `typing-extensions==4.13.2` | requirements.txt; đáp ứng Jupyter Client ≥4.13.0 và Lightning <6.0 |
 | Notebook | `ipykernel==7.3.0`, `nbclient==0.10.0`, `nbformat==5.10.4` | [requirements.txt](../../requirements.txt) |
 
@@ -136,6 +137,27 @@ python -m pip check
 
 Đồng thời dùng requirements đã cập nhật để lần cài sau không hạ packaging lại về 23.2. Không dùng upgrade packaging không giới hạn vì phiên bản ≥25.0 không đáp ứng constraint của Lightning 2.1.3. Chỉ khi `pip check` không còn conflict mới tiếp tục import và nghiệm thu notebook; log cài thành công chưa chứng nhận model/GPU.
 
+## Import Lightning lỗi: No module named pkg_resources
+
+Lần cài Conda sạch ngày 10/10/2026 kéo `setuptools==84.0.0`. Cài requirements và `pip check` đều exit 0,
+nhưng import Lightning thất bại vì `lightning-utilities==0.10.1` gọi `import pkg_resources`.
+Module này đã bị loại bỏ từ [Setuptools 82.0.0](https://setuptools.pypa.io/en/latest/history.html#v82-0-0).
+Conda pdp cũ có setuptools 81.0.0 nên không bộc lộ lỗi khi kiểm tra môi trường đã cài sẵn.
+Sau khi khóa setuptools 81, env mới đạt 105 tests, hai full-model CUDA cases và notebook pilot dry run;
+xem [báo cáo cài sạch](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md).
+
+Requirements hiện khóa **setuptools==81.0.0** để giữ API mà stack Lightning đang dùng.
+Trong đúng environment Python 3.10:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip check
+USE_TF=0 python -c "import lightning, pytorch_lightning, torchmetrics; print('imports PASS')"
+```
+
+`pip check` kiểm tra metadata dependency; cần kiểm tra imports và đường chạy model để phát hiện API đã bị gỡ.
+Không nâng setuptools lên ≥82 khi vẫn dùng lightning-utilities 0.10.1.
+
 ## Cấu hình project và lỗi Ninja ở notebook 02
 
 Giữ stack model phù hợp mã PDP vendored: Python 3.10, torch/torchvision 2.2.2/0.17.2,
@@ -184,7 +206,7 @@ python -m pip check
 python -c "import torch, torchvision, transformers, timm, lightning, pycocotools; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())"
 ```
 
-Nếu dùng uv thay pip, chạy `uv pip check --python .venv/bin/python`. Trên local CPU, CUDA không khả dụng là kết quả dự kiến. Trên instance GPU, cần xác nhận `torch.cuda.is_available()` và tên GPU, `nvcc`, custom kernel, forward/backward trong notebook nghiệm thu riêng.
+Nếu dùng uv thay pip, chạy `uv pip check --python .venv/bin/python`. Trên local CPU, CUDA không khả dụng là kết quả dự kiến. Trên instance GPU, xác nhận CUDA/tên GPU và ghi metadata runtime trong pilot/training; người dùng đã bỏ notebook nghiệm thu môi trường riêng. Native-kernel acceptance vẫn cần bằng chứng kernel thực chạy.
 
 Regression dữ liệu gồm suite từng thiếu `pycocotools`:
 
@@ -198,4 +220,4 @@ python -m pytest tests/test_native_checkout.py tests/test_resize.py \
 
 Sau đó chạy các test PDP/metrics/runner phù hợp với môi trường đã chuẩn bị; ghi kết quả thực tế, không tính các test CUDA bị skip là đã nghiệm thu GPU. Cài xong dependency chưa chứng nhận processor 640/800, loader, ConvNeXt adapter hoặc convergence.
 
-Local Conda pdp/processor/loader và full pretrained CUDA smoke đã đạt trên RTX 3060 bằng PyTorch fallback; [kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md). Adapter ConvNeXt đã có nghiệm thu notebook 03; [runtime notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi kiểm chứng CLI/runner. Bước tiếp là calibration và kiểm chứng native kernel/toolchain trên môi trường train Vast.ai theo [kế hoạch](../project/IMPLEMENTATION_PLAN.md). Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; tài liệu này chỉ là hướng dẫn cài.
+Local Conda pdp/processor/loader và full pretrained CUDA smoke đã đạt trên RTX 3060 bằng PyTorch fallback; [kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md). Adapter ConvNeXt đã có nghiệm thu notebook 03; [runtime notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi kiểm chứng CLI/runner. S6 calibration đã nghiệm thu kỹ thuật; bước tiếp là pilot/chuyển task/baseline trên 4090 theo [runbook training](../project/TRAINING_NOTEBOOK_RUNBOOK.md). Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; xem [cài Conda sạch](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) để tái dựng môi trường đã kiểm chứng local.

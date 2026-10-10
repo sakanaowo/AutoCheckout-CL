@@ -12,6 +12,12 @@ Các làm rõ của người dùng có ưu tiên hơn handoff gốc.
 Quyết định 10/10/2026: bỏ notebook nghiệm thu môi trường Vast.ai riêng; bước tiếp là chuẩn bị pilot local và thực chạy pilot/chuyển Task 1→2/baseline 5 task trên RTX 4090. Ghi metadata/VRAM/thời gian trong các run đó; fixture/debug nhỏ tiếp tục dùng CPU/3060 local.
 Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; chưa có real pilot/full training 4090.
 
+[Conda cài sạch 10/10](CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên local RTX 3060: Python 3.10.22,
+105 tests, ResNet/ConvNeXt 640 step 1→4 và notebook pilot CPU dry run. Requirements bổ sung **setuptools==81.0.0**:
+lần cài mới kéo setuptools 84 khiến Lightning thiếu pkg_resources dù pip check đạt.
+Artifacts ở `data/training/validation/conda_py310_clean_install_20261010/`; env thử còn trong /tmp.
+Không chuyển project sang Python 3.9/3.12; trên máy thuê dùng env Conda Python 3.10 riêng.
+
 ## 1. Phạm vi và thứ tự ưu tiên
 
 - Bài toán: phát hiện và đếm sản phẩm trên khay checkout; mục tiêu RPC gồm 200 SKU.

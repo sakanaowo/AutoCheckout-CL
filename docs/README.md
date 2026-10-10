@@ -12,7 +12,7 @@ Cập nhật 10/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên *
 | [CLI/runner acceptance](project/TRAINING_RUNTIME_ACCEPTANCE.md) | Notebook 04: ResNet/ConvNeXt, resolution, checkpoint, resume và bbox native |
 | [S6 calibration/evaluation acceptance](project/COUNT_CALIBRATION_ACCEPTANCE.md) | Evaluation 01: policy val lưu riêng, test-only reload, oracle tắt, không cần GPU |
 | [Training notebook runbook](project/TRAINING_NOTEBOOK_RUNBOOK.md), [dry run](project/TRAINING_NOTEBOOK_DRY_RUN.md) | Pilot/transition/baseline 5 task; artifacts data, tmux/headless, logs và resume |
-| [Dependencies/môi trường](environment/README.md) | Python 3.10, gói cần cài, lệnh CPU/CUDA và kiểm tra sau cài |
+| [Dependencies/môi trường](environment/README.md), [Conda cài sạch](project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) | Python 3.10, setuptools/pkg_resources, 105 tests và GPU/notebook checks trong env mới |
 | [Tiền xử lý](data_preprocessing/README.md), [hướng dẫn vận hành](data_preprocessing/OPERATIONS.md) | Cách đọc kết quả, chạy lại và tiếp tục pipeline |
 | [Schema](data_preprocessing/formats.md) | Tọa độ, COCO, task mapping và artifacts |
 | [Báo cáo thực nghiệm](data_preprocessing/reports/README.md) | Kết quả theo ngày/run; giữ nguyên kết luận tại thời điểm chạy |
