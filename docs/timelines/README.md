@@ -18,3 +18,4 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 
 - [Nghiệm thu CLI/runner và notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md): run `ac818116-ceb0-4ce8-9c1e-979c6f54788a`, 78 tests, 4 CUDA cases, 10/10 gates; xem báo cáo cho timestamps thực chạy và giới hạn.
 - [S6 calibration/evaluation](../project/COUNT_CALIBRATION_ACCEPTANCE.md): evaluation 01 đã PASS trên CPU, val-only policy/test-only reload/raw mAP và 4 cases predictions notebook 04; báo cáo giữ run ID/timestamps và giới hạn metrics subset.
+- [Training notebooks và dry run](../project/TRAINING_NOTEBOOK_DRY_RUN.md): 10/10, CPU pilot/transition/5 task trong tmux detached, interruption/resume, per-task metrics, 88 regression tests; artifacts mới dưới data. [Runbook](../project/TRAINING_NOTEBOOK_RUNBOOK.md) hướng dẫn settings/upload/tmux/logs/resume cho real run trên 4090.

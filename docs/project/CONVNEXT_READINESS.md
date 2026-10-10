@@ -28,7 +28,7 @@ Run dùng **PyTorch CUDA fallback**; native kernel chưa đạt, log environment
 
 - [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb) kiểm chứng cấu hình này qua CLI/runner thật, interruption/resume, predict-only và bbox native. Đọc [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy kết quả mới nhất.
 - [S6 kỹ thuật đã đạt](COUNT_CALIBRATION_ACCEPTANCE.md): threshold/NMS chọn trên val, lưu/nạp policy cho test, oracle mặc định tắt. Sinh policy mới từ val của checkpoint pilot thật.
-- Kiểm chứng GPU/toolchain của instance training; native kernel phải có forward/backward equivalence hoặc ghi rõ fallback và đo hiệu năng.
+- Người dùng đã bỏ notebook nghiệm thu GPU/toolchain Vast.ai riêng ngày 10/10/2026. Ghi GPU/versions/kernel mode và số đo runtime trong pilot; native kernel chưa có evidence nghiệm thu mới.
 - Pilot EXP-B1 ResNet/EXP-B2 ConvNeXt cùng split/resolution/optimizer-step budget/evaluator, rồi kiểm chứng full teacher/PPG Task 1→2 trước 5 task.
 
 Không cần chờ synthetic pending để chạy baseline real-only. LoRA/K=3/FSA/freeze bổ sung và generator overlap là ablation sau baseline. Tests 23 contract ở commit `41827ed` là bằng chứng trước runtime; run 29 tests và CUDA ở trên là bằng chứng mới hơn.

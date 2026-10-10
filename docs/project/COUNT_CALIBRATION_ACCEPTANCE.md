@@ -39,6 +39,6 @@ python -m tools.eval_count --run-dir RUN --task-config TASKS.json \
 
 S6 kỹ thuật đã nghiệm thu; `pilot_calibrated=False`, `full_training_ready=False`. Policy từ fixture/subset không dùng cho metrics nghiên cứu. Mỗi checkpoint pilot phải có policy được chọn trên toàn bộ val của release rồi áp cố định sang test. Test lock và protocol 5 task giữ nguyên.
 
-Tiếp theo: kiểm chứng môi trường GPU training/native kernel hoặc fallback có đo throughput/VRAM; pilot EXP-B1/B2 cùng split/resolution/optimizer-step budget; full-model Task 1→2 teacher/PPG/prototype smoke; baseline đủ 5 task. Chưa có run Vast.ai hoặc convergence mới.
+Theo quyết định người dùng ngày 10/10/2026, bỏ notebook nghiệm thu môi trường Vast.ai riêng. Tiếp theo: chuẩn bị notebook/config local; thực chạy pilot EXP-B1/B2 cùng split/resolution/optimizer-step budget trên RTX 4090; full-model Task 1→2 teacher/PPG/prototype smoke trên cùng máy; baseline đủ 5 task. Metadata và throughput/VRAM ghi trong run pilot/training. Chưa có run Vast.ai hoặc convergence mới.
 
 Validation: regression 71 tests trong notebook, 7 gates end-to-end, thêm 19 retrieval tests PASS, ruff cho các Python files thay đổi, shell syntax và `git diff --check`. AI DevKit offline lint/memory trả `ENOTCACHED`; không dùng kết quả đó làm bằng chứng lint/memory thành công.

@@ -13,7 +13,7 @@ Cập nhật **10/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. M
 | [data_preprocessing/03_annotation_review.ipynb](data_preprocessing/03_annotation_review.ipynb) | Visual 222 case, pilots và Batch 200; lịch sử đề xuất, gate nội dung FAIL |
 | [data_preprocessing/04_annotation_resolution.ipynb](data_preprocessing/04_annotation_resolution.ipynb) | Đã xử lý 202 case: 9 giữ/193 tái ghép; acceptance PASS ngày 08/10, 13:31:19–13:34:20 UTC+7 |
 | [modeling/](modeling/README.md) | Notebook 01 đạt limited foundation (CPU, máy RTX 3060); notebook 02 full pretrained CUDA 640/800 smoke PASS trên 3060 (PyTorch fallback); notebook 03 ConvNeXt PASS; notebook 04 kiểm chứng CLI/runner thật |
-| [training/](training/README.md) | Pilot và 5 task trên Vast.ai; chưa train |
+| [training/](training/README.md) | Notebooks 01 pilot, 02 transition, 03 baseline 5 task; dry run CPU, artifacts data/tmux/resume; real 4090 chưa chạy |
 | [evaluation/](evaluation/README.md) | Notebook 01 S6 PASS trên CPU: val-only policy, test-only reload và raw mAP; metrics pilot chưa có |
 | [references/](references) | Notebook thành viên nhóm, chỉ dùng tham khảo |
 

@@ -168,11 +168,13 @@ Không đặt trước AP/cAcc như kết quả đã đạt. Chỉ công nhận 
 Phạm vi notebook processor/loader/PDP nền đã hoàn tất; xem [kết luận nghiệm thu](PDP_FOUNDATION_ACCEPTANCE.md).
 
 1. **S1/S2 local:** đọc [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md) và [ConvNeXt acceptance](CONVNEXT_READINESS.md); giữ artifacts/notebooks 01–04, không tạo lại adapter hoặc pipeline song song.
-2. **Môi trường train:** S6 kỹ thuật đã nghiệm thu CPU; kiểm chứng toolchain/kernel hoặc fallback có đo throughput trên máy training. Sinh policy từ val checkpoint pilot rồi áp cố định sang test; không dùng policy subset nghiệm thu.
-3. **E1:** pilot EXP-B1/EXP-B2 Task 1 cùng real-only split/resolution/optimizer-step budget/evaluator; ghi loss/val curves, VRAM, latency và run artifacts. Budget smoke 4 steps không phải budget pilot.
-4. **E2:** full-model Task 1→2 teacher/PPG/prototype/current-task-only loader smoke, sau đó baseline đủ 5 task và metrics/counting/forgetting trên holdout cố định.
+2. **Bỏ bước nghiệm thu môi trường Vast.ai riêng:** người dùng quyết định ngày 10/10/2026 không tạo/chạy notebook environment/kernel riêng trước pilot. Ghi GPU/versions/kernel mode và VRAM/thời gian step trong run pilot; trạng thái native kernel vẫn theo evidence thực chạy.
+3. **E1 trên RTX 4090:** chuẩn bị code/config/notebook local; thực chạy pilot EXP-B1/EXP-B2 Task 1 trên GPU training đã chọn, cùng real-only split/resolution/optimizer-step budget/evaluator. Ghi loss/val curves, VRAM, latency và run artifacts; sinh policy từ val checkpoint pilot. Budget smoke 4 steps không phải budget pilot.
+4. **E2 trên RTX 4090:** kiểm chứng full-model Task 1→2 teacher/PPG/prototype/current-task-only loader trên cùng máy pilot, sau đó baseline đủ 5 task và metrics/counting/forgetting trên holdout cố định. Fixture/debug nhỏ vẫn có thể chạy CPU/3060 local.
 
 Synthetic 202/20 pilot pending là track riêng; không chặn baseline real-only. LoRA/K=3/FSA/freeze bổ sung/generator overlap là ablation sau baseline, không là điều kiện bắt buộc để bắt đầu baseline E2.
+
+Triển khai notebook training: [01 pilot](../../notebooks/training/01_task1_pilot.ipynb), [02 transition](../../notebooks/training/02_task_transition.ipynb), [03 baseline](../../notebooks/training/03_five_task_baseline.ipynb), [settings](../../configs/training/notebooks.json). Artifacts mới ghi dưới data, dùng tmux/headless executor để giữ run khi SSH mất kết nối; checkpoint và task skip/predict-only hỗ trợ rerun cùng campaign. [Runbook](TRAINING_NOTEBOOK_RUNBOOK.md) và [dry-run report](TRAINING_NOTEBOOK_DRY_RUN.md) ghi cách vận hành/bằng chứng local; kết quả dry run không thay nghiệm thu real GPU/full training.
 
 
 Cập nhật S2 ngày 09/10: notebook 03 đã đạt CUDA smoke 640/800 (run aeeb770b); notebook 04 tiếp nối qua CLI/runner thật. Native kernel/Vast.ai, calibration và convergence chưa được suy ra từ các smoke local.

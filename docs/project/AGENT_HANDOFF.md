@@ -9,6 +9,8 @@ Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_C
 đọc cùng kết luận hiện hành, không dùng các đoạn “chưa chạy” trong snapshot làm trạng thái model mới nhất.
 [Nhật ký model](../timelines/model-foundation-2026-10-09.md) giữ chi tiết runs PASS/FAIL và các sửa lỗi.
 Các làm rõ của người dùng có ưu tiên hơn handoff gốc.
+Quyết định 10/10/2026: bỏ notebook nghiệm thu môi trường Vast.ai riêng; bước tiếp là chuẩn bị pilot local và thực chạy pilot/chuyển Task 1→2/baseline 5 task trên RTX 4090. Ghi metadata/VRAM/thời gian trong các run đó; fixture/debug nhỏ tiếp tục dùng CPU/3060 local.
+Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; chưa có real pilot/full training 4090.
 
 ## 1. Phạm vi và thứ tự ưu tiên
 
@@ -101,7 +103,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
 4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
-5. **Môi trường train → E1/E2:** S6 kỹ thuật đã PASS [evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb); configs native có `EVALUATE=1`, tạo policy val lần đầu rồi giữ policy khi rerun. Kiểm chứng kernel hoặc fallback có đo throughput trên RTX 4090 Vast.ai; pilot ResNet/ConvNeXt cùng split/budget và policy val checkpoint thật trước full 5 task. Mọi bước có notebook/timestamps; LoRA/K=3/FSA/freeze bổ sung sau baseline trong run riêng.
+5. **E1/E2 trên RTX 4090:** người dùng đã bỏ bước environment Vast.ai riêng. S6 kỹ thuật đã PASS [evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb); configs native có `EVALUATE=1`, tạo policy val lần đầu rồi giữ policy khi rerun. Chuẩn bị notebook/config local, chạy pilot ResNet/ConvNeXt cùng split/budget và policy val checkpoint thật trên 4090; kiểm chứng full-model Task 1→2 trên cùng máy rồi full 5 task. Ghi GPU/versions/kernel mode, steps/VRAM/thời gian trong run. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
 

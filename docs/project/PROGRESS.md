@@ -19,6 +19,7 @@ Cập nhật 10/10/2026. **Hoàn tất local foundation, adapter ConvNeXt và CL
 | ConvNeXt-V2-Base | [Notebook 03](../../notebooks/modeling/03_convnext_v2_base_acceptance.ipynb) PASS 8/8 gates, 29 tests; run aeeb770b trên 3060, 640/800 peak 3,683/4,416 GiB | [Readiness](CONVNEXT_READINESS.md); native kernel, evaluator và pilot còn chờ |
 | CLI/runner native | [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb) PASS 10/10 gates, 78 tests; ResNet/ConvNeXt 640/800, step 1→4, checkpoint metadata/resume/predict-only/bbox native | [Báo cáo](TRAINING_RUNTIME_ACCEPTANCE.md); S6 đạt kỹ thuật; môi trường training rồi pilot |
 | S6 calibration/evaluation | [Evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb) PASS 7/7 gates; grid/NMS, val-only policy, test-only reload, oracle tắt; [báo cáo](COUNT_CALIBRATION_ACCEPTANCE.md) | Đã nghiệm thu CPU; sinh policy từ val checkpoint pilot thật |
+| Training notebooks 01–03 | Đã tạo pilot/transition/5-task notebooks, headless executor, tmux, logging và resume; artifacts dưới data; [dry run](TRAINING_NOTEBOOK_DRY_RUN.md), [runbook](TRAINING_NOTEBOOK_RUNBOOK.md) | Cấu hình settings/data/weights trên 4090, chạy real pilot rồi chọn baseline_epochs từ val |
 | Vast.ai training/eval | Chưa train/đánh giá trên protocol mới | Pilot EXP-B1/B2 rồi 5 task, calibration chỉ trên val |
 | LoRA/K=3/FSA/freeze/overlap | Chưa triển khai các ablation mới | Sau baseline, mỗi thay đổi một run |
 
@@ -32,5 +33,6 @@ Kiểm tra tổ chức tài liệu: **284 liên kết nội bộ hợp lệ**, *
 ## Bước tiếp theo
 
 Theo [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md) và [S6 acceptance](COUNT_CALIBRATION_ACCEPTANCE.md):
-**Môi trường training/throughput → pilot EXP-B1/B2 cùng budget và policy val → full teacher Task 1→2 smoke → đủ 5 task**.
+**Chuẩn bị pilot local → chạy pilot EXP-B1/B2 trên RTX 4090 cùng budget và policy val → full teacher Task 1→2 smoke trên cùng máy → đủ 5 task**.
+Người dùng quyết định ngày 10/10 bỏ notebook nghiệm thu môi trường Vast.ai riêng; metadata và số đo runtime ghi trong các run pilot/training.
 Local notebooks 01–04 đã có bằng chứng; full training/E1/E2 chưa hoàn tất. Synthetic pending/LoRA/K=3/FSA/freeze bổ sung là track sau baseline.
