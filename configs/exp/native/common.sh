@@ -20,7 +20,7 @@ ARGS=(
     --image_size "$RESOLUTION" --max_image_size "$RESOLUTION"
     --accelerator gpu --n_gpus 1 --require_kernel "${REQUIRE_KERNEL:-0}"
     --batch_size "${BATCH_SIZE:-1}" --eff_batch_size "${EFFECTIVE_BATCH:-2}"
-    --num_workers "${NUM_WORKERS:-0}" --tf32 0 --seed 0 --augment 0
+    --num_workers "${NUM_WORKERS:-0}" --tf32 "${TF32:-0}" --seed 0 --augment 0
     --epochs "${EPOCHS:-2}" --eval_epochs "${EVAL_EPOCHS:-1}" --shuffle "${SHUFFLE:-1}" --print_freq "${PRINT_FREQ:-1}"
     --lr 0.0001 --lr_old 0.00001 --optim_groups prompt
     --use_prompts 1 --local_query 1 --num_prompts 100 --prompt_len 10

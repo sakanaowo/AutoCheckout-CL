@@ -40,6 +40,22 @@ def test_resume_refuses_changed_batch_in_existing_phase(tmp_path):
         workflow().prepare(changed, 'pilot')
 
 
+def test_tf32_setting_is_forwarded_and_locked_without_breaking_older_plans(tmp_path):
+    module = workflow()
+    config = settings(tmp_path)
+    plan = module.prepare(config, 'pilot')
+    old_plan = dict(plan)
+    old_plan.pop('tf32', None)
+    save_json(Path(plan['phase_dir']) / 'plan.json', old_plan)
+    resumed = module.prepare(config, 'pilot')
+    assert resumed['tf32'] is False
+    assert module._case_environment(resumed, 'EXP-B1')['TF32'] == '0'
+    with pytest.raises(ValueError, match='configuration'):
+        module.prepare({**config, 'tf32': True}, 'pilot')
+    enabled = module.prepare({**config, 'campaign_id': 'tf32-enabled', 'tf32': True}, 'pilot')
+    assert module._case_environment(enabled, 'EXP-B1')['TF32'] == '1'
+
+
 def test_uploaded_campaign_can_resume_after_root_path_changes(tmp_path):
     import shutil
 

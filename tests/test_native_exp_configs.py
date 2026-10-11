@@ -65,6 +65,16 @@ def test_native_runner_calls_real_entrypoint_with_resume_controls(tmp_path):
     assert not any("tools.eval" in line for line in entries)
 
 
+def test_native_runner_passes_explicit_tf32_setting(tmp_path):
+    result = run(
+        tmp_path,
+        config='source "$REPO/configs/exp/native/EXP-B1.sh"\n',
+        TF32="1",
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--tf32 1" in main_calls(calls(tmp_path))[0]
+
+
 def test_native_runner_uses_val_only_calibration_then_saved_policy(tmp_path):
     result = run(tmp_path, config='source "$REPO/configs/exp/native/EXP-B1.sh"\n', EVALUATE="1")
     assert result.returncode == 0, result.stderr

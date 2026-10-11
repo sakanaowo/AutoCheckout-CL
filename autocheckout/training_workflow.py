@@ -12,6 +12,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -90,6 +91,7 @@ def _portable_plan(plan):
     identity = {k: v for k, v in plan.items() if k not in locations}
     identity['input_hashes'] = {Path(p).name: digest for p, digest in plan['input_hashes'].items()}
     identity.setdefault('pretrained_hashes', {})
+    identity.setdefault('tf32', False)
     return identity
 
 
@@ -159,6 +161,7 @@ def prepare(settings, phase):
                 experiments=experiments, raw_root=str(raw), task_dir=str(tasks), task_config=str(task_config),
                 detector_dir=detector, backbone_weights=backbone, resolution=96 if dry else int(settings['resolution']),
                 batch_size=physical, effective_batch=effective, accumulation=accumulation,
+                tf32=bool(settings.get('tf32', False)),
                 num_workers=0 if dry else int(settings.get('num_workers', 4)),
                 checkpoint_every_minutes=float(settings.get('checkpoint_every_minutes', 2)),
                 test_interruption=bool(settings.get('test_interruption', dry)),
@@ -183,6 +186,7 @@ def _case_environment(plan, experiment):
                 BACKBONE_WEIGHTS=plan['backbone_weights'],
                 RESOLUTION=str(plan['resolution']), BATCH_SIZE=str(plan['batch_size']),
                 EFFECTIVE_BATCH=str(plan['effective_batch']), NUM_WORKERS=str(plan['num_workers']),
+                TF32=str(int(plan.get('tf32', False))),
                 EPOCHS=str(plan['epochs']), START_TASK=str(plan['start_task']), N_TASKS=str(plan['n_tasks']),
                 CKPT_EVERY_MINUTES=str(plan['checkpoint_every_minutes']), VERIFY_RESUME='1', REQUIRE_KERNEL='0',
                 EVALUATE='1', COUNT_NMS_GRID=plan['count_nms_grid'], PYTHON=sys.executable, PYTHONUNBUFFERED='1',
@@ -209,6 +213,16 @@ def _run_logged(command, environment, log_path):
                       process_start=process_start(process.pid), started_at=now(), command=command)
         save_json(receipt, record, indent=2)
         try:
+            # Keep the child's original stdout/stderr log and also forward it
+            # into notebook output while the training cell is still running.
+            with log_path.open() as reader:
+                while True:
+                    output = reader.read()
+                    if output:
+                        print(output, end='', flush=True)
+                    if process.poll() is not None and not output:
+                        break
+                    time.sleep(0.2)
             code = process.wait()
         except BaseException:
             os.killpg(process.pid, signal.SIGINT)

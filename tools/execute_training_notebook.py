@@ -1,10 +1,12 @@
-"""Execute a training notebook headlessly and persist outputs after every cell."""
+"""Execute a training notebook headlessly and persist outputs while cells run."""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import sys
+import time
 import traceback
 import uuid
 from pathlib import Path
@@ -20,7 +22,13 @@ def main():
     parser.add_argument('--settings', required=True, type=Path)
     parser.add_argument('--dry-run', action='store_true', help='force isolated CPU fixture mode')
     parser.add_argument('--cell-timeout', type=int, default=-1, help='-1: no timeout for long training cells')
+    parser.add_argument('--save-interval', type=float, default=15,
+                        help='seconds between snapshots when notebook output arrives')
+    parser.add_argument('--live-notebook', type=Path,
+                        help='mirror outputs here until the notebook is edited externally')
     args = parser.parse_args()
+    if args.save_interval <= 0:
+        parser.error('--save-interval must be positive')
     import nbformat
     from jupyter_client import AsyncKernelManager
     from jupyter_client.kernelspec import KernelSpecManager
@@ -54,28 +62,87 @@ def main():
     receipt = attempt/'execution.json'
     save_json(receipt, record, indent=2)
     console = (attempt/'console.log').open('a', buffering=1)
+    live_path = resolve(args.live_notebook) if args.live_notebook else None
+    live_expected = live_path.read_bytes() if live_path and live_path.exists() else None
+    last_saved = 0.0
+    snapshot_timer = None
+    record.update(live_notebook=str(live_path) if live_path else None,
+                  live_mirror_status='ACTIVE' if live_path else 'DISABLED')
 
     def log(message):
         text = f'{now()} {message}'
         print(text, flush=True)
         console.write(text+'\n')
 
+    def save_snapshot(force=False):
+        nonlocal last_saved, live_path, live_expected
+        if not force and time.monotonic() - last_saved < args.save_interval:
+            return
+        text = nbformat.writes(notebook)
+
+        def write_atomic(path):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_name(f'.{path.name}.{attempt.name}.tmp')
+            temporary.write_text(text)
+            temporary.replace(path)
+
+        write_atomic(attempt/'notebook_executed.ipynb')
+        if live_path:
+            current = live_path.read_bytes() if live_path.exists() else None
+            if current == live_expected:
+                write_atomic(live_path)
+                live_expected = text.encode()
+            else:
+                record['live_mirror_status'] = 'STOPPED_EXTERNAL_EDIT'
+                log(f'Live notebook edited externally; outputs continue in {attempt}/notebook_executed.ipynb')
+                live_path = None
+        last_saved = time.monotonic()
+        record['last_notebook_saved_at'] = now()
+        save_json(receipt, record, indent=2)
+
+    class LiveNotebookClient(NotebookClient):
+        def process_message(self, msg, cell, cell_index):
+            output = super().process_message(msg, cell, cell_index)
+            if msg['msg_type'] == 'stream':
+                text = msg['content']['text']
+                console.write(text)
+                console.flush()
+                sys.stdout.write(text)
+                sys.stdout.flush()
+                outputs = cell.get('outputs', [])
+                if (output is not None and len(outputs) >= 2 and outputs[-1] is output
+                        and outputs[-2].output_type == 'stream'
+                        and outputs[-2].name == output.name):
+                    outputs[-2].text += output.text
+                    outputs.pop()
+            elif msg['msg_type'] == 'error':
+                text = '\n'.join(msg['content'].get('traceback', []))+'\n'
+                console.write(text)
+                console.flush()
+                sys.stdout.write(text)
+                sys.stdout.flush()
+            save_snapshot()
+            return output
+
+    def periodic_snapshot():
+        nonlocal snapshot_timer
+        save_snapshot(force=True)
+        snapshot_timer = asyncio.get_running_loop().call_later(args.save_interval, periodic_snapshot)
+
     def started(cell, cell_index):
+        nonlocal snapshot_timer
         record.update(current_cell=cell_index, cell_started_at=now())
         save_json(receipt, record, indent=2)
         log(f'CELL {cell_index} START')
+        if snapshot_timer is None:
+            snapshot_timer = asyncio.get_running_loop().call_later(args.save_interval, periodic_snapshot)
 
     def finished(cell, cell_index, execute_reply):
-        nbformat.write(notebook, attempt/'notebook_executed.ipynb')
         record.update(completed_cells=record['completed_cells']+1, last_cell=cell_index, cell_finished_at=now())
-        save_json(receipt, record, indent=2)
-        for output in cell.get('outputs', []):
-            if output.output_type == 'stream':
-                console.write(output.text)
-                print(output.text, flush=True)
+        save_snapshot(force=True)
         log(f'CELL {cell_index} FINISH')
 
-    client = NotebookClient(notebook, km=kernel_manager, timeout=args.cell_timeout,
+    client = LiveNotebookClient(notebook, km=kernel_manager, timeout=args.cell_timeout,
                             resources={'metadata': {'path': str(REPO)}}, on_cell_start=started,
                             on_cell_executed=finished)
     log(f'NOTEBOOK START outputs={attempt}')
@@ -91,7 +158,9 @@ def main():
         log(f"NOTEBOOK {record['status']} error={error}")
         raise
     finally:
-        nbformat.write(notebook, attempt/'notebook_executed.ipynb')
+        if snapshot_timer is not None:
+            snapshot_timer.cancel()
+        save_snapshot(force=True)
         save_json(receipt, record, indent=2)
         console.close()
 
