@@ -1,6 +1,23 @@
 # Chỉ mục triển khai và đầu ra
 
-Cập nhật 10/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_ACCEPTANCE.md): phạm vi notebook đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) có nghiệm thu riêng; training milestones còn chờ. Bảng này ánh xạ các phần **đã triển khai** đến code, notebook, cấu hình và bằng chứng. [Vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại; [kế hoạch](IMPLEMENTATION_PLAN.md) dành cho phần chưa làm.
+**DỪNG THEO YÊU CẦU NGƯỜI DÙNG — 11/10/2026 15:08:40 UTC+7.**
+Baseline ConvNeXt dừng ở Task 1, completed 11 epochs; checkpoint step 31.550
+có thể resume trên GPU tương thích. **Giữ artifact**, không tự khởi chạy lại.
+[Báo cáo dừng và chuyển GPU](BASELINE_4090_STOP_REVIEW_2026-10-11.md) ghi validation,
+audit, manifest và điều kiện tiếp tục. ResNet chưa bắt đầu, full baseline chưa hoàn tất.
+
+
+Notebook 03 đang chạy ngầm ngày 11/10: ConvNeXt trước ResNet, budget khởi đầu 16
+epochs/task. Executor lưu notebook mỗi 15 giây và stream runner log vào notebook;
+[executor tests](../../tests/test_execute_training_notebook.py) và
+[workflow regression](../../tests/test_training_workflow.py): 13 PASS.
+Xem [cấu hình và logging hiện hành](BASELINE_4090_CONFIGURATION.md).
+
+[Khảo sát GPU/chi phí 11/10](GPU_COST_REVIEW_2026-10-11.md) lưu peak bộ nhớ,
+snapshot giá public offers/current instance, ngưỡng FPS hòa vốn và shortlist host.
+DLPerf chỉ là proxy; chưa có benchmark PDP trên GPU khác, baseline vẫn chạy.
+
+Cập nhật 11/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_ACCEPTANCE.md): phạm vi notebook đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) có nghiệm thu riêng. Real pilot, transition smoke và benchmark GPU đã hoàn tất; convergence/full baseline còn chờ. Bảng này ánh xạ các phần **đã triển khai** đến code, notebook, cấu hình và bằng chứng. [Vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại; [kế hoạch](IMPLEMENTATION_PLAN.md) dành cho phần chưa làm.
 
 | Phần | Code / giao diện | Notebook và config | Tests / bằng chứng |
 |---|---|---|---|
@@ -15,6 +32,7 @@ Cập nhật 10/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_A
 | CLI/runner native | [runtime.py](../../pdp/runtime.py), [main.py](../../pdp/main.py), [checkpointing.py](../../pdp/checkpointing.py); [acceptance worker](../../tools/pdp_runtime_acceptance.py) | [Notebook 04](../../notebooks/modeling/04_training_runtime_acceptance.ipynb), [EXP-B1](../../configs/exp/native/EXP-B1.sh), [EXP-B2](../../configs/exp/native/EXP-B2.sh) | [test_pdp_runtime.py](../../tests/test_pdp_runtime.py), [test_native_exp_configs.py](../../tests/test_native_exp_configs.py); [báo cáo thực chạy](TRAINING_RUNTIME_ACCEPTANCE.md) |
 | S6 calibration/evaluation | [eval_count.py](../../tools/eval_count.py), [counting.py](../../autocheckout/counting.py), [predictions.py](../../autocheckout/predictions.py), runner native `EVALUATE=1`; mAP CLI giữ predictions thô | [Evaluation 01](../../notebooks/evaluation/01_count_calibration_acceptance.ipynb); grid 0.10–0.90 step 0.01, NMS 0.45 hoặc grid val-only | [test_count_calibration.py](../../tests/test_count_calibration.py), counting/predictions/mAP/runner regression; [nghiệm thu S6](COUNT_CALIBRATION_ACCEPTANCE.md), 7/7 gates CPU |
 | Training notebooks và chạy ngầm | [training_workflow.py](../../autocheckout/training_workflow.py), [execute_training_notebook.py](../../tools/execute_training_notebook.py); logging/checkpoints trong PDP hiện có | [Training 01–03](../../notebooks/training/README.md), [settings](../../configs/training/notebooks.json); artifacts `data/training/`, tmux/headless, resume | [test_training_workflow.py](../../tests/test_training_workflow.py), [test_training_progress.py](../../tests/test_training_progress.py); [dry run](TRAINING_NOTEBOOK_DRY_RUN.md), [runbook](TRAINING_NOTEBOOK_RUNBOOK.md) |
+| Real pilot/transition và hardware baseline 4090 | TF32 settings→plan→environment→[native CLI](../../configs/exp/native/common.sh); plan cũ tương thích TF32 off, phase đang chạy khóa TF32 | [Notebook 03 baseline](../../notebooks/training/03_five_task_baseline.ipynb), local `data/training/settings_baseline_4090.json` | [Pilot](TASK1_PILOT_4090_REVIEW.md), [transition](TASK_TRANSITION_4090_REVIEW.md), [20 GPU cases](BASELINE_4090_CONFIGURATION.md); 20 tests config/workflow/runner PASS; convergence chưa chốt |
 
 Các module review/API/resolution là thư viện được notebook gọi, **chưa có CLI end-to-end riêng**. Audit/split/task tools có CLI kế thừa, nhưng pipeline native đã nghiệm thu đi qua notebook 02; `scripts/prepare_data.sh` là đường legacy resize 800, không phải lệnh phát hành native v1.
 
@@ -37,7 +55,7 @@ Real-only ảnh dùng root `data/archive`; resolved synth COCO dùng root repo. 
 
 PDP/teacher/PPG/checkpoint đã có trong [pdp/](../../pdp/); mapping/metrics/counting/provenance ở [autocheckout/](../../autocheckout/); evaluation ở [tools/eval_cl.py](../../tools/eval_cl.py), [tools/eval_count.py](../../tools/eval_count.py); runner ở [scripts/run_exp.sh](../../scripts/run_exp.sh). Kết quả cũ [results/](../../results/) là lịch sử.
 
-[Notebook 01 kiểm chứng processor/loader/PDP foundation](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt limited foundation trong run 65687942, CPU trên máy RTX 3060; [báo cáo](../timelines/model-foundation-2026-10-09.md). [Notebook 02 full pretrained baseline CUDA](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) đạt CUDA smoke 640/800 trên 3060 (run d967dc7b), native kernel chưa đạt; [hướng dẫn](../../notebooks/modeling/README.md). Đã nghiệm thu full pretrained Task 1 CUDA smoke (PyTorch fallback); adapter ConvNeXt đã đạt notebook 03; CLI/runner được kiểm chứng ở notebook 04; chưa có run train/eval mới trên Vast.ai, LoRA/K=3 hay generator đầy đủ đạt overlap 20–45%. Compositor resolution hiện có phục vụ scope 202; không đánh dấu toàn bộ S7 đã hoàn tất. Thứ tự tiếp theo: native kernel hoặc fallback đo hiệu năng trên máy training + calibration → pilot cùng split/budget → đủ 5 task → ablation riêng.
+[Notebook 01 kiểm chứng processor/loader/PDP foundation](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt limited foundation trong run 65687942, CPU trên máy RTX 3060; [báo cáo](../timelines/model-foundation-2026-10-09.md). [Notebook 02 full pretrained baseline CUDA](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) đạt CUDA smoke 640/800 trên 3060 (run d967dc7b), native kernel chưa đạt tại lần chạy đó; [hướng dẫn](../../notebooks/modeling/README.md). Adapter ConvNeXt đã đạt notebook 03; CLI/runner được kiểm chứng ở notebook 04. Real pilot trên Vast.ai đã train/eval bằng native CUDA kernel; transition smoke và benchmark batch/TF32 đã hoàn tất. Chưa có convergence/full baseline, LoRA/K=3 hay generator đầy đủ đạt overlap 20–45%. Compositor resolution hiện có phục vụ scope 202; không đánh dấu toàn bộ S7 đã hoàn tất. Thứ tự tiếp theo: chọn budget từ validation → đủ 5 task → ablation riêng.
 
 Khi sinh code/docs mới: thuật toán dùng lại đặt vào module, config có version, notebook giải thích và ghi run thật, báo cáo có ngày trong `reports/`, tests kiểm tra hành vi, rồi cập nhật bảng này + [PROGRESS](PROGRESS.md) + [timeline](../timelines/README.md). Commit theo chức năng sau nghiệm thu, giữ key/data/receipts lớn ngoài git.
 

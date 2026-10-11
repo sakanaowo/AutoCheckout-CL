@@ -1,17 +1,34 @@
 # Bàn giao AutoCheckout-CL
 
-Cập nhật: **10/10/2026**. Notebook 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
+**DỪNG THEO YÊU CẦU NGƯỜI DÙNG — 11/10/2026 15:08:40 UTC+7.**
+Baseline ConvNeXt dừng ở Task 1, completed 11 epochs; checkpoint step 31.550
+có thể resume trên GPU tương thích. **Giữ artifact**, không tự khởi chạy lại.
+[Báo cáo dừng và chuyển GPU](BASELINE_4090_STOP_REVIEW_2026-10-11.md) ghi validation,
+audit, manifest và điều kiện tiếp tục. ResNet chưa bắt đầu, full baseline chưa hoàn tất.
+
+
+Cập nhật: **11/10/2026**. Notebook modeling 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
 [ConvNeXt notebook 03](CONVNEXT_READINESS.md) đã đạt 8/8 gates, 29 tests trên RTX 3060 (run aeeb770b).
 CLI/runner và notebook 04 có triển khai/kiểm chứng riêng tại [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md).
 Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md) đã nghiệm thu kỹ thuật bằng CPU, policy val và test-only reload.
-[Pilot Task 1 RTX 4090](TASK1_PILOT_4090_REVIEW.md) đã COMPLETED ngày 10/10 lúc 18:14:57 UTC+7: đủ hai models, 21.752 steps/model, 100/100 prototypes, policy val và test metrics. B1/B2 test M1 AP 26,88%/73,54%, cAcc 3,50%/30,57%. Convergence, chuyển Task 1→2 và full 5-task training chưa nghiệm thu; bước tiếp là notebook training 02, baseline_epochs vẫn null.
+[Pilot Task 1 RTX 4090](TASK1_PILOT_4090_REVIEW.md) đã COMPLETED ngày 10/10 lúc 18:14:57 UTC+7: đủ hai models, 21.752 steps/model, 100/100 prototypes, policy val và test metrics. B1/B2 test M1 AP 26,88%/73,54%, cAcc 3,50%/30,57%.
+[Notebook 02 transition smoke](TASK_TRANSITION_4090_REVIEW.md) đã COMPLETED ngày 11/10 lúc 09:13:40 UTC+7: 8 steps/model, teacher frozen/16 calls, PPG 62/46, old prototypes/private prompt rows giữ nguyên. Chưa có prototype lớp mới; scope 16 ảnh/7 lớp mới chỉ đạt kỹ thuật. [Benchmark GPU baseline](BASELINE_4090_CONFIGURATION.md) đã PASS 20 cases: batch/effective 8/8, workers 8, FP32 + TF32. Notebook 03 khởi chạy lúc 10:54:46 ngày 11/10 UTC+7, tmux `ac-baseline`, ConvNeXt Task 1–5 trước rồi ResNet Task 1–5. Budget khởi đầu 16 epochs/task; ưu tiên validation, chưa nghiệm thu hội tụ hoặc full baseline.
 
 [Snapshot đầu ngày 09/10](HANDOFF_2026-10-09.md) giữ bằng chứng dependency/branch tại lúc viết, trước các run model đã đạt;
 đọc cùng kết luận hiện hành, không dùng các đoạn “chưa chạy” trong snapshot làm trạng thái model mới nhất.
+Đo hai model cùng train Task 2 ở batch 8 cũng PASS: GPU memory used 19,30 GiB,
+không OOM, nhưng B1/B2 chỉ 6,77/5,44 ảnh/s so với 16,80/10,94 khi chạy riêng.
+Giữ notebook 03 chạy tuần tự; xem [benchmark đồng thời](BASELINE_4090_CONFIGURATION.md).
+
+[Khảo sát resource/cost 11/10](GPU_COST_REVIEW_2026-10-11.md): batch 8 peak GPU-wide
+9,59/9,72 GiB B1/B2; current price 0,4153 USD/h, DLPerf 49,57. Shortlist host 4090
+khác giá 0,422–0,459 (DLPerf 97–123), hoặc hai GPU riêng 2×3090 giá 0,323 tổng /
+2×4070 Ti SUPER giá 0,425 tổng để nghiên cứu parallel. Chưa thuê/chuyển instance,
+chưa benchmark PDP trên các offers mới; không coi DLPerf là tốc độ PDP đã kiểm chứng.
 [Nhật ký model](../timelines/model-foundation-2026-10-09.md) giữ chi tiết runs PASS/FAIL và các sửa lỗi.
 Các làm rõ của người dùng có ưu tiên hơn handoff gốc.
 Quyết định 10/10/2026: bỏ notebook nghiệm thu môi trường Vast.ai riêng; bước tiếp là chuẩn bị pilot local và thực chạy pilot/chuyển Task 1→2/baseline 5 task trên RTX 4090. Ghi metadata/VRAM/thời gian trong các run đó; fixture/debug nhỏ tiếp tục dùng CPU/3060 local.
-Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; real pilot 4090 đã hoàn tất trong campaign `vast4090-seed0-640-v1`, full training còn chờ. Dùng `data/training/settings_4090.json` cho notebook 02, tránh template mặc định dry_run=true.
+Yêu cầu tiếp nối: mọi artifacts của training notebooks ghi dưới `data/training/` để upload; logging từng step/epoch/task và resume phải có evidence dry run local. [Notebooks 01–03](../../notebooks/training/README.md) dùng [settings](../../configs/training/notebooks.json), headless executor/tmux theo [runbook](TRAINING_NOTEBOOK_RUNBOOK.md). Không tạo lại notebook environment riêng; real pilot 4090 đã hoàn tất trong campaign `vast4090-seed0-640-v1`, full training còn chờ. Dùng `data/training/settings_4090.json` cho notebook 02; notebook 03 mặc định đọc `data/training/settings_baseline_4090.json`, budget 16 đã khóa; checkpoint đang giữ để chuyển GPU.
 
 [Conda cài sạch 10/10](CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên local RTX 3060: Python 3.10.22,
 105 tests, ResNet/ConvNeXt 640 step 1→4 và notebook pilot CPU dry run. Requirements bổ sung **setuptools==81.0.0**:
@@ -110,7 +127,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
 4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
-5. **E1/E2 trên RTX 4090:** người dùng đã bỏ bước environment Vast.ai riêng. S6 kỹ thuật và [real pilot Task 1](TASK1_PILOT_4090_REVIEW.md) đã hoàn tất; giữ policies val hiện hành. Chạy notebook 02 cùng campaign để kiểm chứng full-model Task 1→2. Subset mặc định chỉ 16 ảnh/7 lớp mới, 8 steps/model; không dùng metrics smoke để kết luận forgetting/convergence. Trước notebook 03 cần quét batch riêng và chọn budget từ val; cả hai models vẫn tăng AP ở epoch 2. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
+5. **E1/E2 trên RTX 4090:** pilot và transition smoke đã hoàn tất. Baseline đã dừng theo người dùng; tmux `ac-baseline` pane dead. Không launch lại nếu chưa có yêu cầu tiếp tục. [Cấu hình/logging](BASELINE_4090_CONFIGURATION.md): 16 epochs/task là budget khởi đầu, chưa chứng minh hội tụ. Đọc val curves và prototype coverage; không sửa plan locked khi resume hoặc thêm early stopping trước khi xử lý prototype chỉ tích lũy ở epoch cuối. Source notebook và bản trong data lưu output mỗi 15 giây; console tổng ở `data/training/vast4090-seed0-640-v1/tmux_baseline.log`. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
 

@@ -1,5 +1,7 @@
 # Vận hành notebooks training: data artifacts, tmux và resume
 
+Run baseline 4090 hiện đã dừng theo người dùng. Xem [báo cáo dừng](BASELINE_4090_STOP_REVIEW_2026-10-11.md); giữ checkpoint và chỉ resume khi được yêu cầu.
+
 Ngày 10/10/2026. Chuẩn bị code/notebooks tại local, chạy thực nghiệm chính trên RTX 4090 đã chọn. Theo quyết định người dùng, bỏ notebook nghiệm thu môi trường Vast.ai riêng. Ba notebook gọi runner/PDP/evaluator hiện có; executor chỉ giúp notebook chạy ngầm và lưu outputs.
 
 ## 1. Thứ tự và cấu hình
@@ -36,10 +38,18 @@ Sửa `data/training/settings_4090.json`:
 | `baseline_epochs` | Mặc định `null`; sau pilot chọn số nguyên dương từ loss/val curves trước notebook 03 |
 | `checkpoint_every_minutes` | Mặc định 2, và checkpoint cuối mỗi epoch |
 | `num_workers` | Mặc định 4 cho real run; dry run dùng 0 |
+| `tf32` | Mặc định `false`; truyền xuống native CLI, được khóa theo phase như batch. Hardware baseline 4090 đề xuất `true` sau benchmark |
 | `count_nms_grid` | Mặc định `"0.45"`; nếu tune NMS, các candidates chỉ được chọn trên val |
 | `test_interruption` | Chỉ áp dụng dry run: cố ý dừng step 1 rồi resume; real run không tự dừng |
 
-Giữ physical/effective batch, epochs, resolution và dữ liệu của phase đang resume. Plan và input hashes được khóa; thay cấu hình thí nghiệm cần campaign mới. `baseline_epochs` có thể chọn sau pilot vì các phase có plan riêng. Epoch budget giữ cơ chế cập nhật prototype ở epoch cuối của PDP hiện tại; không cắt task giữa epoch bằng một max-step tùy ý.
+Giữ physical/effective batch, TF32, epochs, resolution và dữ liệu của phase đang resume. Plan và input hashes được khóa; thay cấu hình thí nghiệm cần campaign mới. `baseline_epochs` và hardware profile cho phase baseline chưa bắt đầu có thể chọn sau pilot vì các phase có plan riêng. Epoch budget giữ cơ chế cập nhật prototype ở epoch cuối của PDP hiện tại; không cắt task giữa epoch bằng một max-step tùy ý.
+
+Trên instance hiện hành, pilot/transition dùng `data/training/settings_4090.json`;
+notebook 03 mặc định đọc `data/training/settings_baseline_4090.json` trong cùng campaign.
+[Benchmark và cấu hình baseline](BASELINE_4090_CONFIGURATION.md) đề xuất batch/effective 8/8,
+workers 8, FP32 + TF32. Run khởi chạy 11/10 dùng `baseline_epochs=16` làm budget khởi
+đầu, ConvNeXt trước ResNet; số epochs này chưa chứng minh hội tụ trên validation.
+Không dùng hardware file mới để resume pilot/transition có batch/TF32 khác.
 
 ## 2. Upload data và pretrained
 
@@ -87,7 +97,19 @@ Sau notebook 01, chạy notebook 02 bằng cùng lệnh, đổi `--notebook` san
 
 tmux giữ session qua SSH timeout/detach theo [manual chính thức](https://man.openbsd.org/tmux). Instance reboot/termination hoặc disk mất không được tmux bảo vệ; checkpoint/artifact cần nằm trên disk bền vững và được tải về trước khi kết thúc thuê máy.
 
-Executor dùng `--cell-timeout -1` mặc định để cell train dài không bị timeout; tự lưu `notebook_executed.ipynb` sau mỗi code cell và khi lỗi. [nbclient](https://nbclient.readthedocs.io/en/latest/client.html) hỗ trợ execution hooks và tắt timeout. Trong lúc cell train chạy, đọc runner/task logs dưới data để theo dõi trực tiếp; console notebook hiển thị cell start/finish và stream outputs sau cell.
+Executor dùng `--cell-timeout -1` mặc định để cell train dài không bị timeout;
+lưu notebook mỗi 15 giây, sau cell và khi lỗi, stdout/stderr vào console ngay khi
+phát sinh. [nbclient](https://nbclient.readthedocs.io/en/latest/client.html) hỗ trợ
+execution hooks và tắt timeout. `--save-interval N` đổi chu kỳ autosave;
+`--live-notebook notebooks/training/03_five_task_baseline.ipynb` mirror output vào
+notebook người dùng mở. Nếu file bị sửa ngoài executor, mirror dừng để giữ sửa tay,
+bản trong data tiếp tục lưu. Nguồn notebook ban đầu luôn có snapshot riêng.
+
+Run hiện hành dùng tmux `ac-baseline`, launcher
+`data/training/vast4090-seed0-640-v1/run_baseline_tmux.sh`, ConvNeXt trước ResNet.
+Console tổng ở `data/training/vast4090-seed0-640-v1/tmux_baseline.log`;
+runner/task logs trong `baseline/EXP-B2/task_1/` cho task đầu tiên.
+Nếu đang ở tmux khác, dùng `tmux switch-client -t ac-baseline` tránh nested session.
 
 Nếu chạy trực tiếp từ IDE, chọn kernel Conda pdp và đặt trước cell setup:
 
