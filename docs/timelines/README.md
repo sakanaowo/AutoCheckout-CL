@@ -13,6 +13,9 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 | 09/10/2026, 15:12:32–15:13:43 UTC+7 | Notebook 01 limited PDP foundation PASS trên CPU/máy 3060; tạo notebook 02 full CUDA, chưa chạy | [Bằng chứng và phạm vi model](model-foundation-2026-10-09.md) |
 | 09/10/2026, 16:12:09–16:12:57 UTC+7 | Full pretrained PDP CUDA 640/800 smoke PASS trên RTX 3060, PyTorch fallback; sửa device sau Lightning teardown | [Báo cáo full baseline](model-foundation-2026-10-09.md#full-baseline-cuda-đạt-trên-rtx-3060) |
 | 09/10/2026 | Khép phạm vi notebook processor/loader/PDP nền; cập nhật docs hiện hành và thứ tự bước tiếp theo | [Kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md) |
+| 12/10/2026 | Setup L4 GCP, tải data bằng rclone, native kernel/resume smoke PASS, chạy baseline trong tmux với live notebook | [Setup L4 và logging](../environment/GCP_L4_SETUP_2026-10-12.md) |
+| 13/10/2026, 05:18 UTC+7 | ConvNeXt baseline Task 1 hoàn tất cùng predictions/policy/evaluation | [Kết quả Task 1 và chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md) |
+| 13/10/2026, 09:56 UTC+7 | Dừng L4 theo người dùng để chuyển sang 4080 SUPER; Task 2 checkpoint 6.414, audit/manifest đạt | [Bàn giao chuyển máy](../environment/TRANSFER_TO_4080_2026-10-13.md) |
 
 [Nhật ký chi tiết 06–08/10](history-2026-10-06-08.md) · [Tiến độ dự án](../project/PROGRESS.md) · [Notebook review](../../notebooks/data_preprocessing/03_annotation_review.ipynb).
 

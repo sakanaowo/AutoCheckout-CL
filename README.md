@@ -5,7 +5,8 @@ Nghiên cứu nhận diện và đếm sản phẩm tại quầy thanh toán b�
 - **Protocol chính:** 5 task **100+4×25 SKU**, seed 0; nguồn nhập 4 task chỉ dùng tham khảo.
 - **Dữ liệu:** release ảnh thật đã nghiệm thu: **22.494 train / 1.503 val / 6.003 test**. Split nghiên cứu độc lập; một phần test2019 nguồn được dùng train, nên không gọi là official RPC test2019 benchmark.
 - **Synthetic:** bản riêng 202 ảnh đã nghiệm thu: 9 giữ / 193 tái ghép thật với owner masks, provenance và mapping 5 task. CSV còn 20 pilot pending; chưa thêm vào release ảnh thật hoặc phát hành lại toàn bộ nguồn synth.
-- **Nghiệm thu model:** processor/loader 640/800 và full pretrained PDP Task 1 CUDA smoke đã đạt trên RTX 3060 (PyTorch fallback); [kết luận](docs/project/PDP_FOUNDATION_ACCEPTANCE.md). GPU train là RTX 4090 24 GB **Vast.ai**, ConvNeXt adapter đã đạt notebook 03; [runtime notebook 04](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) kiểm chứng CLI/runner; native kernel/pilot còn chờ; LoRA/K=3/FSA/freeze bổ sung là ablation sau baseline.
+- **Nghiệm thu model:** foundation, ConvNeXt adapter và [CLI/runner](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) đã đạt. Pilot và transition smoke đã hoàn tất trên 4090; [môi trường L4 GCP](docs/environment/GCP_L4_SETUP_2026-10-12.md) đạt native kernel và resume thật. LoRA/K=3/FSA/freeze bổ sung là ablation sau baseline.
+- **Training hiện tại (13/10):** đã dừng trên L4 để chuyển sang **4080 SUPER**. ConvNeXt Task 1 hoàn tất; Task 2 checkpoint **step 6.414**, ResNet chưa bắt đầu. [Bàn giao chuyển GPU](docs/environment/TRANSFER_TO_4080_2026-10-13.md) ghi kết quả, hashes và paths cần giữ; máy đích chưa kiểm chứng.
 - **Quy trình:** mỗi bước dữ liệu/model/train/eval có notebook ghi mục tiêu, config, output và thời điểm chạy thật. Kết quả tháng 09 giữ làm lịch sử.
 
 ## Điểm vào
@@ -33,8 +34,8 @@ docs/
 notebooks/
   data_preprocessing/  audit → nghiệm thu → split → review → resolution
   modeling/            foundation + ConvNeXt CUDA; notebook 04 kiểm chứng CLI/runner
-  training/            notebooks pilot/transition/5 task; dry run CPU, real 4090 còn chờ
-  evaluation/          S6 calibration/raw mAP đã nghiệm thu CPU; metrics pilot còn chờ
+  training/            pilot/transition đạt; baseline Task 2 đang dở, đã dừng
+  evaluation/          S6 đạt; pilot và ConvNeXt baseline Task 1 có metrics
   references/          notebook thành viên nhóm
 configs/               task mapping, data release lock và cấu hình thí nghiệm
 pdp/                   lõi PDP/Deformable DETR, teacher và PPG
@@ -51,15 +52,15 @@ runs/                  log, QA và bản notebook theo run ID (không đưa vào
 
 Training notebooks mới ghi logs/checkpoints/predictions/policies và bản notebook đã execute dưới `data/training/`; [runbook](docs/project/TRAINING_NOTEBOOK_RUNBOOK.md) hướng dẫn upload folder data, chạy ngầm với tmux và resume. [Dry-run report](docs/project/TRAINING_NOTEBOOK_DRY_RUN.md) là evidence kiểm chứng local.
 
-Các file kế hoạch/tiến độ/hướng dẫn GCP ở root là đường dẫn vào tài liệu đã tổ chức lại. Tái sử dụng tools/tests/configs đã khôi phục; kiểm chứng defaults cũ trước khi train trên Vast.ai.
+Các file kế hoạch/tiến độ/hướng dẫn GCP ở root là đường dẫn vào tài liệu đã tổ chức lại. Tái sử dụng tools/tests/configs đã khôi phục; kiểm chứng môi trường và kernel trên GPU đích trước khi resume.
 
 ## Kiểm chứng và bước tiếp theo
 
-Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) ghi run IDs, artifacts và giới hạn; full suite/convergence/native kernel/Vast.ai chưa nghiệm thu.
+Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) giữ phạm vi local; [setup L4](docs/environment/GCP_L4_SETUP_2026-10-12.md) bổ sung 58 regression + 4 kernel tests và smoke resume thật. Full baseline và convergence chưa hoàn tất.
 
-Bước tiếp sau [nghiệm thu runtime](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) và [S6 calibration/evaluation](docs/project/COUNT_CALIBRATION_ACCEPTANCE.md): chuẩn bị notebook/config local → pilot PDP ResNet/ConvNeXt trên RTX 4090 cùng split/budget và policy val → full-model Task 1→2 smoke → đủ 5 task. Người dùng đã bỏ notebook nghiệm thu môi trường Vast.ai riêng; metadata và số đo runtime ghi trong pilot/training. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
+Bước tiếp: chuyển campaign hiện tại, kiểm chứng 4080 SUPER → resume ConvNeXt Task 2 → đủ 5 task ConvNeXt và ResNet. Giữ 640px, batch/effective 8/8, 16 epochs/task, FP32 + TF32 và input hashes. Người dùng đã bỏ notebook nghiệm thu môi trường riêng; metadata và số đo runtime ghi trong training. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
 
-`pyproject.toml` hiện yêu cầu Python 3.10; dependencies model trong repo là cấu hình kế thừa. Chuẩn bị môi trường riêng trên Vast.ai và kiểm tra PyTorch/CUDA/deformable-attention kernel trước pilot. Không bật `--shutdown` của runner như cơ chế kết thúc thuê instance.
+`pyproject.toml` yêu cầu Python 3.10; dependencies đã pin trong requirements. Chuẩn bị environment riêng và build CUDA kernel trên máy đích. Không bật `--shutdown` của runner như cơ chế kết thúc thuê instance.
 
 ## Nguồn và giấy phép
 

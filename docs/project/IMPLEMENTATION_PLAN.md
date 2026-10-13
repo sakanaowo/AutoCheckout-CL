@@ -1,5 +1,11 @@
 # Kế hoạch triển khai nhánh investigation
 
+**Trạng thái 13/10/2026:** pilot/transition đã hoàn tất; baseline ConvNeXt Task 1
+COMPLETED, Task 2 checkpoint **6.414**. L4 đã dừng theo người dùng để chuyển sang
+4080 SUPER; target chưa kiểm chứng. [Bàn giao chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md)
+và [tiến độ](PROGRESS.md) là trạng thái hiện hành. Các giả định hardware/milestone
+ngày 10/10 bên dưới giữ bối cảnh kế hoạch ban đầu; budget baseline đã khóa 16 epochs/task.
+
 Cập nhật: **10/10/2026**. [Kết luận nghiệm thu notebook foundation](PDP_FOUNDATION_ACCEPTANCE.md): foundation đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) và [adapter ConvNeXt](CONVNEXT_READINESS.md) có nghiệm thu local riêng; native kernel/Vast.ai còn chờ. Phạm vi hiện tại: **tái dựng PDP theo paper, sau đó thay backbone bằng ConvNeXt-V2-Base**. GPU train là **RTX 4090 trên Vast.ai**, không phải GPU local. Dữ liệu đã nhập vào `data/archive`, phải audit trước khi chuẩn bị split hoặc train. Notebook Kaggle của thành viên nhóm chỉ là tham khảo. Xem [bàn giao hệ thống](AGENT_HANDOFF.md) để biết nguồn quyết định và trạng thái repo.
 
 Sau khi kiểm tra reset, đã khôi phục 189 file bị xóa từ HEAD: test/fixture, tools/CLI, runner/config, baseline truy xuất và báo cáo cũ. **Tái sử dụng nền tảng đã có**, không triển khai lại các phần đó từ đầu. Các thay đổi kiến trúc dưới đây vẫn cần thực hiện và kiểm chứng.

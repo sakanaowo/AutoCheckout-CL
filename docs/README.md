@@ -1,6 +1,8 @@
 # Tài liệu AutoCheckout-CL
 
-Cập nhật 11/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên **RTX 4090 Vast.ai**. Pilot, transition smoke và benchmark GPU đã hoàn tất; baseline đã dừng theo người dùng, giữ checkpoint để resume trên GPU tương thích.
+Cập nhật **13/10/2026**. Protocol **5 task 100+4×25, seed 0**. Baseline đã resume trên L4 GCP,
+hoàn tất ConvNeXt Task 1 rồi dừng theo người dùng tại Task 2 để chuyển sang **4080 SUPER**.
+Checkpoint resume **6.414**, ResNet chưa bắt đầu; giữ toàn bộ artifacts, máy đích chưa kiểm chứng.
 
 | Điểm vào | Mục đích |
 |---|---|
@@ -14,7 +16,8 @@ Cập nhật 11/10/2026. Protocol **5 task 100+4×25, seed 0**; training trên *
 | [Training notebook runbook](project/TRAINING_NOTEBOOK_RUNBOOK.md), [dry run](project/TRAINING_NOTEBOOK_DRY_RUN.md) | Pilot/transition/baseline 5 task; artifacts data, tmux/headless, logs và resume |
 | [Pilot Task 1](project/TASK1_PILOT_4090_REVIEW.md), [transition Task 1→2](project/TASK_TRANSITION_4090_REVIEW.md), [cấu hình baseline 4090](project/BASELINE_4090_CONFIGURATION.md) | Kết quả real run, giới hạn smoke và 20 benchmark cases để chọn batch/TF32; epochs chờ validation |
 | [Dependencies/môi trường](environment/README.md), [Conda cài sạch](project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) | Python 3.10, setuptools/pkg_resources, 105 tests và GPU/notebook checks trong env mới |
-| [Báo cáo dừng baseline](project/BASELINE_4090_STOP_REVIEW_2026-10-11.md) | 11 epochs ConvNeXt, val AP 82,83%, checkpoint portable step 31.550, giữ artifact |
+| [Setup L4 GCP](environment/GCP_L4_SETUP_2026-10-12.md), [chuyển sang 4080 SUPER](environment/TRANSFER_TO_4080_2026-10-13.md) | 62 tests, kernel/resume thật, Task 1 metrics, checkpoint Task 2 và paths/hashes cần chuyển |
+| [Báo cáo dừng baseline 4090 ngày 11/10](project/BASELINE_4090_STOP_REVIEW_2026-10-11.md) | Snapshot lịch sử trước L4: 11 epochs ConvNeXt, val AP 82,83%, checkpoint step 31.550 |
 | [Tài nguyên và chi phí GPU Vast.ai](project/GPU_COST_REVIEW_2026-10-11.md) | Peak VRAM/CPU/RAM đã đo, giá instance hiện tại, offers một/hai GPU và ngưỡng hiệu quả theo throughput |
 | [Tiền xử lý](data_preprocessing/README.md), [hướng dẫn vận hành](data_preprocessing/OPERATIONS.md) | Cách đọc kết quả, chạy lại và tiếp tục pipeline |
 | [Schema](data_preprocessing/formats.md) | Tọa độ, COCO, task mapping và artifacts |

@@ -1,26 +1,28 @@
 # Chỉ mục triển khai và đầu ra
 
-**DỪNG THEO YÊU CẦU NGƯỜI DÙNG — 11/10/2026 15:08:40 UTC+7.**
-Baseline ConvNeXt dừng ở Task 1, completed 11 epochs; checkpoint step 31.550
-có thể resume trên GPU tương thích. **Giữ artifact**, không tự khởi chạy lại.
-[Báo cáo dừng và chuyển GPU](BASELINE_4090_STOP_REVIEW_2026-10-11.md) ghi validation,
-audit, manifest và điều kiện tiếp tục. ResNet chưa bắt đầu, full baseline chưa hoàn tất.
+**Cập nhật 13/10/2026: baseline dừng trên L4 để chuyển sang 4080 SUPER.**
+ConvNeXt Task 1 đã COMPLETED, Task 2 checkpoint resume **6.414**, backup 6.365;
+ResNet chưa bắt đầu. [Bàn giao chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md)
+ghi audit và required paths; giữ toàn bộ artifacts, máy đích chưa kiểm chứng.
 
 
-Notebook 03 đang chạy ngầm ngày 11/10: ConvNeXt trước ResNet, budget khởi đầu 16
+Notebook 03 đã chạy ngầm trên 4090 rồi L4: ConvNeXt trước ResNet, budget khởi đầu 16
 epochs/task. Executor lưu notebook mỗi 15 giây và stream runner log vào notebook;
 [executor tests](../../tests/test_execute_training_notebook.py) và
 [workflow regression](../../tests/test_training_workflow.py): 13 PASS.
-Xem [cấu hình và logging hiện hành](BASELINE_4090_CONFIGURATION.md).
+Xem [cấu hình baseline](BASELINE_4090_CONFIGURATION.md) và
+[setup/logging L4](../environment/GCP_L4_SETUP_2026-10-12.md).
 
 [Khảo sát GPU/chi phí 11/10](GPU_COST_REVIEW_2026-10-11.md) lưu peak bộ nhớ,
 snapshot giá public offers/current instance, ngưỡng FPS hòa vốn và shortlist host.
-DLPerf chỉ là proxy; chưa có benchmark PDP trên GPU khác, baseline vẫn chạy.
+DLPerf chỉ là proxy; chưa có benchmark PDP trên các offers đó. L4 đã có telemetry
+Task 1/2 thật; các ETA 4080 SUPER vẫn là ngoại suy, chưa đo trên máy đích.
 
-Cập nhật 11/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_ACCEPTANCE.md): phạm vi notebook đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) có nghiệm thu riêng. Real pilot, transition smoke và benchmark GPU đã hoàn tất; convergence/full baseline còn chờ. Bảng này ánh xạ các phần **đã triển khai** đến code, notebook, cấu hình và bằng chứng. [Vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại; [kế hoạch](IMPLEMENTATION_PLAN.md) dành cho phần chưa làm.
+Cập nhật 13/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_ACCEPTANCE.md): phạm vi notebook đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) có nghiệm thu riêng. Real pilot, transition smoke, benchmark GPU và baseline ConvNeXt Task 1 đã hoàn tất; convergence/full baseline còn chờ. Bảng này ánh xạ các phần **đã triển khai** đến code, notebook, cấu hình và bằng chứng. [Vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại; [kế hoạch](IMPLEMENTATION_PLAN.md) dành cho phần chưa làm.
 
 | Phần | Code / giao diện | Notebook và config | Tests / bằng chứng |
 |---|---|---|---|
+| Setup/resume L4 và chuyển 4080 SUPER | [Activation](../../scripts/activate_gcp_l4.sh), native kernel/cache theo máy; runner/restore audit đã có | Notebook 03, `data/training/settings_baseline_l4.json` và `settings_baseline_4080.json` | [Setup L4](../environment/GCP_L4_SETUP_2026-10-12.md): 58 regression + 4 kernel tests, smoke restore thật; [transfer](../environment/TRANSFER_TO_4080_2026-10-13.md): Task 1 final/Task 2 checkpoint audit |
 | Audit tài nguyên nhập | [audit_rpc.py](../../tools/audit_rpc.py); inventory, decode/hash/alpha và đối chiếu synth trong notebook | [01](../../notebooks/data_preprocessing/01_data_audit.ipynb), [01b](../../notebooks/data_preprocessing/01b_preprocessing_acceptance.ipynb), [01c](../../notebooks/data_preprocessing/01c_protocol_comparison.ipynb) | [test_audit_rpc.py](../../tests/test_audit_rpc.py); [nghiệm thu tài nguyên](../data_preprocessing/reports/preprocessing-acceptance-2026-10-07.md) |
 | Split native và 5 task | [resize.py](../../tools/resize.py): `merge_annotations(size=None)` giữ bbox/area/source paths; [make_split.py](../../tools/make_split.py), [make_task_config.py](../../tools/make_task_config.py), [make_task_json.py](../../tools/make_task_json.py), [TaskConfig](../../autocheckout/taskcfg.py) là nền tái sử dụng | [02](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb); [release config](../../configs/data/rpc_100-4x25_seed0_native_v1.json), [mapping](../../configs/tasks_100-4x25_seed0.json) | [test_native_checkout.py](../../tests/test_native_checkout.py), resize/split/group/task-config tests; [split/test lock](../data_preprocessing/reports/split-100-4x25-2026-10-07.md) |
 | Visual review | [annotation_review.py](../../tools/annotation_review.py): crop bao phủ bbox và polygon, full/crop/overlay card | [03 phần 1–5](../../notebooks/data_preprocessing/03_annotation_review.ipynb); `CASE_KEY=(source_task,annotation_id)` | [test_annotation_review.py](../../tests/test_annotation_review.py); [222 card/gallery](../data_preprocessing/reports/annotation-review-2026-10-07.md) |

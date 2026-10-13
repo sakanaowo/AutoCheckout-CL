@@ -1,6 +1,12 @@
 # Vận hành notebooks training: data artifacts, tmux và resume
 
-Run baseline 4090 hiện đã dừng theo người dùng. Xem [báo cáo dừng](BASELINE_4090_STOP_REVIEW_2026-10-11.md); giữ checkpoint và chỉ resume khi được yêu cầu.
+**Trạng thái 13/10/2026:** baseline đã dừng trên L4 theo người dùng để chuyển sang
+4080 SUPER. ConvNeXt Task 1 hoàn tất, Task 2 checkpoint **6.414**, ResNet chưa bắt đầu.
+[Bàn giao chuyển máy](../environment/TRANSFER_TO_4080_2026-10-13.md) ghi paths/hashes và
+settings `data/training/settings_baseline_4080.json`. Giữ campaign hiện tại và build
+kernel mới trên máy đích; chỉ resume khi được yêu cầu. Các ví dụ 4090 bên dưới giữ
+lịch sử thiết lập pilot/baseline. Trên L4 đã kiểm chứng `.venv` bằng
+`source scripts/activate_gcp_l4.sh`; không copy `.venv` sang máy đích.
 
 Ngày 10/10/2026. Chuẩn bị code/notebooks tại local, chạy thực nghiệm chính trên RTX 4090 đã chọn. Theo quyết định người dùng, bỏ notebook nghiệm thu môi trường Vast.ai riêng. Ba notebook gọi runner/PDP/evaluator hiện có; executor chỉ giúp notebook chạy ngầm và lưu outputs.
 
@@ -44,7 +50,7 @@ Sửa `data/training/settings_4090.json`:
 
 Giữ physical/effective batch, TF32, epochs, resolution và dữ liệu của phase đang resume. Plan và input hashes được khóa; thay cấu hình thí nghiệm cần campaign mới. `baseline_epochs` và hardware profile cho phase baseline chưa bắt đầu có thể chọn sau pilot vì các phase có plan riêng. Epoch budget giữ cơ chế cập nhật prototype ở epoch cuối của PDP hiện tại; không cắt task giữa epoch bằng một max-step tùy ý.
 
-Trên instance hiện hành, pilot/transition dùng `data/training/settings_4090.json`;
+Trong campaign nguồn, pilot/transition dùng `data/training/settings_4090.json`;
 notebook 03 mặc định đọc `data/training/settings_baseline_4090.json` trong cùng campaign.
 [Benchmark và cấu hình baseline](BASELINE_4090_CONFIGURATION.md) đề xuất batch/effective 8/8,
 workers 8, FP32 + TF32. Run khởi chạy 11/10 dùng `baseline_epochs=16` làm budget khởi
@@ -105,10 +111,12 @@ execution hooks và tắt timeout. `--save-interval N` đổi chu kỳ autosave;
 notebook người dùng mở. Nếu file bị sửa ngoài executor, mirror dừng để giữ sửa tay,
 bản trong data tiếp tục lưu. Nguồn notebook ban đầu luôn có snapshot riêng.
 
-Run hiện hành dùng tmux `ac-baseline`, launcher
+Run 4090 ngày 11/10 dùng tmux `ac-baseline`, launcher
 `data/training/vast4090-seed0-640-v1/run_baseline_tmux.sh`, ConvNeXt trước ResNet.
 Console tổng ở `data/training/vast4090-seed0-640-v1/tmux_baseline.log`;
 runner/task logs trong `baseline/EXP-B2/task_1/` cho task đầu tiên.
+Lượt L4 dùng `ac-baseline-l4` và `tmux_baseline_l4.log`, đã dừng; logs từng step/task
+và notebook executions còn trong campaign. Ctrl+B rồi D để detach; Ctrl+C dừng job.
 Nếu đang ở tmux khác, dùng `tmux switch-client -t ac-baseline` tránh nested session.
 
 Nếu chạy trực tiếp từ IDE, chọn kernel Conda pdp và đặt trước cell setup:

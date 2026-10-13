@@ -1,5 +1,27 @@
 # Bàn giao AutoCheckout-CL
 
+**DỪNG THEO NGƯỜI DÙNG — 13/10/2026 09:56 UTC+7, chuẩn bị chuyển L4 → 4080 SUPER.**
+ConvNeXt Task 1 đã COMPLETED; Task 2 dừng ở observed step 6.420, checkpoint resume
+**6.414**, backup 6.365. ResNet chưa bắt đầu. Đã đọc/audit checkpoints, tensors hữu hạn,
+đủ states; GPU trống, không còn training. Giữ toàn bộ artifacts, không tự launch lại.
+[Điểm dừng, manifest và paths cần chuyển](../environment/TRANSFER_TO_4080_2026-10-13.md).
+Settings đích `data/training/settings_baseline_4080.json`; máy 4080 chưa kiểm chứng.
+Các mô tả RUNNING bên dưới là snapshot trước điểm dừng này.
+
+**Cập nhật máy đích 12/10/2026: NVIDIA L4 trên GCP**, thay cho phương án 4080 SUPER.
+[Setup L4](../environment/GCP_L4_SETUP_2026-10-12.md) đã đạt Python/CUDA/native kernel,
+58 regression + 4 kernel tests; data đã tải/giải nén bằng rclone. Checkpoint step
+31.550 và backup khớp hashes nguồn, ConvNeXt strict restore/640px forward trên L4 đạt.
+Smoke resume trên bản checkpoint riêng đã đạt 2 updates đến 31.552: Lightning
+restore đủ model/optimizer/scheduler/PDP memory, batch 8, finite losses, peak allocated
+6,847 GiB; checkpoint baseline gốc giữ nguyên ở 31.550.
+Settings: `data/training/settings_baseline_l4.json`; plan chỉ đổi roots, campaign/budget
+giữ nguyên. **Baseline RUNNING trên L4 từ 12/10/2026 23:46:00 UTC+7**,
+tmux `ac-baseline-l4`, ConvNeXt Task 1 resume từ 31.550 đã có updates mới.
+Notebook 03 và bản execution autosave 15 giây, console tổng `tmux_baseline_l4.log`
+trong campaign; `baseline_launch_l4.json` giữ receipt/PID attempt paths.
+Session detached vẫn train khi SSH ngắt. Snapshot Vast.ai bên dưới là lịch sử.
+
 **DỪNG THEO YÊU CẦU NGƯỜI DÙNG — 11/10/2026 15:08:40 UTC+7.**
 Baseline ConvNeXt dừng ở Task 1, completed 11 epochs; checkpoint step 31.550
 có thể resume trên GPU tương thích. **Giữ artifact**, không tự khởi chạy lại.
@@ -7,7 +29,7 @@ có thể resume trên GPU tương thích. **Giữ artifact**, không tự khở
 audit, manifest và điều kiện tiếp tục. ResNet chưa bắt đầu, full baseline chưa hoàn tất.
 
 
-Cập nhật: **11/10/2026**. Notebook modeling 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
+Snapshot nền **11/10/2026**; trạng thái baseline/GPU mới nhất ở đầu tài liệu. Notebook modeling 01/02 đã đạt processor/loader và full pretrained ResNet CUDA smoke.
 [ConvNeXt notebook 03](CONVNEXT_READINESS.md) đã đạt 8/8 gates, 29 tests trên RTX 3060 (run aeeb770b).
 CLI/runner và notebook 04 có triển khai/kiểm chứng riêng tại [báo cáo runtime](TRAINING_RUNTIME_ACCEPTANCE.md).
 Các run model local dùng PyTorch fallback. [S6 calibration/evaluation](COUNT_CALIBRATION_ACCEPTANCE.md) đã nghiệm thu kỹ thuật bằng CPU, policy val và test-only reload.
@@ -41,7 +63,7 @@ Không chuyển project sang Python 3.9/3.12; trên máy thuê dùng env Conda P
 - Bài toán: phát hiện và đếm sản phẩm trên khay checkout; mục tiêu RPC gồm 200 SKU.
 - **Đã chốt 07/10: 5 task 100+4×25 SKU**, seed mapping 0, phân tầng đủ 17 nhóm hàng mỗi task. Nguồn 4 task `[48,68,47,37]` giữ làm tham khảo/đối chứng. 24 slot dự phòng hiện có không phải task dữ liệu. Ràng buộc replay-free giữ nguyên: loader train chỉ đọc task hiện tại, không bổ sung replay ảnh/GT task cũ; được giữ trọng số, prompt và prototype embedding.
 - [Notebook so sánh protocol](../../notebooks/data_preprocessing/01c_protocol_comparison.ipynb) ghi phân tích trước quyết định; output lịch sử được giữ. Người dùng đã chọn 5 task sau lần chạy đó, không phải kết luận protocol này chắc chắn có cAcc cao hơn.
-- GPU training mục tiêu là **RTX 4090 24 GB trên Vast.ai**, không phải GPU local. Máy phát triển và instance train là hai môi trường khác nhau; instance đã có Conda pdp Python 3.10.22/Torch cu121 và real pilot dùng CUDA kernel. Xem báo cáo pilot để lấy metadata/VRAM; không suy ra Task 2/5-task convergence từ Task 1.
+- GPU nguồn baseline là **L4 GCP**, đã dừng để chuyển sang **4080 SUPER**; target chưa kiểm chứng. Pilot trước đó chạy trên RTX 4090 Vast.ai. Dùng Python 3.10/Torch cu121 theo pins, build kernel mới trên GPU đích; không suy ra full 5-task convergence từ Task 1.
 - Độ phân giải mục tiêu: **640×640** cho cấu hình chính; **800×800** cho cấu hình đối sánh. Cần cấu hình processor và kiểm tra biến đổi bbox, không chỉ đổi kích thước file ảnh.
 - Mục tiêu đợt đầu: **tái dựng PDP theo paper rồi thay backbone ConvNeXt-V2-Base**. Giữ losses/prompt/teacher/PPG và prototype nền để đối chiếu; LoRA, K=3, FSA và freeze shared bổ sung là mở rộng/ablation sau baseline.
 - Dữ liệu đã nhập tại **`data/archive`**. **Audit data trước** khi chuẩn bị split và train; không tiếp tục ghi là chờ dữ liệu.
@@ -127,7 +149,7 @@ Train task chỉ đọc nhãn lớp hiện tại; full GT dùng audit. Ảnh nhi
 2. Kiểm tra `git status`, branch và file thực tế; bảo toàn code/tests/config đã khôi phục. Kết quả cũ chỉ để tham khảo, không vận hành lại GCP theo nhật ký tháng 09.
 3. **D1 ảnh thật đã đạt:** dùng release đã khóa ở data/processed; không chia lại test. Bản synth 202 tách riêng đã đạt nghiệm thu; còn 20 pilot pending, chưa tích hợp augmentation.
 4. **S1 runtime/S2:** đọc [báo cáo notebook 04](TRAINING_RUNTIME_ACCEPTANCE.md) để lấy trạng thái CLI/runner thật. Model/processor được lưu trong checkpoint; dùng configs native EXP-B1/B2, giữ configs tháng 09 làm lịch sử. Notebook 03 adapter đã PASS.
-5. **E1/E2 trên RTX 4090:** pilot và transition smoke đã hoàn tất. Baseline đã dừng theo người dùng; tmux `ac-baseline` pane dead. Không launch lại nếu chưa có yêu cầu tiếp tục. [Cấu hình/logging](BASELINE_4090_CONFIGURATION.md): 16 epochs/task là budget khởi đầu, chưa chứng minh hội tụ. Đọc val curves và prototype coverage; không sửa plan locked khi resume hoặc thêm early stopping trước khi xử lý prototype chỉ tích lũy ở epoch cuối. Source notebook và bản trong data lưu output mỗi 15 giây; console tổng ở `data/training/vast4090-seed0-640-v1/tmux_baseline.log`. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
+5. **Tiếp tục baseline trên GPU đích:** pilot/transition và ConvNeXt Task 1 đã hoàn tất. L4 dừng theo người dùng; tmux `ac-baseline-l4` pane dead. Không launch lại nếu chưa được yêu cầu. [Transfer](../environment/TRANSFER_TO_4080_2026-10-13.md): copy campaign hiện tại, kiểm chứng 4080, resume Task 2 từ **6.414**. Giữ 16 epochs/task, batch 8, TF32 và hashes; budget chưa chứng minh hội tụ. Source notebook/bản execution lưu outputs mỗi 15 giây khi chạy; console L4 `data/training/vast4090-seed0-640-v1/tmux_baseline_l4.log`. Bản đầy đủ tại commit được giữ trong data. LoRA/K=3/freeze bổ sung sau baseline trong run riêng.
 
 ## 7. Quy tắc tài liệu và giới hạn xác minh
 

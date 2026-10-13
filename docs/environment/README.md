@@ -1,5 +1,12 @@
 # Dependencies và chuẩn bị môi trường
 
+**Môi trường nguồn: NVIDIA L4 trên GCP.** Đã cài `.venv` Python 3.10,
+kiểm chứng CUDA/native kernel và khôi phục data/checkpoint;
+xem [báo cáo setup L4 và lệnh resume](GCP_L4_SETUP_2026-10-12.md).
+Baseline đã dừng ngày 13/10 để chuyển sang **4080 SUPER**;
+[bàn giao máy đích](TRANSFER_TO_4080_2026-10-13.md), chưa kiểm chứng GPU đích.
+Các mô tả RTX 3060/Vast.ai bên dưới giữ bối cảnh kiểm chứng trước đó.
+
 Tài liệu này liệt kê các gói cần cài cho AutoCheckout-CL. [Cài Conda sạch ngày 10/10](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên RTX 3060 local với Python 3.10; instance Vast.ai/4090 được chuẩn bị và ghi metadata khi thực chạy pilot.
 
 ## Python và bộ phiên bản
@@ -193,7 +200,8 @@ Nếu thiếu toolkit/compiler, mặc định `require_custom_kernel=False` cho 
 native-kernel acceptance vẫn False. Với True, cần toolchain CUDA tương thích và gate kernel đạt.
 
 Full baseline có thể kiểm tra trên RTX 3060 batch 1/FP32 nếu đủ VRAM; không bắt buộc 4090 cho smoke.
-OOM ở 800 giữ kết quả 640 và tổng hợp PARTIAL. GPU RTX 4090 Vast.ai vẫn là môi trường pilot/training chính.
+OOM ở 800 giữ kết quả 640 và tổng hợp PARTIAL. Pilot đã chạy trên RTX 4090 Vast.ai;
+baseline tiếp tục trên L4 rồi dừng để chuyển sang 4080 SUPER theo bàn giao hiện hành.
 Xem [notebook 02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) và
 [hướng dẫn modeling](../../notebooks/modeling/README.md).
 
