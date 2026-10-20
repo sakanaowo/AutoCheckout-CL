@@ -1,13 +1,10 @@
 # Dependencies và chuẩn bị môi trường
 
-**Môi trường nguồn: NVIDIA L4 trên GCP.** Đã cài `.venv` Python 3.10,
-kiểm chứng CUDA/native kernel và khôi phục data/checkpoint;
-xem [báo cáo setup L4 và lệnh resume](GCP_L4_SETUP_2026-10-12.md).
-Baseline đã dừng ngày 13/10 để chuyển sang **4080 SUPER**;
-[bàn giao máy đích](TRANSFER_TO_4080_2026-10-13.md), chưa kiểm chứng GPU đích.
-Các mô tả RTX 3060/Vast.ai bên dưới giữ bối cảnh kiểm chứng trước đó.
+**Cập nhật local 20/10/2026:** Conda `pdp` Python 3.10.22, Torch 2.2.2+cu121, torchvision 0.17.2+cu121; 64 pins requirements khớp, pip check/imports và 63 tests evaluation PASS. Kernel `pdp` có tên hiển thị AutoCheckout (pdp Python 3.10). Tạo Python/pip từ conda-forge do defaults yêu cầu chấp nhận điều khoản; runtime dùng requirements hiện hành.
 
-Tài liệu này liệt kê các gói cần cài cho AutoCheckout-CL. [Cài Conda sạch ngày 10/10](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) đã đạt trên RTX 3060 local với Python 3.10; instance Vast.ai/4090 được chuẩn bị và ghi metadata khi thực chạy pilot.
+RTX 3060 được PCI nhận diện nhưng nvidia-smi không kết nối driver, torch.cuda.is_available() là False. Lượt kiểm tra metrics chạy CPU, chưa nghiệm thu CUDA/native kernel trên môi trường mới. [Báo cáo và evidence](../project/FINAL_BACKBONE_COMPARISON_2026-10-20.md).
+
+Baseline đã hoàn tất trên các máy training trước đó ngày 15/10; setup L4 và chuyển 4080 là lịch sử. [Cài sạch 10/10](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) giữ GPU acceptance của lần cài cũ, không thay trạng thái driver hiện tại.
 
 ## Python và bộ phiên bản
 
@@ -51,6 +48,9 @@ python -m pip --version
 
 ```bash
 conda env create -f configs/environment/pdp.yml
+# Lựa chọn nếu không dùng kênh defaults (không chạy cả hai lệnh tạo):
+# conda create -n pdp --override-channels -c conda-forge python=3.10 pip
+# conda env config vars set -n pdp PYTHONNOUSERSITE=1 USE_TF=0
 conda activate pdp
 ```
 
@@ -201,7 +201,7 @@ native-kernel acceptance vẫn False. Với True, cần toolchain CUDA tương t
 
 Full baseline có thể kiểm tra trên RTX 3060 batch 1/FP32 nếu đủ VRAM; không bắt buộc 4090 cho smoke.
 OOM ở 800 giữ kết quả 640 và tổng hợp PARTIAL. Pilot đã chạy trên RTX 4090 Vast.ai;
-baseline tiếp tục trên L4 rồi dừng để chuyển sang 4080 SUPER theo bàn giao hiện hành.
+baseline đã hoàn tất trên 4080 SUPER ngày 15/10; xem báo cáo cuối hiện hành.
 Xem [notebook 02](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) và
 [hướng dẫn modeling](../../notebooks/modeling/README.md).
 
@@ -228,4 +228,4 @@ python -m pytest tests/test_native_checkout.py tests/test_resize.py \
 
 Sau đó chạy các test PDP/metrics/runner phù hợp với môi trường đã chuẩn bị; ghi kết quả thực tế, không tính các test CUDA bị skip là đã nghiệm thu GPU. Cài xong dependency chưa chứng nhận processor 640/800, loader, ConvNeXt adapter hoặc convergence.
 
-Local Conda pdp/processor/loader và full pretrained CUDA smoke đã đạt trên RTX 3060 bằng PyTorch fallback; [kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md). Adapter ConvNeXt đã có nghiệm thu notebook 03; [runtime notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi kiểm chứng CLI/runner. S6 calibration đã nghiệm thu kỹ thuật; bước tiếp là pilot/chuyển task/baseline trên 4090 theo [runbook training](../project/TRAINING_NOTEBOOK_RUNBOOK.md). Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; xem [cài Conda sạch](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) để tái dựng môi trường đã kiểm chứng local.
+Local Conda pdp/processor/loader và full pretrained CUDA smoke đã đạt trên RTX 3060 bằng PyTorch fallback; [kết luận nghiệm thu](../project/PDP_FOUNDATION_ACCEPTANCE.md). Adapter ConvNeXt đã có nghiệm thu notebook 03; [runtime notebook 04](../project/TRAINING_RUNTIME_ACCEPTANCE.md) ghi kiểm chứng CLI/runner. S6 calibration đã được dùng cho full baseline và kiểm tra lại ngày 20/10. [Runbook training](../project/TRAINING_NOTEBOOK_RUNBOOK.md) dành cho run mới hoặc run gián đoạn. Mỗi lần thực chạy ghi run ID, thời điểm bắt đầu/kết thúc, phiên bản thư viện và host/GPU; xem [cài Conda sạch](../project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) để tái dựng môi trường đã kiểm chứng local.

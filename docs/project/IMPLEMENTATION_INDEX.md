@@ -1,27 +1,12 @@
 # Chỉ mục triển khai và đầu ra
 
-**Cập nhật 13/10/2026: baseline dừng trên L4 để chuyển sang 4080 SUPER.**
-ConvNeXt Task 1 đã COMPLETED, Task 2 checkpoint resume **6.414**, backup 6.365;
-ResNet chưa bắt đầu. [Bàn giao chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md)
-ghi audit và required paths; giữ toàn bộ artifacts, máy đích chưa kiểm chứng.
+**Cập nhật 20/10/2026:** baseline EXP-B1/EXP-B2 đã đủ 5 task; [báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) có metrics, biểu đồ, provenance và giới hạn. Pilot/transition/native kernel và các lần chuyển GPU giữ trong báo cáo có ngày. 16 epochs/task đã hoàn tất, convergence và ablation còn cần nghiên cứu riêng.
 
-
-Notebook 03 đã chạy ngầm trên 4090 rồi L4: ConvNeXt trước ResNet, budget khởi đầu 16
-epochs/task. Executor lưu notebook mỗi 15 giây và stream runner log vào notebook;
-[executor tests](../../tests/test_execute_training_notebook.py) và
-[workflow regression](../../tests/test_training_workflow.py): 13 PASS.
-Xem [cấu hình baseline](BASELINE_4090_CONFIGURATION.md) và
-[setup/logging L4](../environment/GCP_L4_SETUP_2026-10-12.md).
-
-[Khảo sát GPU/chi phí 11/10](GPU_COST_REVIEW_2026-10-11.md) lưu peak bộ nhớ,
-snapshot giá public offers/current instance, ngưỡng FPS hòa vốn và shortlist host.
-DLPerf chỉ là proxy; chưa có benchmark PDP trên các offers đó. L4 đã có telemetry
-Task 1/2 thật; các ETA 4080 SUPER vẫn là ngoại suy, chưa đo trên máy đích.
-
-Cập nhật 13/10/2026. [Kết luận nghiệm thu foundation](PDP_FOUNDATION_ACCEPTANCE.md): phạm vi notebook đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) có nghiệm thu riêng. Real pilot, transition smoke, benchmark GPU và baseline ConvNeXt Task 1 đã hoàn tất; convergence/full baseline còn chờ. Bảng này ánh xạ các phần **đã triển khai** đến code, notebook, cấu hình và bằng chứng. [Vận hành](../data_preprocessing/OPERATIONS.md) mô tả cách chạy lại; [kế hoạch](IMPLEMENTATION_PLAN.md) dành cho phần chưa làm.
+Ngày 20/10 cài lại Conda pdp, tính lại counting 10 stage/final calibration/final detection AP, kiểm tra checkpoint và 63 tests evaluation. Bảng dưới ánh xạ code/notebook đến bằng chứng; [kế hoạch](IMPLEMENTATION_PLAN.md) ghi phần tiếp theo.
 
 | Phần | Code / giao diện | Notebook và config | Tests / bằng chứng |
 |---|---|---|---|
+| Báo cáo baseline cuối | Evaluators hiện có, không sửa model/metrics | [Evaluation 02](../../notebooks/evaluation/02_final_backbone_report.ipynb), [báo cáo](FINAL_BACKBONE_COMPARISON_2026-10-20.md) | 10 stage counting, final AP/calibration khớp; 63 tests; 10 checkpoint hashes khớp |
 | Setup/resume L4 và chuyển 4080 SUPER | [Activation](../../scripts/activate_gcp_l4.sh), native kernel/cache theo máy; runner/restore audit đã có | Notebook 03, `data/training/settings_baseline_l4.json` và `settings_baseline_4080.json` | [Setup L4](../environment/GCP_L4_SETUP_2026-10-12.md): 58 regression + 4 kernel tests, smoke restore thật; [transfer](../environment/TRANSFER_TO_4080_2026-10-13.md): Task 1 final/Task 2 checkpoint audit |
 | Audit tài nguyên nhập | [audit_rpc.py](../../tools/audit_rpc.py); inventory, decode/hash/alpha và đối chiếu synth trong notebook | [01](../../notebooks/data_preprocessing/01_data_audit.ipynb), [01b](../../notebooks/data_preprocessing/01b_preprocessing_acceptance.ipynb), [01c](../../notebooks/data_preprocessing/01c_protocol_comparison.ipynb) | [test_audit_rpc.py](../../tests/test_audit_rpc.py); [nghiệm thu tài nguyên](../data_preprocessing/reports/preprocessing-acceptance-2026-10-07.md) |
 | Split native và 5 task | [resize.py](../../tools/resize.py): `merge_annotations(size=None)` giữ bbox/area/source paths; [make_split.py](../../tools/make_split.py), [make_task_config.py](../../tools/make_task_config.py), [make_task_json.py](../../tools/make_task_json.py), [TaskConfig](../../autocheckout/taskcfg.py) là nền tái sử dụng | [02](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb); [release config](../../configs/data/rpc_100-4x25_seed0_native_v1.json), [mapping](../../configs/tasks_100-4x25_seed0.json) | [test_native_checkout.py](../../tests/test_native_checkout.py), resize/split/group/task-config tests; [split/test lock](../data_preprocessing/reports/split-100-4x25-2026-10-07.md) |
@@ -57,7 +42,7 @@ Real-only ảnh dùng root `data/archive`; resolved synth COCO dùng root repo. 
 
 PDP/teacher/PPG/checkpoint đã có trong [pdp/](../../pdp/); mapping/metrics/counting/provenance ở [autocheckout/](../../autocheckout/); evaluation ở [tools/eval_cl.py](../../tools/eval_cl.py), [tools/eval_count.py](../../tools/eval_count.py); runner ở [scripts/run_exp.sh](../../scripts/run_exp.sh). Kết quả cũ [results/](../../results/) là lịch sử.
 
-[Notebook 01 kiểm chứng processor/loader/PDP foundation](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt limited foundation trong run 65687942, CPU trên máy RTX 3060; [báo cáo](../timelines/model-foundation-2026-10-09.md). [Notebook 02 full pretrained baseline CUDA](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) đạt CUDA smoke 640/800 trên 3060 (run d967dc7b), native kernel chưa đạt tại lần chạy đó; [hướng dẫn](../../notebooks/modeling/README.md). Adapter ConvNeXt đã đạt notebook 03; CLI/runner được kiểm chứng ở notebook 04. Real pilot trên Vast.ai đã train/eval bằng native CUDA kernel; transition smoke và benchmark batch/TF32 đã hoàn tất. Chưa có convergence/full baseline, LoRA/K=3 hay generator đầy đủ đạt overlap 20–45%. Compositor resolution hiện có phục vụ scope 202; không đánh dấu toàn bộ S7 đã hoàn tất. Thứ tự tiếp theo: chọn budget từ validation → đủ 5 task → ablation riêng.
+[Notebook 01 kiểm chứng processor/loader/PDP foundation](../../notebooks/modeling/01_processor_loader_pdp_acceptance.ipynb) đạt limited foundation trong run 65687942, CPU trên máy RTX 3060; [báo cáo](../timelines/model-foundation-2026-10-09.md). [Notebook 02 full pretrained baseline CUDA](../../notebooks/modeling/02_full_pdp_baseline_acceptance.ipynb) đạt CUDA smoke 640/800 trên 3060 (run d967dc7b), native kernel chưa đạt tại lần chạy đó; [hướng dẫn](../../notebooks/modeling/README.md). Adapter ConvNeXt đã đạt notebook 03; CLI/runner được kiểm chứng ở notebook 04. Real pilot trên Vast.ai đã train/eval bằng native CUDA kernel; transition smoke và benchmark batch/TF32 đã hoàn tất. Full baseline hai backbone đã hoàn tất và metrics được kiểm tra lại ngày 20/10. Chưa chứng minh convergence, chưa có ablation LoRA/K=3 hay generator đầy đủ đạt overlap 20–45%. Compositor resolution hiện có phục vụ scope 202; không đánh dấu toàn bộ S7 đã hoàn tất. Thứ tự tiếp theo: phân tích validation/hội tụ → thêm seeds và ablation riêng.
 
 Khi sinh code/docs mới: thuật toán dùng lại đặt vào module, config có version, notebook giải thích và ghi run thật, báo cáo có ngày trong `reports/`, tests kiểm tra hành vi, rồi cập nhật bảng này + [PROGRESS](PROGRESS.md) + [timeline](../timelines/README.md). Commit theo chức năng sau nghiệm thu, giữ key/data/receipts lớn ngoài git.
 

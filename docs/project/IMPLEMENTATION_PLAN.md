@@ -1,18 +1,10 @@
 # Kế hoạch triển khai nhánh investigation
 
-**Trạng thái 13/10/2026:** pilot/transition đã hoàn tất; baseline ConvNeXt Task 1
-COMPLETED, Task 2 checkpoint **6.414**. L4 đã dừng theo người dùng để chuyển sang
-4080 SUPER; target chưa kiểm chứng. [Bàn giao chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md)
-và [tiến độ](PROGRESS.md) là trạng thái hiện hành. Các giả định hardware/milestone
-ngày 10/10 bên dưới giữ bối cảnh kế hoạch ban đầu; budget baseline đã khóa 16 epochs/task.
+**Cập nhật 20/10/2026:** E1 pilot/transition và phần baseline E2 đã hoàn tất: hai backbone đủ 5 task, 16 epochs/task. [Báo cáo kết quả](FINAL_BACKBONE_COMPARISON_2026-10-20.md) ghi metrics cuối và kiểm tra lại từ predictions. Phần ablation E2, kiểm chứng hội tụ và nhiều seeds chưa hoàn tất.
 
-Cập nhật: **10/10/2026**. [Kết luận nghiệm thu notebook foundation](PDP_FOUNDATION_ACCEPTANCE.md): foundation đã hoàn tất; [runtime CLI/runner](TRAINING_RUNTIME_ACCEPTANCE.md) và [adapter ConvNeXt](CONVNEXT_READINESS.md) có nghiệm thu local riêng; native kernel/Vast.ai còn chờ. Phạm vi hiện tại: **tái dựng PDP theo paper, sau đó thay backbone bằng ConvNeXt-V2-Base**. GPU train là **RTX 4090 trên Vast.ai**, không phải GPU local. Dữ liệu đã nhập vào `data/archive`, phải audit trước khi chuẩn bị split hoặc train. Notebook Kaggle của thành viên nhóm chỉ là tham khảo. Xem [bàn giao hệ thống](AGENT_HANDOFF.md) để biết nguồn quyết định và trạng thái repo.
+Phạm vi đã thực hiện: audit/release real-only 100+4×25, foundation PDP, ConvNeXt adapter, CLI/runner, S6 calibration, pilot/transition và full baseline. Giữ release/holdout, 640px, batch 8 và cấu hình đã chạy làm mốc. Các thiết kế S3/S4/S5/S7 dưới đây là hướng sau baseline; không suy rằng đã triển khai chỉ vì đã có kế hoạch.
 
-Sau khi kiểm tra reset, đã khôi phục 189 file bị xóa từ HEAD: test/fixture, tools/CLI, runner/config, baseline truy xuất và báo cáo cũ. **Tái sử dụng nền tảng đã có**, không triển khai lại các phần đó từ đầu. Các thay đổi kiến trúc dưới đây vẫn cần thực hiện và kiểm chứng.
-
-Thứ tự ưu tiên: **notebook audit dữ liệu → xác nhận protocol/split → notebook kiểm chứng PDP nền → notebook tích hợp backbone → pilot Vast.ai → đánh giá**. Đợt đầu giữ các thành phần PDP theo paper; LoRA, prototype K=3, freeze shared bổ sung, FSA và generator khay đầy đủ là mở rộng/ablation sau baseline, không tự bật cùng backbone.
-
-**Đã chốt protocol 5 task và nghiệm thu release ảnh thật ngày 07/10.** [Notebook split/acceptance](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb) đã sinh 22.494 train / 1.503 val / 6.003 test và 5 task JSON, có checksum/test lock. [Notebook review nhãn](../../notebooks/data_preprocessing/03_annotation_review.ipynb) độc lập cho 222 case synth; nguồn đó chưa được thêm vào release. Notebook 04 đã xử lý riêng 202 case (9 giữ/193 tái ghép, task/geometry/CSV PASS); còn 20 pilot pending. Modeling notebooks 01–04 đã nghiệm thu foundation, ConvNeXt và CLI/runner; [evaluation 01](COUNT_CALIBRATION_ACCEPTANCE.md) nghiệm thu S6 kỹ thuật. Bản augmentation mới chưa tích hợp training. [Chỉ mục triển khai](IMPLEMENTATION_INDEX.md) và [runbook](../data_preprocessing/OPERATIONS.md) là điểm vào code/operations.
+Training B2 đi qua 4090/L4/4080 SUPER, B1 trên 4080 SUPER; không còn yêu cầu chuyển máy/resume baseline. Synthetic 202 tách riêng, 20 pilot pending; không trộn kết quả tháng 09 vào baseline hiện tại.
 
 ## 0. Quy trình notebook bắt buộc
 
@@ -30,7 +22,7 @@ Notebook là điểm vào ghi chép và điều phối; thuật toán dùng lạ
 
 - **Protocol đã chốt: 100+4×25 SKU**, seed mapping 0, đủ 17 nhóm hàng mỗi task. Dùng `TaskConfig` ánh xạ RPC ID sang model label; giữ 224 slots/225 outputs để tương thích mã nền, 24 slot dự phòng không huấn luyện. Nguồn 4 task chỉ để tham khảo.
 - Không thêm replay buffer/loader task cũ; teacher là snapshot model, memory lâu dài gồm tham số và prototype tổng hợp. Train JSON chỉ có GT của lớp hiện tại; full GT chỉ dùng audit. Release hiện tại cho phép ảnh nhiều SKU xuất hiện ở nhiều task với nhãn mới khác nhau, chưa bảo đảm điều kiện nghiêm ngặt “mỗi ảnh chỉ dùng ở một task”. Kiểm chứng và ghi rõ quy ước này trong notebook loader/PDP nền trước training.
-- Một GPU RTX 4090 24 GB **thuê trên Vast.ai**. Kiểm tra GPU/driver/CUDA/kernel và dependency versions trên instance thực tế. Khởi đầu FP32; chỉ bật TF32/AMP sau khi kiểm tra finite loss và đo thực tế. Máy phát triển có thể audit và chạy test CPU; không mặc định có GPU tại đó. Không sử dụng hướng vận hành GCP cũ.
+- Baseline đã dùng một GPU/experiment, FP32+TF32 sau benchmark; B2 chuyển 4090/L4/4080 SUPER, B1 dùng 4080 SUPER. Run mới cần kiểm tra GPU/driver/kernel và lưu metadata riêng. Local 20/10 dùng CPU vì driver NVIDIA chưa hoạt động.
 - Ảnh 640 cho cấu hình chính, 800 cho đối sánh; giữ toàn cảnh khay. Processor, bbox và dự đoán phải dùng cùng quy ước tọa độ.
 - Mỗi thành phần có cờ bật/tắt để đo tác động. Không thay đồng thời backbone, LoRA và prototype rồi quy kết cải thiện cho một thành phần.
 - Kết quả cũ không được nhập vào bảng nghiên cứu mới. Lưu git revision, config, seed, checksum dữ liệu, weight nguồn và phiên bản thư viện cho mỗi run.
@@ -40,16 +32,16 @@ Notebook là điểm vào ghi chép và điều phối; thuật toán dùng lạ
 | ID | Công việc / kết quả bàn giao | Phụ thuộc | Kiểm chứng cần có | Làm khi chưa có data thật |
 |---|---|---|---|---|
 | D1 | Split/manifest và 5-task JSON ảnh thật: đã nghiệm thu; synth có gate riêng | 5 task đã chốt; release native v1 đã tạo | T8 đạt: partition/group/hash disjoint, đủ SKU, label đúng và split tái lập | Processor/loader notebook đã đạt; giữ holdout lock |
-| S0 | Local Conda/CPU+GPU smoke đã đạt; full suite và môi trường/native kernel Vast.ai còn chờ | Source hiện tại | T0 local có evidence theo runs; cần kiểm chứng toolkit/kernel và suite còn thiếu trước train | Local 3060 đã có evidence |
+| S0 | Conda local và native kernel trên máy training đã có evidence theo từng run | Source hiện tại | Local 20/10 đạt CPU evaluation; kiểm chứng CUDA lại trên máy nào sẽ dùng cho run mới | Local 3060 đã có evidence |
 | S1 | Foundation + CLI/runner với model/processor checkpoint và resolution explicit; [bằng chứng](TRAINING_RUNTIME_ACCEPTANCE.md) | S0, D1 cho data thật | T1: bbox native, loss/resume, batch và optimizer steps qua entrypoint thật | Local 3060 smoke; full training budget ở E1 |
 | S2 | ConvNeXt adapter đã PASS notebook 03; cấu hình runtime ở notebook 04 | S1 | T2: features/masks, pretrained preservation, CUDA 640/800 và cold reload đạt | RTX 3060, batch 1 FP32 |
 | S3 | Ablation freeze shared/private bổ sung, kiểm soát optimizer | E1; freeze nền kiểm tra ở S1 | T3: tham số/slice cũ bất biến, tham số mới có gradient | Có bằng fixture; thực nghiệm sau baseline |
 | S4 | LoRA decoder cross-attention, config và vòng đời adapter | E1, S3 | T4: zero-init equivalence, đúng target, gradient và reload | Có bằng fixture; thực nghiệm sau baseline |
 | S5 | Spherical K-Means K=3 và PPG multi-prototype | E1, S3; tương thích S4 nếu bật | T5: cluster, similarity, thiếu prototype, resume, ranh giới task | Có bằng fixture; thực nghiệm sau baseline |
-| S6 | Grid/NMS, policy val riêng, test-only reload, oracle opt-in; [nghiệm thu](COUNT_CALIBRATION_ACCEPTANCE.md) | S0, S1 | T6 đạt fixture + 4 cases notebook 04; policy cố định, checksum và raw mAP; calibration pilot còn chờ checkpoint thật | CPU, không cần GPU |
+| S6 | Grid/NMS, policy val riêng, test-only reload, oracle opt-in; [nghiệm thu](COUNT_CALIBRATION_ACCEPTANCE.md) | S0, S1 | T6 đạt fixture/smoke/full baseline; policy cố định, checksum; final calibration tính lại khớp | CPU, không cần GPU |
 | S7 | Generator đầy đủ/overlap; compositor resolution đã có trong tools/annotation_resolution.py | S0; data/masks thật cho sản xuất | T7: mask/bbox/area, overlap, seed, tách nguồn split | Chỉ phần ghép với mask giả |
-| E1 | Notebook pilot EXP-B1 PDP ResNet / EXP-B2 ConvNeXt trên Vast.ai; đo steps/VRAM/convergence | S1 runtime, S2, S6, D1, GPU train | T9: metrics val, latency/VRAM, run artifacts tái lập | Local foundation/adapter/runtime/S6 có evidence; chờ train GPU, pilot budget và val checkpoint thật |
-| E2 | Baseline đủ 5 task rồi ablation riêng S3/S4/S5/S7 | E1; S3–S5/S7 chỉ là phụ thuộc của ablation tương ứng | T10: metrics sau mỗi task, độ quên, policy calibration và ngân sách memory; full teacher/PPG transition smoke trước protocol | Chờ E1 |
+| E1 | **Pilot hai backbone và transition smoke đã hoàn tất** trên 4090 | S1, S2, S6, D1 đạt | Teacher/PPG/prototypes, val policy và artifacts đã có báo cáo riêng | Không chạy lại pilot để tiếp tục đọc kết quả |
+| E2 | **Baseline đủ 5 task hai backbone đã hoàn tất**; ablation S3/S4/S5/S7 chưa chạy | E1 đã hoàn tất; ablation có phụ thuộc riêng | Metrics/counting/forgetting đã kiểm tra lại; hội tụ, nhiều seeds và ngân sách memory nghiên cứu thêm | Phân tích validation; giữ baseline gốc |
 
 Kết quả audit tài nguyên: [notebook 01b](../../notebooks/data_preprocessing/01b_preprocessing_acceptance.ipynb) full decode/hash 57.710 file đạt, đã phát hiện 222 mask/bbox case. Sau đó notebook 04 khép 202 case bằng bản riêng có owner masks/provenance/task mapping; còn 20 pilot và mục tiêu che khuất riêng. **Release ảnh thật đã nghiệm thu** trong notebook 02 sau quyết định 5 task, xem [báo cáo split](../data_preprocessing/reports/split-100-4x25-2026-10-07.md). Không chặn release real-only vì lỗi synth, và không đánh dấu synth/processor sẵn sàng chỉ vì split đạt.
 
@@ -59,7 +51,7 @@ Tái dựng ở đây là kiểm chứng architecture, prompt pools, DDL/query l
 
 ### Kiểm chứng và tái sử dụng nền tảng hiện có
 
-Nền tảng đã khôi phục từ HEAD. Release split/task JSON và scope resolution 202 có nghiệm thu riêng; kết quả regression CPU hiện hành nằm trong [PROGRESS](PROGRESS.md). Conda pdp đã đạt pip check, limited CPU foundation và full pretrained Task 1 CUDA smoke 640/800 trên 3060; full suite/native kernel/Vast.ai chưa nghiệm thu. Dùng Conda này cho local validation, không suy ra trạng thái `.venv`. Chế độ `merge_annotations(..., size=None)` giữ nguyên geometry/path source để không phải resize/copy ảnh khi chia tập.
+Nền tảng đã khôi phục từ HEAD. Release split/task JSON và scope resolution 202 có nghiệm thu riêng; kết quả regression CPU hiện hành nằm trong [PROGRESS](PROGRESS.md). Các run trước đã đạt foundation/CUDA smoke và native kernel trên máy training. Conda pdp cài lại 20/10 đạt pip check/imports/63 tests evaluation; driver local chưa hoạt động. Không suy ra GPU acceptance mới từ evidence môi trường cũ. Chế độ `merge_annotations(..., size=None)` giữ nguyên geometry/path source để không phải resize/copy ảnh khi chia tập.
 
 - Tái sử dụng `tests/coco_helpers.py`, `tests/synth_rpc.py`, `tests/pdp_helpers.py` và test suites taskcfg/predictions/counting/CL/runner/PDP. Thêm ca kiểm thử còn thiếu cho thay đổi mới; không viết lại fixture tương đương.
 - Chạy regression nền trước khi đổi kiến trúc; thêm kiểm tra giao thức 100+4×25 với config hiện có, chỉ thay catalog/mapping khi data mới được xác nhận.
@@ -161,26 +153,20 @@ Audit trước khi train: checksum/version, catalog 200 SKU, đường dẫn và
 
 ## 10. E1–E2: thực nghiệm sau audit và chốt protocol
 
-**EXP-B1 (baseline mới trên Vast.ai):** PDP với backbone hiện tại trên Task 1, cùng dữ liệu, resolution, số bước tối ưu và evaluator với EXP-B2; giữ protocol theo quyết định mới. Không tự bật FSA/LoRA/K=3/freeze bổ sung. Tên này không tham chiếu kết quả E0/E1 cũ.
+**Thiết kế đã thực hiện — EXP-B1:** PDP với backbone hiện tại trên Task 1, cùng dữ liệu, resolution, số bước tối ưu và evaluator với EXP-B2; giữ protocol theo quyết định mới. Không tự bật FSA/LoRA/K=3/freeze bổ sung. Tên này không tham chiếu kết quả E0/E1 cũ.
 
 **EXP-B2:** PDP + ConvNeXt-V2-Base trên Task 1 của protocol được chọn; LoRA tắt, prototype mean baseline giữ để đo riêng tác động backbone. Ghi rõ pretrained weights và thành phần train/frozen. Quét batch vật lý 4/8/16 theo VRAM, ghi batch hiệu dụng, số bước tối ưu, loss/val curves, peak VRAM, latency và tensor load report trong notebook có timestamp. Nếu không hội tụ, kiểm tra loader/classifier/optimizer/số bước; FSA nếu thử phải là run/ablation riêng.
 
-Sau pilot, chạy toàn bộ protocol đã chọn khi checkpoint/resume, teacher và memory policy đã test. Sau mỗi task lưu `mAP@C/P/A`, ma trận theo task, chỉ số đếm tại lớp đã thấy và policy calibration. Sau task cuối báo cáo checkout trên 200 SKU bằng test cố định. Các cải tiến freeze/LoRA/K=3/FSA/dữ liệu ghép được đo trong run riêng sau baseline và có notebook ghi thời điểm chạy.
+Baseline toàn bộ protocol đã hoàn tất sau pilot/transition. Quy trình đã dùng: kiểm tra checkpoint/resume, teacher và memory policy trước training. Sau mỗi task lưu `mAP@C/P/A`, ma trận theo task, chỉ số đếm tại lớp đã thấy và policy calibration. Sau task cuối báo cáo checkout trên 200 SKU bằng test cố định. Các cải tiến freeze/LoRA/K=3/FSA/dữ liệu ghép được đo trong run riêng sau baseline và có notebook ghi thời điểm chạy.
 
 Không đặt trước AP/cAcc như kết quả đã đạt. Chỉ công nhận một milestone khi có lệnh/output kiểm chứng và artifacts của run tương ứng.
 
 ## 11. Các bước tiếp theo
 
-Phạm vi notebook processor/loader/PDP nền đã hoàn tất; xem [kết luận nghiệm thu](PDP_FOUNDATION_ACCEPTANCE.md).
+1. Báo cáo baseline: dùng [kết quả cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) và [evaluation 02](../../notebooks/evaluation/02_final_backbone_report.ipynb), giữ AP50 tách AP[.50:.95], counting tách detection, forgetting tách độ chính xác cuối.
+2. Phân tích validation: định lượng thiếu đếm SKU mới, score theo nhóm, lỗi trên ảnh hard và tác động NMS. Thiết kế tiếp theo dựa trên validation; test chỉ dùng đánh giá policy đã khóa.
+3. Kiểm tra hội tụ từ learning curves, thêm seeds để đo độ biến thiên; không xem hoàn tất 16 epochs/task là bằng chứng hội tụ.
+4. Ablation độc lập S3/S4/S5/S7 hoặc FSA chỉ triển khai khi chọn phạm vi; mỗi thay đổi có campaign/config/notebook riêng, giữ baseline và holdout.
+5. Nếu cần GPU local, sửa driver và nghiệm thu kernel trước. Conda pdp đã sẵn cho phân tích CPU; không tự resume campaign COMPLETED.
 
-1. **S1/S2 local:** đọc [runtime acceptance](TRAINING_RUNTIME_ACCEPTANCE.md) và [ConvNeXt acceptance](CONVNEXT_READINESS.md); giữ artifacts/notebooks 01–04, không tạo lại adapter hoặc pipeline song song.
-2. **Bỏ bước nghiệm thu môi trường Vast.ai riêng:** người dùng quyết định ngày 10/10/2026 không tạo/chạy notebook environment/kernel riêng trước pilot. Ghi GPU/versions/kernel mode và VRAM/thời gian step trong run pilot; trạng thái native kernel vẫn theo evidence thực chạy.
-3. **E1 trên RTX 4090:** chuẩn bị code/config/notebook local; thực chạy pilot EXP-B1/EXP-B2 Task 1 trên GPU training đã chọn, cùng real-only split/resolution/optimizer-step budget/evaluator. Ghi loss/val curves, VRAM, latency và run artifacts; sinh policy từ val checkpoint pilot. Budget smoke 4 steps không phải budget pilot.
-4. **E2 trên RTX 4090:** kiểm chứng full-model Task 1→2 teacher/PPG/prototype/current-task-only loader trên cùng máy pilot, sau đó baseline đủ 5 task và metrics/counting/forgetting trên holdout cố định. Fixture/debug nhỏ vẫn có thể chạy CPU/3060 local.
-
-Synthetic 202/20 pilot pending là track riêng; không chặn baseline real-only. LoRA/K=3/FSA/freeze bổ sung/generator overlap là ablation sau baseline, không là điều kiện bắt buộc để bắt đầu baseline E2.
-
-Triển khai notebook training: [01 pilot](../../notebooks/training/01_task1_pilot.ipynb), [02 transition](../../notebooks/training/02_task_transition.ipynb), [03 baseline](../../notebooks/training/03_five_task_baseline.ipynb), [settings](../../configs/training/notebooks.json). Artifacts mới ghi dưới data, dùng tmux/headless executor để giữ run khi SSH mất kết nối; checkpoint và task skip/predict-only hỗ trợ rerun cùng campaign. [Runbook](TRAINING_NOTEBOOK_RUNBOOK.md) và [dry-run report](TRAINING_NOTEBOOK_DRY_RUN.md) ghi cách vận hành/bằng chứng local; kết quả dry run không thay nghiệm thu real GPU/full training.
-
-
-Cập nhật S2 ngày 09/10: notebook 03 đã đạt CUDA smoke 640/800 (run aeeb770b); notebook 04 tiếp nối qua CLI/runner thật. Native kernel/Vast.ai, calibration và convergence chưa được suy ra từ các smoke local.
+Synthetic 202/20 pilot pending vẫn là track riêng. [Runbook](TRAINING_NOTEBOOK_RUNBOOK.md) giữ hướng dẫn vận hành cho run mới hoặc run bị gián đoạn, không phải yêu cầu chạy lại baseline đã hoàn tất.

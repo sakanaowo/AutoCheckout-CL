@@ -16,6 +16,9 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 | 12/10/2026 | Setup L4 GCP, tải data bằng rclone, native kernel/resume smoke PASS, chạy baseline trong tmux với live notebook | [Setup L4 và logging](../environment/GCP_L4_SETUP_2026-10-12.md) |
 | 13/10/2026, 05:18 UTC+7 | ConvNeXt baseline Task 1 hoàn tất cùng predictions/policy/evaluation | [Kết quả Task 1 và chuyển GPU](../environment/TRANSFER_TO_4080_2026-10-13.md) |
 | 13/10/2026, 09:56 UTC+7 | Dừng L4 theo người dùng để chuyển sang 4080 SUPER; Task 2 checkpoint 6.414, audit/manifest đạt | [Bàn giao chuyển máy](../environment/TRANSFER_TO_4080_2026-10-13.md) |
+| 14/10/2026 | ConvNeXt đủ 5 task trên 4080 SUPER; tiếp tục ResNet | [Báo cáo cuối](../project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) |
+| 15/10/2026, 19:28:27 UTC+7 | Baseline hai backbone COMPLETED | [Báo cáo cuối](../project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) |
+| 20/10/2026 | Cài lại Conda pdp; 63 tests evaluation; tính lại counting 10 stage, final calibration/AP và báo cáo | [Báo cáo](../project/FINAL_BACKBONE_COMPARISON_2026-10-20.md), [notebook evaluation 02](../../notebooks/evaluation/02_final_backbone_report.ipynb) |
 
 [Nhật ký chi tiết 06–08/10](history-2026-10-06-08.md) · [Tiến độ dự án](../project/PROGRESS.md) · [Notebook review](../../notebooks/data_preprocessing/03_annotation_review.ipynb).
 

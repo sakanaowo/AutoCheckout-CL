@@ -1,12 +1,8 @@
 # Vận hành notebooks training: data artifacts, tmux và resume
 
-**Trạng thái 13/10/2026:** baseline đã dừng trên L4 theo người dùng để chuyển sang
-4080 SUPER. ConvNeXt Task 1 hoàn tất, Task 2 checkpoint **6.414**, ResNet chưa bắt đầu.
-[Bàn giao chuyển máy](../environment/TRANSFER_TO_4080_2026-10-13.md) ghi paths/hashes và
-settings `data/training/settings_baseline_4080.json`. Giữ campaign hiện tại và build
-kernel mới trên máy đích; chỉ resume khi được yêu cầu. Các ví dụ 4090 bên dưới giữ
-lịch sử thiết lập pilot/baseline. Trên L4 đã kiểm chứng `.venv` bằng
-`source scripts/activate_gcp_l4.sh`; không copy `.venv` sang máy đích.
+**Cập nhật 20/10/2026:** baseline hai backbone đã COMPLETED ngày 15/10. [Báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) là nguồn trạng thái hiện hành. Các ví dụ khởi chạy/resume dưới đây dành cho vận hành run mới hoặc run gián đoạn, không phải bước tiếp theo của campaign đã hoàn tất. Giữ nguyên checkpoints, policies và holdout. Conda local pdp đã cài lại, evaluation CPU đạt; driver NVIDIA local chưa hoạt động.
+
+Lịch sử chuyển GPU: [L4 setup](../environment/GCP_L4_SETUP_2026-10-12.md), [transfer 13/10](../environment/TRANSFER_TO_4080_2026-10-13.md). B2 sau đó hoàn tất trên 4080 SUPER, B1 cũng đủ 5 task trên máy này.
 
 Ngày 10/10/2026. Chuẩn bị code/notebooks tại local, chạy thực nghiệm chính trên RTX 4090 đã chọn. Theo quyết định người dùng, bỏ notebook nghiệm thu môi trường Vast.ai riêng. Ba notebook gọi runner/PDP/evaluator hiện có; executor chỉ giúp notebook chạy ngầm và lưu outputs.
 

@@ -1,6 +1,6 @@
 # Notebook thực nghiệm AutoCheckout-CL
 
-Cập nhật **10/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. Mỗi bước dữ liệu, model, train và đánh giá phải có notebook ghi rõ **làm gì và chạy lúc nào**. GPU training là **RTX 4090 trên Vast.ai**; local RTX 3060 đã đạt foundation CPU và full pretrained Task 1 CUDA smoke 640/800 bằng PyTorch fallback; native kernel/môi trường Vast.ai còn chờ.
+Cập nhật **20/10/2026**. Protocol **5 task 100+4×25**; baseline hai backbone đã hoàn tất ngày 15/10. [Báo cáo cuối](../docs/project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) và evaluation 02 tổng hợp artifacts đã kiểm tra lại. Mỗi bước ghi rõ **làm gì và chạy lúc nào**; outputs lịch sử của các notebook trước giữ nguyên. Local Conda pdp hiện sẵn cho CPU evaluation, CUDA driver chưa hoạt động.
 
 ## Cấu trúc và thứ tự
 
@@ -13,8 +13,8 @@ Cập nhật **10/10/2026**. Protocol chính đã chốt **5 task 100+4×25**. M
 | [data_preprocessing/03_annotation_review.ipynb](data_preprocessing/03_annotation_review.ipynb) | Visual 222 case, pilots và Batch 200; lịch sử đề xuất, gate nội dung FAIL |
 | [data_preprocessing/04_annotation_resolution.ipynb](data_preprocessing/04_annotation_resolution.ipynb) | Đã xử lý 202 case: 9 giữ/193 tái ghép; acceptance PASS ngày 08/10, 13:31:19–13:34:20 UTC+7 |
 | [modeling/](modeling/README.md) | Notebook 01 đạt limited foundation (CPU, máy RTX 3060); notebook 02 full pretrained CUDA 640/800 smoke PASS trên 3060 (PyTorch fallback); notebook 03 ConvNeXt PASS; notebook 04 kiểm chứng CLI/runner thật |
-| [training/](training/README.md) | Notebooks 01 pilot, 02 transition, 03 baseline 5 task; dry run CPU, artifacts data/tmux/resume; real 4090 chưa chạy |
-| [evaluation/](evaluation/README.md) | Notebook 01 S6 PASS trên CPU: val-only policy, test-only reload và raw mAP; metrics pilot chưa có |
+| [training/](training/README.md) | Pilot/transition và baseline hai backbone đủ 5 task đã hoàn tất; artifacts trong data, source notebook giữ các snapshot lịch sử |
+| [evaluation/](evaluation/README.md) | Notebook 01 S6 PASS; notebook 02 báo cáo final baseline, ma trận/forgetting/counting và evidence kiểm tra lại |
 | [references/](references) | Notebook thành viên nhóm, chỉ dùng tham khảo |
 
 [Báo cáo split và test lock](../docs/data_preprocessing/reports/split-100-4x25-2026-10-07.md), [tài liệu tiền xử lý](../docs/data_preprocessing/README.md). Release chính chỉ gồm ảnh thật; bản synth 202 riêng đã nghiệm thu geometry/provenance/mapping, còn 20 pilot pending. Kiểm chứng loader/processor trước khi tích hợp augmentation. Xem [hướng dẫn vận hành](../docs/data_preprocessing/OPERATIONS.md).

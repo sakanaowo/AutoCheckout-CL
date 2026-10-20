@@ -1,9 +1,7 @@
-# Training trên GCP L4
+# Training trên GCP L4 — tài liệu lịch sử
 
-Môi trường hiện tại là NVIDIA L4 trên GCP. Xem [setup 12/10/2026 và lệnh resume](docs/environment/GCP_L4_SETUP_2026-10-12.md).
+Baseline hai backbone đã hoàn tất ngày 15/10/2026; [báo cáo cuối](docs/project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) và [bàn giao hiện hành](docs/project/AGENT_HANDOFF.md) cập nhật ngày 20/10.
 
-Baseline đã dừng ngày 13/10/2026 lúc 09:56 UTC+7 để chuyển sang 4080 SUPER.
-Task 1 hoàn tất, Task 2 checkpoint resume 6.414; xem
-[manifest và hướng dẫn chuyển máy](docs/environment/TRANSFER_TO_4080_2026-10-13.md).
+L4 là một chặng training của ConvNeXt trước khi chuyển sang 4080 SUPER. [Setup L4 12/10](docs/environment/GCP_L4_SETUP_2026-10-12.md) và [transfer 13/10](docs/environment/TRANSFER_TO_4080_2026-10-13.md) giữ bằng chứng tại thời điểm đó, không phải hướng dẫn resume campaign hiện tại.
 
-Hướng dẫn GCP tháng 09 giữ ở [docs/archive/GCP_TRAINING_GUIDE.md](docs/archive/GCP_TRAINING_GUIDE.md).
+Hướng dẫn GCP tháng 09 giữ ở [archive](docs/archive/GCP_TRAINING_GUIDE.md).

@@ -6,7 +6,7 @@ Nghiên cứu nhận diện và đếm sản phẩm tại quầy thanh toán b�
 - **Dữ liệu:** release ảnh thật đã nghiệm thu: **22.494 train / 1.503 val / 6.003 test**. Split nghiên cứu độc lập; một phần test2019 nguồn được dùng train, nên không gọi là official RPC test2019 benchmark.
 - **Synthetic:** bản riêng 202 ảnh đã nghiệm thu: 9 giữ / 193 tái ghép thật với owner masks, provenance và mapping 5 task. CSV còn 20 pilot pending; chưa thêm vào release ảnh thật hoặc phát hành lại toàn bộ nguồn synth.
 - **Nghiệm thu model:** foundation, ConvNeXt adapter và [CLI/runner](docs/project/TRAINING_RUNTIME_ACCEPTANCE.md) đã đạt. Pilot và transition smoke đã hoàn tất trên 4090; [môi trường L4 GCP](docs/environment/GCP_L4_SETUP_2026-10-12.md) đạt native kernel và resume thật. LoRA/K=3/FSA/freeze bổ sung là ablation sau baseline.
-- **Training hiện tại (13/10):** đã dừng trên L4 để chuyển sang **4080 SUPER**. ConvNeXt Task 1 hoàn tất; Task 2 checkpoint **step 6.414**, ResNet chưa bắt đầu. [Bàn giao chuyển GPU](docs/environment/TRANSFER_TO_4080_2026-10-13.md) ghi kết quả, hashes và paths cần giữ; máy đích chưa kiểm chứng.
+- **Baseline hoàn tất:** cả ResNet-50 và ConvNeXt-V2-Base đủ 5 task, campaign kết thúc 15/10; kiểm tra lại artifacts ngày 20/10. Final test AP50 **62,33% / 84,40%**, cAcc **2,58% / 21,74%** (ResNet / ConvNeXt). [Báo cáo chi tiết](docs/project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) có metrics từng task, forgetting, counting và đối chiếu paper.
 - **Quy trình:** mỗi bước dữ liệu/model/train/eval có notebook ghi mục tiêu, config, output và thời điểm chạy thật. Kết quả tháng 09 giữ làm lịch sử.
 
 ## Điểm vào
@@ -14,6 +14,7 @@ Nghiên cứu nhận diện và đếm sản phẩm tại quầy thanh toán b�
 | Tài liệu | Nội dung |
 |---|---|
 | [docs/README.md](docs/README.md) | Mục lục tài liệu hiện hành, tham khảo và lịch sử |
+| [Kết quả baseline hai backbone](docs/project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) | Báo cáo cuối, bảng/biểu đồ, kiểm chứng từ predictions và giới hạn so sánh paper |
 | [Bàn giao](docs/project/AGENT_HANDOFF.md) | Quyết định, trạng thái code và cách tiếp quản |
 | [Kế hoạch](docs/project/IMPLEMENTATION_PLAN.md), [tiến độ](docs/project/PROGRESS.md) | Thứ tự triển khai và bằng chứng kiểm chứng |
 | [notebooks/README.md](notebooks/README.md) | Quy trình notebook và thứ tự thực hiện |
@@ -34,8 +35,8 @@ docs/
 notebooks/
   data_preprocessing/  audit → nghiệm thu → split → review → resolution
   modeling/            foundation + ConvNeXt CUDA; notebook 04 kiểm chứng CLI/runner
-  training/            pilot/transition đạt; baseline Task 2 đang dở, đã dừng
-  evaluation/          S6 đạt; pilot và ConvNeXt baseline Task 1 có metrics
+  training/            pilot/transition và baseline hai backbone đủ 5 task
+  evaluation/          S6 và notebook báo cáo baseline cuối đã có bằng chứng
   references/          notebook thành viên nhóm
 configs/               task mapping, data release lock và cấu hình thí nghiệm
 pdp/                   lõi PDP/Deformable DETR, teacher và PPG
@@ -56,9 +57,9 @@ Các file kế hoạch/tiến độ/hướng dẫn GCP ở root là đường d�
 
 ## Kiểm chứng và bước tiếp theo
 
-Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) giữ phạm vi local; [setup L4](docs/environment/GCP_L4_SETUP_2026-10-12.md) bổ sung 58 regression + 4 kernel tests và smoke resume thật. Full baseline và convergence chưa hoàn tất.
+Phạm vi notebook processor/loader/PDP nền đã hoàn tất: notebook 01 đạt 11/11 gates; notebook 02 đạt 7/7 gates full CUDA smoke trên RTX 3060, batch 1 FP32, peak allocated 3,49/4,22 GiB ở 640/800. [Kết luận nghiệm thu](docs/project/PDP_FOUNDATION_ACCEPTANCE.md) giữ phạm vi local; [setup L4](docs/environment/GCP_L4_SETUP_2026-10-12.md) bổ sung 58 regression + 4 kernel tests và smoke resume thật. Full baseline đã hoàn tất; 16 epochs/task chưa tự chứng minh hội tụ.
 
-Bước tiếp: chuyển campaign hiện tại, kiểm chứng 4080 SUPER → resume ConvNeXt Task 2 → đủ 5 task ConvNeXt và ResNet. Giữ 640px, batch/effective 8/8, 16 epochs/task, FP32 + TF32 và input hashes. Người dùng đã bỏ notebook nghiệm thu môi trường riêng; metadata và số đo runtime ghi trong training. Release/holdout giữ nguyên; synth 202/20 pilot pending xử lý riêng, không chặn baseline real-only.
+Ngày 20/10 đã tính lại counting 10 stage, calibration validation Task 5 và final detection AP của cả hai backbone: khớp artifacts; 63 tests evaluation đạt. Conda `pdp` Python 3.10.22 cài đủ 64 pins, pip check/imports đạt; driver NVIDIA local chưa hoạt động nên kiểm tra này dùng CPU. Bước tiếp: phân tích lỗi trên validation, kiểm tra hội tụ và lập ablation/multiple-seed riêng. Giữ release/holdout và baseline gốc; không chọn policy mới dựa trên test. ConvNeXt có AP/counting tốt hơn nhưng forgetting trung bình cao hơn (8,67 so với 6,63 điểm AP50).
 
 `pyproject.toml` yêu cầu Python 3.10; dependencies đã pin trong requirements. Chuẩn bị environment riêng và build CUDA kernel trên máy đích. Không bật `--shutdown` của runner như cơ chế kết thúc thuê instance.
 

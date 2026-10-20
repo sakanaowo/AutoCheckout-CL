@@ -1,11 +1,10 @@
 # Tài liệu AutoCheckout-CL
 
-Cập nhật **13/10/2026**. Protocol **5 task 100+4×25, seed 0**. Baseline đã resume trên L4 GCP,
-hoàn tất ConvNeXt Task 1 rồi dừng theo người dùng tại Task 2 để chuyển sang **4080 SUPER**.
-Checkpoint resume **6.414**, ResNet chưa bắt đầu; giữ toàn bộ artifacts, máy đích chưa kiểm chứng.
+Cập nhật **20/10/2026**. Protocol **5 task 100+4×25, seed 0**. Baseline hai backbone đã hoàn tất ngày 15/10 trên campaign `vast4090-seed0-640-v1`; metrics cuối được tính lại từ predictions ngày 20/10. [Báo cáo kết quả](project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) là nguồn trạng thái mới nhất; các báo cáo dừng/chuyển GPU 11–13/10 là lịch sử.
 
 | Điểm vào | Mục đích |
 |---|---|
+| [Báo cáo cuối hai backbone](project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) | Protocol, full metrics, forgetting/counting, biểu đồ, đối chiếu PDP và evidence kiểm tra lại |
 | [Bàn giao](project/AGENT_HANDOFF.md), [snapshot đầu ngày 09/10](project/HANDOFF_2026-10-09.md) | Bàn giao hiện hành và snapshot lịch sử trước kiểm chứng model |
 | [Kết luận processor/loader/PDP foundation](project/PDP_FOUNDATION_ACCEPTANCE.md) | Phạm vi notebook đã hoàn tất, evidence CPU/CUDA, giới hạn và 5 bước tiếp theo |
 | [Chỉ mục triển khai](project/IMPLEMENTATION_INDEX.md) | Code mới, config, notebook, tests và đầu ra của từng phần |
@@ -18,7 +17,7 @@ Checkpoint resume **6.414**, ResNet chưa bắt đầu; giữ toàn bộ artifac
 | [Dependencies/môi trường](environment/README.md), [Conda cài sạch](project/CONDA_CLEAN_INSTALL_ACCEPTANCE.md) | Python 3.10, setuptools/pkg_resources, 105 tests và GPU/notebook checks trong env mới |
 | [Setup L4 GCP](environment/GCP_L4_SETUP_2026-10-12.md), [chuyển sang 4080 SUPER](environment/TRANSFER_TO_4080_2026-10-13.md) | 62 tests, kernel/resume thật, Task 1 metrics, checkpoint Task 2 và paths/hashes cần chuyển |
 | [Báo cáo dừng baseline 4090 ngày 11/10](project/BASELINE_4090_STOP_REVIEW_2026-10-11.md) | Snapshot lịch sử trước L4: 11 epochs ConvNeXt, val AP 82,83%, checkpoint step 31.550 |
-| [Tài nguyên và chi phí GPU Vast.ai](project/GPU_COST_REVIEW_2026-10-11.md) | Peak VRAM/CPU/RAM đã đo, giá instance hiện tại, offers một/hai GPU và ngưỡng hiệu quả theo throughput |
+| [Tài nguyên và chi phí GPU Vast.ai](project/GPU_COST_REVIEW_2026-10-11.md) | Snapshot ngày 11/10: VRAM/CPU/RAM, giá/offers và ngưỡng hiệu quả theo throughput |
 | [Tiền xử lý](data_preprocessing/README.md), [hướng dẫn vận hành](data_preprocessing/OPERATIONS.md) | Cách đọc kết quả, chạy lại và tiếp tục pipeline |
 | [Schema](data_preprocessing/formats.md) | Tọa độ, COCO, task mapping và artifacts |
 | [Báo cáo thực nghiệm](data_preprocessing/reports/README.md) | Kết quả theo ngày/run; giữ nguyên kết luận tại thời điểm chạy |
