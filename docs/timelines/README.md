@@ -4,6 +4,7 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 
 | Ngày | Công việc | Báo cáo |
 |---|---|---|
+| 20/10/2026 | Đọc code/rules và metadata cutout; lập kế hoạch nhánh `feat/synthetic-data-v2`, chưa chạy generator/train | [Thiết kế](../project/synthetic-data-v2-design-2026-10-20.md), [kế hoạch](../project/synthetic-data-v2-plan-2026-10-20.md) |
 | 07/10/2026 | Audit/split 5 task và review nhãn synth | [Tiền xử lý](../data_preprocessing/README.md) |
 | 07/10/2026 | Pilot GPT-6.1 Sol trên 10 ảnh mới | [Pilot Sol](../data_preprocessing/reports/sol-pilot-2026-10-07.md) |
 | 08/10/2026 | Batch GPT-6.1 Sol, đúng 200 ảnh, 2 deferred | [Batch và nghiệm thu notebook](../data_preprocessing/reports/sol-batch-2026-10-08.md) |

@@ -1,5 +1,7 @@
 # Chỉ mục triển khai và đầu ra
 
+**Ảnh ghép v2 — mới ở bước kế hoạch:** [thiết kế/bản đồ code](synthetic-data-v2-design-2026-10-20.md), [task breakdown](synthetic-data-v2-plan-2026-10-20.md). Các file `synthetic.py`, `compositing.py`, CLI/notebook v2 trong kế hoạch chưa được tạo; bảng sau vẫn mô tả phần đã có.
+
 **Cập nhật 20/10/2026:** baseline EXP-B1/EXP-B2 đã đủ 5 task; [báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) có metrics, biểu đồ, provenance và giới hạn. Pilot/transition/native kernel và các lần chuyển GPU giữ trong báo cáo có ngày. 16 epochs/task đã hoàn tất, convergence và ablation còn cần nghiên cứu riêng.
 
 Ngày 20/10 cài lại Conda pdp, tính lại counting 10 stage/final calibration/final detection AP, kiểm tra checkpoint và 63 tests evaluation. Bảng dưới ánh xạ code/notebook đến bằng chứng; [kế hoạch](IMPLEMENTATION_PLAN.md) ghi phần tiếp theo.

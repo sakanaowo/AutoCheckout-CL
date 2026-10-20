@@ -1,5 +1,7 @@
 # Tiền xử lý dữ liệu
 
+Cập nhật kế hoạch **20/10/2026** trên `feat/synthetic-data-v2`: [thiết kế](../project/synthetic-data-v2-design-2026-10-20.md) và [kế hoạch ảnh ghép v2](../project/synthetic-data-v2-plan-2026-10-20.md). Đã đọc code/index nguồn; chưa sinh ảnh hoặc thay dữ liệu. Hướng mới là kiểm kê cutout → pilot 200 ảnh/task để nhóm duyệt → release mới, giữ nguyên real holdout và artifacts lịch sử bên dưới.
+
 Trạng thái 08/10/2026: **real-only release đã khóa**, **202 case synth đã xử lý**, **20 case pilot còn pending**. Chưa thêm synth vào release ảnh thật; chưa phát hành lại toàn bộ 20.000 ảnh synth.
 
 | Bước | Notebook | Kết quả hiện tại |

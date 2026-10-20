@@ -1,5 +1,7 @@
 # Kế hoạch triển khai nhánh investigation
 
+**Kế hoạch chuyên biệt cho nhánh `feat/synthetic-data-v2` (20/10):** xem [thiết kế](synthetic-data-v2-design-2026-10-20.md) và [các bước triển khai ảnh ghép](synthetic-data-v2-plan-2026-10-20.md). Nội dung dưới đây giữ roadmap/bằng chứng baseline; không coi các hướng synthetic cũ là đặc tả đã chốt cho v2.
+
 **Cập nhật 20/10/2026:** E1 pilot/transition và phần baseline E2 đã hoàn tất: hai backbone đủ 5 task, 16 epochs/task. [Báo cáo kết quả](FINAL_BACKBONE_COMPARISON_2026-10-20.md) ghi metrics cuối và kiểm tra lại từ predictions. Phần ablation E2, kiểm chứng hội tụ và nhiều seeds chưa hoàn tất.
 
 Phạm vi đã thực hiện: audit/release real-only 100+4×25, foundation PDP, ConvNeXt adapter, CLI/runner, S6 calibration, pilot/transition và full baseline. Giữ release/holdout, 640px, batch 8 và cấu hình đã chạy làm mốc. Các thiết kế S3/S4/S5/S7 dưới đây là hướng sau baseline; không suy rằng đã triển khai chỉ vì đã có kế hoạch.

@@ -1,5 +1,7 @@
 # Tiến độ AutoCheckout-CL
 
+**Kế hoạch nhánh `feat/synthetic-data-v2`, 20/10/2026:** đã đọc quy tắc tài liệu, pipeline dữ liệu/loader và index cutout; lưu [thiết kế](synthetic-data-v2-design-2026-10-20.md), [kế hoạch](synthetic-data-v2-plan-2026-10-20.md) và [nguồn cuộc họp](../references/meeting-2026-10-20/README.md). Có metadata camera/source cho đủ 7.502 cutout; chưa review semantic hoặc tạo v2. Mốc kế tiếp đề xuất: inventory/gallery nguyên liệu, nhóm chốt trước pilot. Đây là kế hoạch, không phải nghiệm thu generator hay một run train mới.
+
 **Cập nhật 20/10/2026: baseline EXP-B1/EXP-B2 hoàn tất 5 task ngày 15/10, 19:28:27 UTC+7.** [Báo cáo kết quả](FINAL_BACKBONE_COMPARISON_2026-10-20.md) thay trạng thái dừng/chuyển máy ngày 13/10. Pilot/transition, foundation/ConvNeXt adapter, CLI/runner và S6 đã có bằng chứng riêng.
 
 Final test B1/B2: AP50 **62,33%/84,40%**, AP[.50:.95] **51,55%/71,37%**, cAcc **2,58%/21,74%**; forgetting **6,63/8,67 điểm**. Đã tính lại counting 10 stage, calibration validation Task 5 và AP cuối; hashes/checkpoints khớp. 63 tests evaluation PASS. Hoàn tất budget 16 epochs/task chưa chứng minh hội tụ; LoRA/K=3/FSA/freeze bổ sung vẫn là ablation chưa chạy.

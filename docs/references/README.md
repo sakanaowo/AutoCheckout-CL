@@ -1,5 +1,6 @@
 # Tài liệu nguồn và tham khảo
 
+- [Tài liệu họp 20/10 về ảnh ghép và train](meeting-2026-10-20/README.md): ba bản nguồn người dùng cung cấp, giữ nguyên và có SHA-256; thông số triển khai cần nhóm duyệt.
 - [Handoff gốc 06/10](agent-handoff-vault-2026-10-06.md): bản nguồn từ vault, giữ wikilink lịch sử.
 - [Giải thích paper PDP](giai-thich-paper-PDP.md).
 - [Phân tích PDP cho RPC](<Phân tích PDP cho đồ án thanh toán tự động (RPC).md>).
