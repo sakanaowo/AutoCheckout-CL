@@ -179,3 +179,16 @@ def inventory_cutouts(index: dict[str, Any], cutout_set: str, root: str | os.Pat
             "fill": obj["fill"], "iou": obj["iou"], "status": "pending",
         })
     return sorted(records, key=lambda r: r["cutout_id"]), issues
+
+
+def merge_catalogs(catalogs: list[list[dict[str, Any]]]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Union of several cutout sets; a source image cut again by a later set keeps the earlier cutout."""
+    merged, owner, dropped = [], {}, []
+    for records in catalogs:
+        for rec in records:
+            if rec["source"] in owner:
+                dropped.append({"cutout_id": rec["cutout_id"], "duplicate_of": owner[rec["source"]]})
+                continue
+            owner[rec["source"]] = rec["cutout_id"]
+            merged.append(rec)
+    return sorted(merged, key=lambda r: r["cutout_id"]), dropped

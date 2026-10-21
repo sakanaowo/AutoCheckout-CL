@@ -44,11 +44,11 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 | T1.1 | Tải **toàn bộ ảnh camera 0** của train2019 (13.434 ảnh, khoảng 2,2 GB) qua Kaggle API, tải từng file; tiếp tục được nếu bị ngắt | `data/archive/train2019/` (chỉ camera 0), danh sách + SHA-256 | 13.434/13.434, 0 thiếu/thừa, tất cả mở được (2592×1944), 2,48 GB; `runs/data_preprocessing/train2019_extract/manifest_cam0.json` | [x] |
 | T1.2 | Kiểm kê catalog cutout: hash, camera, nguồn, kích thước, `cutout_set` | `data/processed/rpc_synth_v2_v1/catalog/cutouts_sam_v1.json` | 7.502/7.502 dùng được, 0 lỗi; 7 test PASS. Chặn SKU < 5 làm ở T1.8 khi có nhóm hình dạng | [x] |
 | T1.3 | Lọc val2019: bỏ 208 ảnh làm nền → 5.792 ảnh; đo thống kê thiết kế (số vật/level, kích thước theo SKU, chồng lấn, màu/sáng) | `data/processed/rpc_synth_v2_v1/design/` (val_excluded_backgrounds, design_val, design_statistics, receipt) | 5.792 ảnh (1.933/1.921/1.938), 71.108 vật; từ chối test2019 (test) | [x] |
-| T1.4 | Kiểm tra tương đương SAM: cắt lại 20–30 ảnh nguồn **đã có cutout**, so mask mới với mask cũ | Bảng IoU | IoU trung vị ≥ 0,98, nếu không thì tìm nguyên nhân trước khi trộn | [ ] |
-| T1.5 | Cắt bổ sung camera 0 cho nhóm dạng trụ (drink, canned_food, alcohol, milk; khoảng 51 SKU), mục tiêu 15–20 cutout/SKU, cùng script/tham số/trọng số | `data/processed/cutouts_cam0_v1/` | Số cutout/SKU; không lấy lại cutout đã bị loại | [ ] |
+| T1.4 | Kiểm tra tương đương SAM: cắt lại 20–30 ảnh nguồn **đã có cutout**, so mask mới với mask cũ | `runs/data_preprocessing/sam_equivalence/comparison.json` | **Đạt:** 42/42 cặp, IoU mask thấp nhất 0,993, trung vị 0,998 (7 cặp trùng tuyệt đối). sam2.1_b.pt SHA-256 `f1a9cf2d…5e2e47` | [x] |
+| T1.5 | Cắt bổ sung camera 0 cho nhóm dạng trụ (drink, canned_food, alcohol, milk; khoảng 51 SKU), mục tiêu 15–20 cutout/SKU, cùng script/tham số/trọng số | `data/processed/cutouts_cam0_v1/` | Số cutout/SKU; không lấy lại cutout đã bị loại | [~] |
 | T1.6 | Duyệt cutout bằng mắt (cả bộ cũ và bộ bổ sung), loại thủ công các lỗi (ví dụ dính mâm xoay: 42437, 42491, 42499) | Danh sách loại có lý do | Ghi vào biên bản; không sửa file gốc | [ ] |
 | T1.7 | Gán **nhóm hình dạng** cho 200 SKU (dẹt/trụ/hộp cứng) và đo tỉ lệ chai/lon đứng–nằm trên mẫu val2019 | Bảng SKU → nhóm, góc dùng; tỉ lệ đứng/nằm | Kiểm tra bằng mắt một mẫu | [~] |
-| T1.8 | Gallery theo SKU/camera/nhóm và **họp duyệt M0** | Gallery + `m0_review.json` | Có người duyệt, ngày, quyết định | [ ] |
+| T1.8 | Gallery theo SKU/camera/nhóm và **họp duyệt M0** | Gallery + `m0_review.json` | Có người duyệt, ngày, quyết định | [~] |
 
 ### Giai đoạn 2 — Bộ sinh ảnh (cổng M1)
 
@@ -111,4 +111,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | T0.2: `formats.md` mục 7. Bộ đánh giá dùng tên file như release cũ (`val_task_<t>`, `val_full`, `test_full`) để runner dùng được | — |
 | 21/10 | T1.1: zip 27,2 GB tải xong, không lỗi; giải nén `retail_product_checkout/train2019/*_camera0-*`. Zip có hai bản train2019 (gốc và trong `retail_product_checkout/`), dùng bản sau | `train2019_extract/manifest_cam0.json` |
 | 21/10 | T1.7 (đo trước): chai/lon đứng < 0,5% trong val. Trong 17.719 vật nhóm trụ, bbox nhỏ nhất chỉ bằng 0,48 lần p90 của SKU; 40 bbox nhỏ nhất có khoảng 5 vật đứng. Hộp thịt chữ nhật (`canned_food`) nằm úp mặt, nên cần chọn camera theo SKU | — |
+| 21/10 | T1.4 đạt: SAM chạy 0,19 s/ảnh trên 3060 | `sam_equivalence/` |
+| 21/10 | T1.5 mở rộng từ khoảng 51 lên **cả 200 SKU** (32 ảnh camera 0/SKU, dự kiến còn khoảng 20 sau khi lọc). Lý do: chỉ khoảng 20 phút GPU; tờ duyệt có thể chỉ ra hộp cứng cũng cần góc ngang; cutout không dùng thì bỏ qua | `runs/data_preprocessing/cutouts_cam0_v1/extract.log` |
+| 21/10 | T1.8: lệnh `review-sheets` (mỗi SKU một hàng: crop val, camera 2, camera 0) và hàm `merge_catalogs` gộp catalog bỏ trùng nguồn. Trang chạy thử: chai trong val nằm ngang, khớp camera 0, không khớp camera 2 (nắp). SKU 80 có 3 cutout camera 2 thủng mất phần nắp, lọc tự động không bắt được, cần loại ở T1.6 | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |

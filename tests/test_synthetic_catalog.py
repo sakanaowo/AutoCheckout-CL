@@ -11,6 +11,7 @@ from autocheckout.synthetic import (
     design_statistics,
     design_val,
     inventory_cutouts,
+    merge_catalogs,
 )
 from synth_rpc import make_raw_rpc
 from tools.resize import merge_annotations
@@ -80,6 +81,15 @@ def test_design_statistics_counts_and_overlap(merged):
         assert 0.0 <= level_stats["p50"] <= 1.0
     assert set(stats["background_rgb"]) == {"mean_p10", "mean_p50", "mean_p90"}
     assert stats["n_images"] == len(val["images"])
+
+
+def test_merge_catalogs_keeps_first_set_for_same_source():
+    first = [{"cutout_id": "sam_v1:1", "source": "a_camera0-1.jpg", "ann_id": 1}]
+    second = [{"cutout_id": "cam0_v1:1", "source": "a_camera0-1.jpg", "ann_id": 1},
+              {"cutout_id": "cam0_v1:2", "source": "b_camera0-1.jpg", "ann_id": 2}]
+    merged, dropped = merge_catalogs([first, second])
+    assert [r["cutout_id"] for r in merged] == ["cam0_v1:2", "sam_v1:1"]
+    assert dropped == [{"cutout_id": "cam0_v1:1", "duplicate_of": "sam_v1:1"}]
 
 
 def write_png(path, alpha):
