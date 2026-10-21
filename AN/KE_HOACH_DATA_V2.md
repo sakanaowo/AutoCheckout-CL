@@ -72,7 +72,7 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 |---|---|---|---|---|
 | T4.1 | Sinh đủ 71.642 ảnh `[21752, 12534, 12129, 11850, 13377]` | Release v2 + manifest | Đủ số ảnh, kiểm tra tự động đạt, không trùng | [~] đang sinh |
 | T4.2 | Bộ đánh giá từ RPC gốc: val2019 đã lọc, test2019 đầy đủ, theo task, giữ `level`; thêm tập 6.003 ảnh cũ để so B1/B2 | `eval/` + checksum | Test: 5.792 / 24.000 ảnh, nhãn trong phạm vi các lớp đã học | [x] |
-| T4.3 | Smoke test loader 640: tọa độ box, nhãn, thư mục ảnh, không nhãn cũ trong train | Test loader | PASS | [ ] |
+| T4.3 | Smoke test loader 640: tọa độ box, nhãn, thư mục ảnh, không nhãn cũ trong train | Test loader | PASS | [x] |
 | T4.4 | Báo cáo `synth-v2-<ngày>.md`, cập nhật PROGRESS/chỉ mục | Báo cáo | Link hợp lệ | [ ] |
 
 ### Song song (phục vụ cổng dừng của gói train, chạy CPU)
@@ -105,7 +105,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 
 ## 5. Câu hỏi đang chờ
 
-(Trống)
+- (Cho gói train) `pdp/main.py` đọc `train_task_<t>.json` và `val_task_<t>.json` từ cùng `--task_ann_dir`, nhưng train ảnh ghép nằm ở `rpc_synth_v2_v1/tasks/synth_v2/` còn val ở `rpc_eval_official_v1/`. Đề xuất: runner tạo một thư mục task gồm symlink tới hai nguồn (như test T4.3 đang làm), `--train_img_dir` = release root, `--test_img_dir` = `data/archive`, `--pred_ann_dir` = `rpc_eval_official_v1`. Chốt khi lên plan gói train
 
 ## 6. Nhật ký thực hiện
 
@@ -137,5 +137,6 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | M2: thêm chế độ xếp gọn (`pack_mode=compact`, `pack_prob`, `aligned_prob`) và chỉ số `basket_density`; thử 12 cấu hình trên 400 ảnh. Không cấu hình nào khớp cả mật độ cụm lẫn độ phủ bbox. Đo thêm: vật có hàng xóm cách < 3% cạnh ảnh 94/97/98% (val 98/99/100%), IoU bbox lớn nhất p90 0,25/0,26/0,26 (val 0,23/0,25/0,26). **Người dùng chọn A**, M2 duyệt | `rpc_synth_v2_pilot_v1/pilot_review.json` |
 | 21/10 | T4.1 bắt đầu: kế hoạch 71.642 cảnh (vật mới ở task 2–5 chiếm 50,0–50,1%), sinh với 16 worker khoảng 11 ảnh/s (ước 1 giờ 50 phút) | `rpc_synth_v2_v1/plans/` |
 | 21/10 | T4.2 xong: lệnh `eval-set` → `rpc_eval_official_v1`: val_full 5.792 ảnh / 71.108 vật, val_task_1..5 = 5.562/3.291/3.100/3.053/3.412 ảnh, test_full 24.000 ảnh / 294.333 vật, nhãn 0..199. Tập so B1/B2 (6.003 ảnh) trùng id, file, box với test mới (chỉ khác trường `group` của split cũ) nên lọc dự đoán theo id là so được | `rpc_eval_official_v1/manifest.json` |
+| 21/10 | T4.3 xong: `tests/test_synthetic_loader.py` (4 test PASS trên pilot + bộ đánh giá): ảnh 640, box khớp bbox gốc < 1px, chỉ nhãn task hiện tại | — |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |
