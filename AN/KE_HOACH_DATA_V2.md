@@ -102,6 +102,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | Mảnh mâm nhỏ ở mép | Loại luôn: thấy mâm là loại | Nhãn bbox/mask phải khớp sản phẩm |
 | 21/10 | 105 hộp chụp ngang thấy hai mặt (mask sạch) | Giữ loại | Mỗi SKU đã đủ cutout thẳng mặt; tư thế hai mặt không có trên khay |
 | 21/10 | Bố cục bản đầy đủ (M2) | A: giữ cách rải pilot v1; code xếp gọn để sẵn, mặc định tắt | Khoảng cách giữa các vật và độ chồng bbox đã khớp val; xếp gọn chỉ thu hẹp khoảng trống trong cụm nhưng làm vật bị che thật nhiều hơn (40–47% so với 28–39%) và độ phủ bbox vượt val; sai số tổng 0,099 so với 0,123 |
+| 21/10 | Ngưỡng dừng sau task 1 khi B2 M2 = 85,79% (không phải ~73% như lúc chốt D17) | Giữ Δ: 🟢 ≥ 72,8%, 🟡 57,8–72,8%, 🔴 < 57,8%; FSA kiểm tra sớm < 52,8% | Hai bên đo cùng cách; giữ 60% nghĩa là chấp nhận kém B2 tới 26 điểm |
 
 ## 5. Câu hỏi đang chờ
 

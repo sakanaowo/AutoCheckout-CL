@@ -139,7 +139,7 @@ Generator không giải quyết tự động teacher tự tin nhưng sai, protot
 
 Gói train sau data cần: export/load FSA ConvNeXt round-trip giữ backbone/config; audit teacher dùng processor checkpoint và full GT để phân loại nhầm mới→cũ; lưu policy threshold theo nhóm chọn trên val; log theo handoff; thử task 1 trước task 2–5.
 
-**Cổng dừng sau task 1 (D16–D19):** đo cAcc-M2 trên 5.562 ảnh val2019 đã lọc có SKU task 1, bỏ dự đoán trùng (IoU ≥ 0,5) với vật SKU chưa học. So với B2 tính lại cùng cách từ `pred_val.npz`: Δ ≥ −13 chạy tiếp; −28 ≤ Δ < −13 chỉnh một vòng; Δ < −28 chỉnh một vòng, hết 3 vòng thì dừng. Model FSA < 40% thì bỏ PDP task 1 của vòng đó. Val được dùng lặp có chủ đích (cách 2), không gọi là holdout chưa dùng; test2019 chỉ chấm một lần ở cấu hình cuối. Lý do và giới hạn ở [quyết định v2](synthetic-data-v2-decisions-2026-10-21.md#4-cổng-dừng-sau-task-1).
+**Cổng dừng sau task 1 (D16–D19):** đo cAcc-M2 trên 5.562 ảnh val2019 đã lọc có SKU task 1, bỏ dự đoán trùng (IoU ≥ 0,5) với vật SKU chưa học. So với B2 tính lại cùng cách từ `pred_val.npz` (B = 85,79%): Δ ≥ −13 (≥ 72,8%) chạy tiếp; −28 ≤ Δ < −13 chỉnh một vòng; Δ < −28 chỉnh một vòng, hết 3 vòng thì dừng. Model FSA < 52,8% (B − 33) thì bỏ PDP task 1 của vòng đó. Val được dùng lặp có chủ đích (cách 2), không gọi là holdout chưa dùng; test2019 chỉ chấm một lần ở cấu hình cuối. Lý do và giới hạn ở [quyết định v2](synthetic-data-v2-decisions-2026-10-21.md#4-cổng-dừng-sau-task-1).
 
 FULL-SYN thay nhiều yếu tố và có FSA thêm compute; dùng để đo cả cấu hình tổng hợp, không quy hiệu quả riêng cho ảnh ghép. FULL-REAL **hoãn** (D6); nếu chạy sau thì train trên split thật cũ và chấm trên 6.003 ảnh test cũ.
 

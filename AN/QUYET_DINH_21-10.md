@@ -54,8 +54,8 @@ B1/B2 đã train trên 6.000 ảnh val2019 và 16.494 ảnh test2019, nên **kh�
 | # | Quyết định |
 |---|---|
 | D16 | Chỉ số: **cAcc-M2** trên các ảnh val2019 đã lọc có chứa SKU task 1 (5.562 ảnh). Trước khi đếm, bỏ mọi dự đoán có IoU ≥ 0,5 với vật thuộc SKU chưa học. Ngưỡng đếm chọn trên chính tập này, như B2 đã làm với val của nó. Báo cáo kèm cAcc M1, AP50@A, cAcc theo level và bảng nhầm lẫn làm **chẩn đoán** |
-| D17 | Mốc B = cAcc-M2 task 1 của B2, tính lại từ `pred_val.npz`. Δ = FULL-SYN − B. **🟢 Δ ≥ −13** (khoảng ≥ 60%): chạy task 2–5. **🟡 −28 ≤ Δ < −13**: chỉnh một vòng. **🔴 Δ < −28** (khoảng < 45%): chỉnh một vòng |
-| D18 | Kiểm tra sớm: chấm model FSA trước khi chạy PDP task 1. Nếu cAcc-M2 của FSA < 40%, bỏ qua PDP task 1 của vòng đó và sang vòng chỉnh tiếp theo |
+| D17 | Mốc B = cAcc-M2 task 1 của B2, tính lại từ `pred_val.npz`. Δ = FULL-SYN − B. **🟢 Δ ≥ −13**: chạy task 2–5. **🟡 −28 ≤ Δ < −13**: chỉnh một vòng. **🔴 Δ < −28**: chỉnh một vòng. Đã tính (P2, 21/10): B = **85,79%** (1.464 ảnh val cũ, ngưỡng 0,27; M1 = 73,19% khớp số cũ), nên 🟢 ≥ 72,8%, 🟡 57,8–72,8%, 🔴 < 57,8%. Giữ Δ, không giữ con số 60%/45% ghi trước đó (người dùng chọn): hai bên đo cùng cách nên so khoảng cách mới công bằng |
+| D18 | Kiểm tra sớm: chấm model FSA trước khi chạy PDP task 1. Nếu cAcc-M2 của FSA < 52,8% (B − 33, cùng khoảng cách với mức 40% khi B còn tính là 73%), bỏ qua PDP task 1 của vòng đó và sang vòng chỉnh tiếp theo |
 | D19 | Hết 3 vòng: ở 🟡 thì **vẫn chạy task 2–5** và ghi "kỳ vọng ngang B2"; ở 🔴 thì **dừng** hướng ảnh ghép thuần |
 | D20 | Nút được chỉnh ở mỗi vòng **đăng ký trước**, tối đa 2 nút/vòng, chọn theo chẩn đoán: cân màu/sáng theo val2019, bóng đổ mềm, làm mờ mép cutout, mức che khuất, phân bố tỉ lệ vật, tỉ lệ vật đứng/nằm, cắt bổ sung cutout. **Không** đổi số ảnh, không thêm CycleGAN trong gói này |
 | D21 | Số epoch FSA chọn theo đường val2019 với trần đặt trước; số cụ thể chốt trong plan gói train. Ghi giờ GPU của FSA riêng |
