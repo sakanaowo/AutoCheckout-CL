@@ -138,3 +138,74 @@ Mỗi thư mục có thêm `manifest.json`: tên task config, nguồn ảnh trai
 
 Task được coi là xong khi có `task_final.pth` và cả hai file dự đoán; `scripts/run_exp.sh` dựa vào đó để bỏ qua task hoặc chỉ ghi lại dự đoán.
 ```
+
+## 7. Synthetic v2 và bộ đánh giá RPC gốc (hợp đồng 21/10/2026, chưa có code)
+
+Theo [quyết định D1–D21](../project/synthetic-data-v2-decisions-2026-10-21.md). Code v2 phải theo đúng mục này; muốn đổi thì sửa ở đây trước.
+
+### 7.1 Nguyên liệu
+
+```text
+data/archive/train2019/                         ảnh sản phẩm đơn tải bổ sung (hiện chỉ camera 0), tên gốc RPC
+data/archive/cutouts/sam/                        bộ cutout gốc, không sửa (cutout_set = "sam_v1")
+data/processed/cutouts_cam0_v1/                  cutout camera 0 bổ sung, cùng schema index.json (cutout_set = "cam0_v1")
+data/processed/rpc_synth_v2_<version>/catalog/
+├── cutouts.json      một record mỗi cutout (bảng dưới)
+├── skus.json         một record mỗi SKU: rpc_category_id, shape_group, use_cameras, standing_ratio
+└── reviews.json      quyết định duyệt: cutout_id, decision keep/reject, reviewer, date, reason
+```
+
+| Trường của `cutouts.json` | Ý nghĩa |
+|---|---|
+| `cutout_id` | `<cutout_set>:<ann_id>`, duy nhất giữa các bộ |
+| `cutout_set`, `file`, `sha256` | Bộ nguồn, đường dẫn tương đối từ repo root, hash PNG |
+| `rpc_category_id`, `camera`, `source`, `ann_id` | Theo `index.json`; `camera` 0 ngang, 1 ≈ 45°, 2 trên, 3 ≈ 30° |
+| `bbox_source`, `size`, `fill`, `iou` | bbox trên ảnh nguồn, kích thước PNG, chỉ số SAM |
+| `status` | `keep`, `reject` hoặc `pending`; chỉ `keep` được dùng cho full generation |
+
+`shape_group` thuộc `flat` (gói/hộp dẹt, dùng camera 2), `cylinder` (chai/lon/hộp trụ, camera 0 là chính, camera 2 theo `standing_ratio`) hoặc nhóm khác do M0 chốt. Camera 1/3 không dùng. Index gốc không bị sửa; quyết định nằm ở `reviews.json`.
+
+### 7.2 Release ảnh ghép
+
+```text
+data/processed/rpc_synth_v2_<version>/
+├── images/task_<t>/<image_id>.jpg          1850×1850 JPEG
+├── owner_masks/task_<t>/<image_id>.png     uint16, 0 là nền, giá trị = instance_id
+├── recipes/task_<t>/<image_id>.json        recipe deterministic
+├── annotations/task_<t>_rpc.json           full GT canonical, category_id RPC 1..200
+├── tasks/synth_v2/train_task_<t>.json      nhãn model, chỉ lớp task t (đưa vào loader)
+├── tasks/synth_v2/train_task_<t>_gt_full.json   mọi vật, nhãn model, chỉ để audit
+├── task_config.json                        bản sao byte-identical của release real v1
+└── manifest.json                           config hash, asset hashes, counts, file hashes
+```
+
+| Trường ảnh (`images[]`) | Ý nghĩa |
+|---|---|
+| `id`, `file_name` | ID duy nhất trong release; `file_name` tương đối từ release root (`images/task_<t>/...`) |
+| `width`, `height`, `level` | Kích thước thật; `level` easy/medium/hard theo số vật như val2019 |
+| `generation_task` | Task sinh ra ảnh; **export task t chỉ lấy ảnh có `generation_task == t`** |
+| `seed`, `background_id`, `recipe`, `train_source` | Seed ổn định, nền đã dùng, đường dẫn recipe, `"synth_v2"` |
+
+| Trường vật (`annotations[]`) | Ý nghĩa |
+|---|---|
+| `category_id` | RPC ID trong file canonical; nhãn model trong file task (ánh xạ đúng một lần qua `TaskConfig`) |
+| `bbox`, `area`, `segmentation` | Lấy từ owner mask cuối: `bbox == mask_bbox`, `area == mask.sum()`, RLE |
+| `instance_id`, `cutout_id`, `visible_fraction` | Truy ngược tới cutout; phần còn thấy sau che khuất |
+| `labeled` | Chỉ có trong `_gt_full`: vật có thuộc lớp task hiện tại không |
+
+Task 1 chỉ chứa SKU task 1. Task t ≥ 2 chứa SKU task t (có nhãn) và SKU các task trước (không nhãn trong train); không bao giờ có SKU tương lai. Không lật ảnh. Payload (ảnh, mask, recipe, annotation) phải giống từng byte khi chạy lại cùng code/config/assets; thời gian chạy ghi ở receipt trong `runs/`, không ghi vào payload.
+
+### 7.3 Bộ đánh giá từ RPC gốc
+
+```text
+data/processed/rpc_eval_official_v1/
+├── val_excluded_backgrounds.json   208 ảnh val2019 làm nguồn nền: tên file + SHA-256
+├── val_full.json                   5.792 ảnh val2019, mọi lớp, nhãn model 0..199
+├── val_task_<t>.json               ảnh val có vật task t, chỉ lớp task t
+├── test_full.json                  24.000 ảnh test2019, mọi lớp
+├── compare_b12/test_full.json      bản sao byte-identical test 6.003 ảnh của release real v1 (so B1/B2)
+├── task_config.json                bản sao byte-identical
+└── manifest.json                   nguồn, số ảnh/vật, MD5 + SHA-256 từng file
+```
+
+Tên file theo đúng quy ước mục 4 để runner/công cụ đánh giá hiện có dùng được. `file_name` là `val2019/<name>` hoặc `test2019/<name>`, image root `data/archive`; giữ `level`, `source`, `orig_id`, `orig_file_name`, toạ độ pixel gốc. Thống kê thiết kế ảnh ghép chỉ được đọc `val_full.json`; không file nào của test2019 được dùng để fit generator.
