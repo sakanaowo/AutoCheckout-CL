@@ -54,8 +54,8 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 
 | ID | Task | Đầu ra | Kiểm tra | Trạng thái |
 |---|---|---|---|---|
-| T2.1 | Lập kế hoạch cảnh: số vật theo level, tỉ lệ vật mới 40–60% (kẹp `[1, n−1]`), SKU cũ chọn đều, quota cân bằng, seed ổn định | `plan_scenes` + recipe | Test: task 1 chỉ SKU task 1; không SKU tương lai; quota ±20%; seed không phụ thuộc số worker | [ ] |
-| T2.2 | Renderer: xoay/scale theo val, chồng lấn, mỗi vật còn thấy ≥ 70%, bóng, màu/sáng; bbox/RLE lấy từ mask cuối | `render_scene` | Test: không lật ảnh, bbox khớp mask, vật nhỏ không mất | [ ] |
+| T2.1 | Lập kế hoạch cảnh: số vật theo level, tỉ lệ vật mới 40–60% (kẹp `[1, n−1]`), SKU cũ chọn đều, quota cân bằng, seed ổn định | `plan_scenes` + recipe | Test: task 1 chỉ SKU task 1; không SKU tương lai; quota ±20%; seed không phụ thuộc số worker | [x] |
+| T2.2 | Renderer: xoay/scale theo val, chồng lấn, mỗi vật còn thấy ≥ 70%, bóng, màu/sáng; bbox/RLE lấy từ mask cuối | `render_scene` | Test: không lật ảnh, bbox khớp mask, vật nhỏ không mất | [~] |
 | T2.3 | Ghi file, xuất nhãn theo `generation_task`, manifest, chạy tiếp được nếu bị ngắt | `generate_dataset`, CLI | Test: ảnh task 2 không lọt vào task 1; ID lớp chỉ ánh xạ một lần; chạy song song ra đúng từng byte như chạy tuần tự | [ ] |
 
 ### Giai đoạn 3 — Pilot (cổng M2)
@@ -128,5 +128,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | Sửa 435 cutout lỗi mask bằng cách cắt lại đúng ảnh gốc với **SAM 2.1 large** (cùng crop/hậu xử lý/ngưỡng QC; trọng số SHA-256 `ab7e1ac9…`): 377 qua QC, mình duyệt cạnh nhau cũ/mới → nhận 195. SAM-L sửa rất tốt nắp chai/vành lon bị thủng; với gói trong suốt/trắng chỉ sửa được khoảng một nửa | `cutouts_repair_v1/`, `catalog/cutouts_repl_v1.json` |
 | 21/10 | Kết quả: lấy lại 339/684 (144 khôi phục + 195 sửa). Còn loại 345: dính mâm 125, mảnh mâm 94, mask vỡ 21, hộp hai mặt 105 (loại vì tư thế, mask vẫn sạch). Mỗi SKU vẫn ≥ 11 cutout sạch, trung vị 20. Lưu ý cho bộ sinh: chọn cutout theo `reviews.json` (keep), vì cùng ảnh gốc có thể có cả bản cũ bị loại và bản SAM-L được giữ | — |
 | 21/10 | **M0 chốt** (người dùng đồng ý): `catalog/cutouts.json` + `m0_review.json`; notebook `05_synthetic_v2` chạy lại các bước CPU (run `57ab8898`, PASS_M0) | `runs/data_preprocessing/synthetic_v2/57ab8898/summary.json` |
+| 21/10 | Phát hiện: 48% số vật trong ảnh val là bản lặp của một SKU đã có trong ảnh (khách mua nhiều đơn vị). Bộ sinh lấy **kiểu giỏ hàng** (số đơn vị mỗi SKU) từ ảnh val cùng level, thay vì chọn từng vật độc lập. Đo trên val: tâm vật trung bình (0,505; 0,552), độ lệch chuẩn 0,157/0,187/0,207 theo level; độ sáng vật so với cutout: camera 2 khoảng 0,85, camera 0 khoảng 0,95; JPEG val khoảng q75 | `configs/data/synth_v2.json` |
+| 21/10 | T2.1 xong: `plan_scenes` (kiểu giỏ, 40–60% vật mới kẹp [1, n−1], SKU cân bằng, SKU cũ chia đều, cutout không lặp trong ảnh, seed ổn định), 11 test. T2.2 đang làm: `autocheckout/compositing.py` (xoay không lật, đặt vật giữ ≥ 70% phần thấy, bóng, màu/sáng, nhãn từ owner mask, RLE nén) + `fit_scales`, 7 test. **Chưa làm:** chạy `fit_scales` trên dữ liệu thật, writer/export/CLI (T2.3), pilot | — |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |

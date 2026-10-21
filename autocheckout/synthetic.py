@@ -8,6 +8,8 @@ never read here.
 from __future__ import annotations
 
 import hashlib
+import json
+import math
 import os
 from collections import Counter, defaultdict
 from multiprocessing import Pool
@@ -18,6 +20,7 @@ import numpy as np
 from PIL import Image
 
 from autocheckout.rpc import LEVELS
+from autocheckout.sampling import largest_remainder
 
 DESIGN_SOURCE = "val2019"
 GRID = 256  # side of the grid boxes are rasterised on to measure overlap and tray colour
@@ -134,6 +137,133 @@ def design_statistics(coco: dict[str, Any], image_root: str | os.PathLike, worke
     }
 
 
+def stable_seed(*parts) -> int:
+    """64-bit seed from any printable parts; unlike ``hash()`` it is the same in every process."""
+    digest = hashlib.sha256(json.dumps([str(p) for p in parts]).encode()).digest()
+    return int.from_bytes(digest[:8], "little")
+
+
+def basket_patterns(coco: dict[str, Any]) -> dict[str, list[tuple[int, ...]]]:
+    """Per level, the units-per-SKU pattern of every image, e.g. (3, 2, 1) = 3+2+1 objects of 3 SKUs.
+
+    Real checkout baskets repeat SKUs (about half the val2019 objects repeat an SKU of their image),
+    so scenes copy whole patterns from the design val split instead of drawing objects independently.
+    """
+    cats = defaultdict(Counter)
+    for ann in coco["annotations"]:
+        cats[ann["image_id"]][ann["category_id"]] += 1
+    out = defaultdict(list)
+    for img in sorted(coco["images"], key=lambda i: i["id"]):
+        if cats[img["id"]]:
+            out[img["level"]].append(tuple(sorted(cats[img["id"]].values(), reverse=True)))
+    return dict(out)
+
+
+def new_group_subsets(pattern: tuple[int, ...], new_ratio: list[float]) -> list[tuple[int, ...]]:
+    """Index sets of pattern groups that can be the new SKUs: units in [ceil(lo n), floor(hi n)] and
+    clamped to [1, n - 1] (D13), leaving at least one old group."""
+    n = sum(pattern)
+    lo, hi = max(1, math.ceil(new_ratio[0] * n)), min(n - 1, math.floor(new_ratio[1] * n))
+    subsets = []
+    for mask in range(1, 2 ** len(pattern) - 1):
+        groups = tuple(i for i in range(len(pattern)) if mask >> i & 1)
+        if lo <= sum(pattern[i] for i in groups) <= hi:
+            subsets.append(groups)
+    return subsets
+
+
+class _Cycle:
+    """Endless reshuffled cycle over a list (balanced reuse of backgrounds and cutouts)."""
+
+    def __init__(self, items: list, rng: np.random.Generator):
+        self.items, self.rng, self.queue = list(items), rng, []
+
+    def next(self, avoid=()):
+        """Next item, skipping ``avoid`` (e.g. cutouts already in the image) while the list allows it."""
+        for _ in range(2):
+            for k in range(len(self.queue) - 1, -1, -1):
+                if self.queue[k] not in avoid:
+                    return self.queue.pop(k)
+            self.queue = [self.items[i] for i in self.rng.permutation(len(self.items))] + self.queue
+        return self.queue.pop()
+
+
+def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[str, Any]],
+                skus: list[dict[str, Any]], patterns: dict[str, list[tuple[int, ...]]],
+                backgrounds: list[str], layout: dict[str, Any], seed: int) -> list[dict[str, Any]]:
+    """Recipes of one generation task (formats.md 7.2): which SKUs, units, cutouts and background.
+
+    Task 1 holds only task-1 SKUs, all labeled. Task t >= 2 mixes new SKUs (labeled, 40-60 % of the
+    objects) with SKUs of earlier tasks (unlabeled, spread evenly over every earlier SKU, D14); future
+    SKUs never appear. Per-SKU object counts are balanced greedily. Transforms are drawn at render time
+    from the per-image seed, so the plan only fixes content.
+    """
+    rng = np.random.default_rng(stable_seed(seed, "plan", task_id))
+    new_skus = [c.rpc_category_id for c in task_config.task(task_id).classes]
+    old_skus = [c.rpc_category_id for t in task_config.data_tasks if t.task_id < task_id for c in t.classes]
+    weights = {s["rpc_category_id"]: s["camera_weights"] for s in skus}
+    by_sku_cam = defaultdict(list)
+    for c in sorted(cutouts, key=lambda c: c["cutout_id"]):
+        by_sku_cam[c["rpc_category_id"], c["camera"]].append(c["cutout_id"])
+    cycles = {key: _Cycle(ids, rng) for key, ids in by_sku_cam.items()}
+    bg_cycle = _Cycle(sorted(backgrounds), rng)
+
+    levels = [lv for lv in LEVELS if patterns.get(lv)]
+    level_counts = largest_remainder({lv: 1 for lv in levels}, n_images)
+    image_levels = [lv for lv in levels for _ in range(level_counts[lv])]
+    image_levels = [image_levels[i] for i in rng.permutation(len(image_levels))]
+    units = {"new": Counter({s: 0 for s in new_skus}), "old": Counter({s: 0 for s in old_skus})}
+
+    def pick(pool: str, used: set[int], amount: int) -> int:
+        counts = units[pool]
+        free = [s for s in counts if s not in used]
+        sku = min(free, key=lambda s: (counts[s], rng.random()))
+        counts[sku] += amount
+        return sku
+
+    recipes = []
+    for index, level in enumerate(image_levels):
+        options = patterns[level]
+        for _ in range(100):
+            pattern = options[rng.integers(len(options))]
+            if task_id == 1:
+                if len(pattern) <= len(new_skus):
+                    new_groups = tuple(range(len(pattern)))
+                    break
+                continue
+            subsets = [s for s in new_group_subsets(pattern, layout["new_ratio"])
+                       if len(s) <= len(new_skus) and len(pattern) - len(s) <= len(old_skus)]
+            if subsets:
+                new_groups = subsets[rng.integers(len(subsets))]
+                break
+        else:
+            raise ValueError(f"task {task_id}, level {level}: no basket pattern fits the new/old rules")
+
+        objects, used = [], set()
+        for g in sorted(range(len(pattern)), key=lambda g: -pattern[g]):
+            labeled = g in new_groups
+            sku = pick("new" if labeled else "old", used, pattern[g])
+            used.add(sku)
+            cams = [int(c) for c, w in sorted(weights[sku].items()) if w > 0 and (sku, int(c)) in cycles]
+            probs = np.array([weights[sku][str(c)] for c in cams], float)
+            for _ in range(pattern[g]):
+                cam = cams[rng.choice(len(cams), p=probs / probs.sum())]
+                taken = {o["cutout_id"] for o in objects}
+                objects.append({"rpc_category_id": sku, "camera": cam,
+                                "cutout_id": cycles[sku, cam].next(taken), "labeled": labeled})
+        objects = [objects[i] for i in rng.permutation(len(objects))]
+        for k, obj in enumerate(objects, start=1):
+            obj["instance_id"] = k
+        recipes.append({
+            "schema_version": 1, "generation_task": task_id, "image_index": index,
+            "image_id": task_id * 1_000_000 + index, "level": level,
+            "seed": stable_seed(seed, "render", task_id, index), "background": bg_cycle.next(),
+            "objects": [{key: o[key] for key in ("instance_id", "rpc_category_id", "camera", "cutout_id", "labeled")}
+                        for o in objects],
+        })
+    return recipes
+
+
 def alpha_bbox(alpha: np.ndarray) -> list[int] | None:
     ys, xs = np.nonzero(alpha >= 128)
     if not len(xs):
@@ -231,3 +361,63 @@ def merge_catalogs(catalogs: list[list[dict[str, Any]]]) -> tuple[list[dict[str,
             owner[rec["source"]] = rec["cutout_id"]
             merged.append(rec)
     return sorted(merged, key=lambda r: r["cutout_id"]), dropped
+
+
+def rotated_bbox_areas(alpha: np.ndarray, angles=range(0, 180, 15)) -> np.ndarray:
+    """Axis-aligned bbox area of the alpha support rotated by each angle (convex hull is enough)."""
+    import cv2
+
+    contours, _ = cv2.findContours((alpha >= 128).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    points = cv2.convexHull(np.vstack(contours)).reshape(-1, 2).astype(float)
+    areas = []
+    for angle in angles:
+        t = np.deg2rad(angle)
+        rotated = points @ np.array([[np.cos(t), -np.sin(t)], [np.sin(t), np.cos(t)]])
+        span = rotated.max(axis=0) - rotated.min(axis=0) + 1
+        areas.append(span[0] * span[1])
+    return np.array(areas)
+
+
+def fit_scales(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]], val_coco: dict[str, Any]) -> dict[str, dict]:
+    """Val pixels per source pixel for every (SKU, camera) the SKU table uses.
+
+    Main poses (camera weight >= 0.5, pooled when two cameras share the SKU): the median val bbox area
+    of the SKU over the median rotated bbox area of its cutouts in source pixels, since val objects lie
+    at random angles too. Minor standing pose (camera 2 of upright SKUs): the cutout long side is set to
+    the median short side of the val boxes (the lying diameter). Source pixels are recovered from the
+    PNG through ``bbox_source``, because PNGs above 1000 px were downscaled at extraction.
+    """
+    val = defaultdict(lambda: {"area": [], "short": []})
+    for ann in val_coco["annotations"]:
+        w, h = ann["bbox"][2:]
+        val[ann["category_id"]]["area"].append(w * h)
+        val[ann["category_id"]]["short"].append(min(w, h))
+    by_key = defaultdict(list)
+    for c in cutouts:
+        by_key[c["rpc_category_id"], c["camera"]].append(c)
+
+    def source_stats(c):
+        from PIL import Image
+
+        with Image.open(c["file"]) as im:
+            alpha = np.asarray(im.convert("RGBA"))[..., 3]
+        source_per_png = max(c["bbox_source"][2:]) / max(c["size"])
+        return float(np.median(rotated_bbox_areas(alpha))) * source_per_png ** 2, max(alpha.shape) * source_per_png
+
+    scales = {}
+    for sku in skus:
+        sid, weights = sku["rpc_category_id"], {int(c): w for c, w in sku["camera_weights"].items() if w > 0}
+        main = [c for c, w in weights.items() if w >= 0.5]
+        main_stats = [source_stats(c) for cam in main for c in by_key[sid, cam]]
+        if not main_stats or not val[sid]["area"]:
+            raise ValueError(f"SKU {sid}: no cutouts or val boxes to fit a scale")
+        k = float(np.sqrt(np.median(val[sid]["area"]) / np.median([a for a, _ in main_stats])))
+        for cam in main:
+            scales[f"{sid}:{cam}"] = {"k": round(k, 5), "method": "rotated_area", "n_cutouts": len(main_stats),
+                                      "n_val": len(val[sid]["area"])}
+        for cam in (c for c in weights if c not in main):
+            minor = [source_stats(c) for c in by_key[sid, cam]]
+            k_minor = float(np.median(val[sid]["short"]) / np.median([side for _, side in minor]))
+            scales[f"{sid}:{cam}"] = {"k": round(k_minor, 5), "method": "standing_short_side",
+                                      "n_cutouts": len(minor), "n_val": len(val[sid]["short"])}
+    return scales
