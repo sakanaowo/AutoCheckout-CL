@@ -10,6 +10,7 @@ from autocheckout.synthetic import (
     background_source_names,
     design_statistics,
     design_val,
+    final_catalog,
     inventory_cutouts,
     mask_solidity,
     merge_catalogs,
@@ -92,6 +93,21 @@ def test_merge_catalogs_keeps_first_set_for_same_source():
     merged, dropped = merge_catalogs([first, second])
     assert [r["cutout_id"] for r in merged] == ["cam0_v1:2", "sam_v1:1"]
     assert dropped == [{"cutout_id": "cam0_v1:1", "duplicate_of": "sam_v1:1"}]
+
+
+def test_final_catalog_keeps_reviewed_cutouts_on_used_cameras():
+    skus = [{"rpc_category_id": 1, "camera_weights": {"2": 1.0}}]
+    old = [{"cutout_id": "a:1", "ann_id": 1, "rpc_category_id": 1, "camera": 2},
+           {"cutout_id": "a:2", "ann_id": 2, "rpc_category_id": 1, "camera": 2},
+           {"cutout_id": "a:3", "ann_id": 3, "rpc_category_id": 1, "camera": 0}]
+    repaired = [{"cutout_id": "l:2", "ann_id": 2, "rpc_category_id": 1, "camera": 2}]
+    reviews = [{"cutout_id": "a:1", "decision": "keep"}, {"cutout_id": "a:2", "decision": "reject"},
+               {"cutout_id": "a:3", "decision": "keep"}, {"cutout_id": "l:2", "decision": "keep"}]
+    final = final_catalog([old, repaired], reviews, skus)
+    assert [r["cutout_id"] for r in final] == ["a:1", "l:2"] and {r["status"] for r in final} == {"keep"}
+    reviews[1]["decision"] = "keep"
+    with pytest.raises(ValueError, match="kept more than once"):
+        final_catalog([old, repaired], reviews, skus)
 
 
 def test_mask_solidity_separates_full_and_crescent_masks():

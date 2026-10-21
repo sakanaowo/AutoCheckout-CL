@@ -199,6 +199,27 @@ def inventory_cutouts(index: dict[str, Any], cutout_set: str, root: str | os.Pat
     return sorted(records, key=lambda r: r["cutout_id"]), issues
 
 
+def final_catalog(cutout_sets: list[list[dict[str, Any]]], reviews: list[dict[str, Any]],
+                  skus: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Cutouts the generator may use: reviewed ``keep`` and on a camera the SKU table uses (M0 gate).
+
+    Every cutout must have a review, and one source annotation may be kept only once (a SAM-large
+    re-cut replaces, never duplicates, the original cutout of the same annotation).
+    """
+    decision = {r["cutout_id"]: r["decision"] for r in reviews}
+    by_id = {rec["cutout_id"]: rec for records in cutout_sets for rec in records}
+    unknown = sorted(set(decision) - set(by_id))
+    if unknown:
+        raise ValueError(f"reviews of unknown cutouts: {unknown[:5]}")
+    kept = [by_id[cid] for cid, d in decision.items() if d == "keep"]
+    seen = Counter(rec["ann_id"] for rec in kept)
+    twice = sorted(ann for ann, n in seen.items() if n > 1)
+    if twice:
+        raise ValueError(f"annotations kept more than once: {twice[:5]}")
+    used = used_cutouts(kept, skus)
+    return sorted(({**rec, "status": "keep"} for rec in used), key=lambda r: r["cutout_id"])
+
+
 def merge_catalogs(catalogs: list[list[dict[str, Any]]]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     """Union of several cutout sets; a source image cut again by a later set keeps the earlier cutout."""
     merged, owner, dropped = [], {}, []

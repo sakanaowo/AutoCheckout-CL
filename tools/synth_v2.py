@@ -24,6 +24,7 @@ from autocheckout.synthetic import (
     background_source_names,
     design_statistics,
     design_val,
+    final_catalog,
     inventory_cutouts,
     mask_solidity,
     merge_catalogs,
@@ -189,6 +190,29 @@ def cmd_cutout_sheets(args) -> None:
           f"({(len(index) + per_page - 1) // per_page} pages)")
 
 
+def cmd_finalize(args) -> None:
+    """M0 gate: write catalog/cutouts.json (reviewed keep cutouts on used cameras) and m0_review.json."""
+    sets = [load_json(path)["cutouts"] for path in args.catalogs]
+    reviews = load_json(args.reviews)["reviews"]
+    skus = load_json(args.skus)["skus"]
+    final = final_catalog(sets, reviews, skus)
+    per_sku = Counter(c["rpc_category_id"] for c in final)
+    short = sorted(s["rpc_category_id"] for s in skus if per_sku[s["rpc_category_id"]] < args.min_per_sku)
+    if short:
+        raise SystemExit(f"SKUs below {args.min_per_sku} usable cutouts: {short}")
+    out = Path(args.out_dir)
+    save_json(out / "cutouts.json", {"created_at": now(), "sources": args.catalogs, "n": len(final), "cutouts": final}, indent=1)
+    save_json(out / "m0_review.json", {
+        "gate": "M0", "decision": "accepted", "accepted_by": args.accepted_by, "date": now(),
+        "inputs": {p: sha256_file(p) for p in [*args.catalogs, args.reviews, args.skus]},
+        "cutouts_json_sha256": sha256_file(out / "cutouts.json"),
+        "counts": {"cutouts": len(final), "skus": len(skus), "min_per_sku": min(per_sku.values()),
+                   "reviews": len(reviews), "kept": sum(r["decision"] == "keep" for r in reviews)},
+        "notes": args.notes,
+    }, indent=1)
+    print(f"M0: {len(final)} cutouts, min {min(per_sku.values())}/SKU -> {out}")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -231,6 +255,16 @@ def main(argv=None) -> None:
     grid.add_argument("--background", type=int, nargs=3, default=[20, 30, 90])
     grid.add_argument("--workers", type=int, default=8)
     grid.set_defaults(run=cmd_cutout_sheets)
+
+    fin = sub.add_parser("finalize", help="M0 gate: final cutout catalog + review record")
+    fin.add_argument("--catalogs", nargs="+", required=True)
+    fin.add_argument("--reviews", required=True)
+    fin.add_argument("--skus", required=True)
+    fin.add_argument("--out-dir", required=True)
+    fin.add_argument("--min-per-sku", type=int, default=8)
+    fin.add_argument("--accepted-by", required=True)
+    fin.add_argument("--notes", default="")
+    fin.set_defaults(run=cmd_finalize)
 
     args = parser.parse_args(argv)
     args.run(args)
