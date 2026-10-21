@@ -121,3 +121,28 @@ def test_old_and_new_class_groups_at_stage_2(tmp_path):
     assert groups["new"]["mCCS"] == pytest.approx(0.5) and groups["new"]["mCCD"] == pytest.approx(0.5)
     assert groups["old"]["mCCS"] == pytest.approx(1.0) and groups["old"]["mCCD"] == pytest.approx(0.0)
     assert groups["old"]["K_eff"] == 1  # label 1 has no GT
+
+
+def test_m2_drops_predictions_on_unlearned_objects_and_images_without_learned_ones(tmp_path):
+    from autocheckout.cl_metrics import load_coco
+    from autocheckout.counting import drop_unlearned
+    from tests.coco_helpers import make_preds
+    gt = make_gt(images=[make_image(1), make_image(2)],
+                 annotations=[make_ann(1, 1, 0, [0, 0, 10, 10]), make_ann(2, 1, 4, [50, 50, 10, 10]),
+                              make_ann(3, 2, 4, [0, 0, 10, 10])], num_labels=6)
+    preds = make_preds([(1, 0, 0, 0.9, [0, 0, 10, 10]), (1, 1, 1, 0.9, [51, 51, 61, 61]),
+                        (1, 2, 1, 0.9, [30, 30, 40, 40]), (2, 0, 0, 0.9, [0, 0, 10, 10])])
+    view, kept = drop_unlearned(load_coco(gt), preds, seen=2, iou_threshold=0.5)
+    assert view.getImgIds() == [1]
+    assert sorted(kept.query.tolist()) == [0, 2]    # the box on the unlearned object is gone, a stray box stays
+
+
+def test_m2_policy_is_saved_and_applied_on_test(tmp_path, monkeypatch):
+    run_dir, val_path, test_path, cfg_path = _write_run(tmp_path)
+    argv = ["eval_count", "--run-dir", str(run_dir), "--val-ann", str(val_path), "--test-ann", str(test_path),
+            "--task-config", str(cfg_path), "--unlearned-iou", "0.5"]
+    monkeypatch.setattr(sys, "argv", argv)
+    eval_count.main()
+    assert load_json(run_dir / "calibration_count_m2.json")["unlearned_iou"] == 0.5
+    result = load_json(run_dir / "metrics_count_test_m2.json")
+    assert result["unlearned_iou"] == 0.5 and not (run_dir / "metrics_count_test.json").exists()

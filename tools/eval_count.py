@@ -27,6 +27,7 @@ from autocheckout.counting import (
     ZERO_GT_NOTE,
     class_group_scores,
     dedup_detections,
+    drop_unlearned,
     gt_counts,
     oracle_by_level,
     pred_counts,
@@ -76,8 +77,11 @@ def _validated_predictions(path: Path, coco: COCO, cfg: TaskConfig, stage: int,
 
 def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
                   thresholds: Sequence[float] = CALIBRATION_GRID,
-                  nms_ious: Sequence[float] = (0.45,), stages: Sequence[int] | None = None) -> dict[str, Any]:
-    """Choose one counting policy per checkpoint using validation inputs exclusively."""
+                  nms_ious: Sequence[float] = (0.45,), stages: Sequence[int] | None = None,
+                  unlearned_iou: float | None = None) -> dict[str, Any]:
+    """Choose one counting policy per checkpoint using validation inputs exclusively. With ``unlearned_iou``
+    (cAcc-M2), each stage is scored on the images with learned objects, without the predictions on
+    objects of classes not learned yet (``drop_unlearned``)."""
     thresholds = validated_grid(thresholds, "threshold grid")
     nms_ious = validated_grid(nms_ious, "NMS grid")
     val_md5 = md5_file(val_ann_path)
@@ -90,14 +94,16 @@ def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
     for stage in selected_stages:
         preds = _validated_predictions(available[stage], coco, cfg, stage, "val", val_md5)
         labels = list(range(cfg.seen_classes(stage)))
+        scored, preds = drop_unlearned(coco, preds, len(labels), unlearned_iou) if unlearned_iou else (coco, preds)
         candidates = []
         for nms_iou in nms_ious:
             processed = dedup_detections(preds, nms_iou) if nms_iou else preds.top1_per_query()
-            threshold, scores = select_threshold(coco, processed, labels, thresholds)
+            threshold, scores = select_threshold(scored, processed, labels, thresholds)
             candidates.append(dict(score_threshold=threshold, nms_iou=nms_iou, val_scores=scores))
         best = min(candidates, key=lambda p: (-p["val_scores"]["cAcc"], p["score_threshold"], p["nms_iou"]))
         policies[str(stage)] = {
-            **best, "task_id": stage, "seen_classes": len(labels), "candidates": candidates,
+            **best, "task_id": stage, "seen_classes": len(labels), "val_images": len(scored.getImgIds()),
+            "candidates": candidates,
             "checkpoint_md5": _checkpoint_digest(run_dir, stage),
             "val_prediction_md5": md5_file(available[stage]),
         }
@@ -106,7 +112,7 @@ def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
         "task_config": cfg.name, "task_config_sha256": _config_digest(cfg),
         "val_ann": str(val_ann_path), "val_ann_md5": val_md5,
         "threshold_grid": thresholds, "nms_grid": nms_ious, "tie_break": POLICY_TIE_BREAK,
-        "zero_gt_class_handling": ZERO_GT_NOTE, "stages": policies,
+        "unlearned_iou": unlearned_iou, "zero_gt_class_handling": ZERO_GT_NOTE, "stages": policies,
     }
 
 
@@ -135,23 +141,25 @@ def evaluate_policy(run_dir: Path, test_ann_path: Path, cfg: TaskConfig, policy:
         validated_grid([threshold], "policy threshold grid")
         validated_grid([nms_iou], "policy NMS grid")
         preds = _validated_predictions(path, coco, cfg, stage, "test", test_md5)
-        processed = dedup_detections(preds, nms_iou) if nms_iou else preds.top1_per_query()
         labels = list(range(cfg.seen_classes(stage)))
+        unlearned_iou = policy.get("unlearned_iou")
+        scored, preds = drop_unlearned(coco, preds, len(labels), unlearned_iou) if unlearned_iou else (coco, preds)
+        processed = dedup_detections(preds, nms_iou) if nms_iou else preds.top1_per_query()
         results[stage] = {
             "task_id": stage, "seen_classes": len(labels), "nms_iou": nms_iou,
             "threshold": {"value": threshold, "cAcc_val": selected["val_scores"]["cAcc"]},
-            "test": scores_by_level(coco, processed, labels, threshold),
-            "test_by_task": scores_by_task_group(coco, processed, cfg, stage, threshold),
+            "test": scores_by_level(scored, processed, labels, threshold),
+            "test_by_task": scores_by_task_group(scored, processed, cfg, stage, threshold),
         }
         if oracle:
-            results[stage]["oracle"] = oracle_by_level(coco, processed, labels)
+            results[stage]["oracle"] = oracle_by_level(scored, processed, labels)
     nms_values = {stage["nms_iou"] for stage in results.values()}
     return {
         "run_dir": str(run_dir), "task_config": cfg.name,
         "val_ann": policy["val_ann"], "val_ann_md5": policy["val_ann_md5"],
         "test_ann": str(test_ann_path), "test_ann_md5": test_md5,
         "threshold_grid": policy["threshold_grid"], "tie_break": policy["tie_break"],
-        "zero_gt_class_handling": ZERO_GT_NOTE, "nms_iou": next(iter(nms_values)) if len(nms_values) == 1 else None,
+        "unlearned_iou": policy.get("unlearned_iou"), "zero_gt_class_handling": ZERO_GT_NOTE, "nms_iou": next(iter(nms_values)) if len(nms_values) == 1 else None,
         "oracle_enabled": oracle, "calibration_policy": policy, "stages": results,
     }
 
@@ -229,13 +237,17 @@ def main() -> None:
     nms = parser.add_mutually_exclusive_group()
     nms.add_argument("--nms-iou", type=float, help="fixed class-agnostic NMS IoU (0 = off); default 0.45")
     nms.add_argument("--nms-grid", help="comma-separated IoUs selected on val only; 0 disables NMS")
+    parser.add_argument("--unlearned-iou", type=float,
+                        help="cAcc-M2: score images with learned objects, dropping predictions with this IoU "
+                             "against objects of classes not learned yet (synthetic v2 D16: 0.5)")
     parser.add_argument("--oracle", action="store_true",
                         help="explicit test-selected diagnostic; never used for policy")
     args = parser.parse_args()
 
     cfg = TaskConfig.load(args.task_config)
     if args.policy_in:
-        if args.threshold_grid is not None or args.nms_grid is not None or args.nms_iou is not None or args.policy_out:
+        if args.threshold_grid is not None or args.nms_grid is not None or args.nms_iou is not None or args.policy_out \
+                or args.unlearned_iou is not None:
             parser.error("--policy-in cannot be combined with calibration settings")
         policy = load_json(args.policy_in)
         policy_path = args.policy_in
@@ -247,8 +259,10 @@ def main() -> None:
         thresholds = [float(x) for x in args.threshold_grid.split(",")] if args.threshold_grid else CALIBRATION_GRID
         nms_ious = [float(x) for x in args.nms_grid.split(",")] if args.nms_grid else [
             0.45 if args.nms_iou is None else args.nms_iou]
-        policy = calibrate_run(args.run_dir, args.val_ann, cfg, thresholds=thresholds, nms_ious=nms_ious)
-        policy_path = args.policy_out or args.run_dir / "calibration_count.json"
+        policy = calibrate_run(args.run_dir, args.val_ann, cfg, thresholds=thresholds, nms_ious=nms_ious,
+                               unlearned_iou=args.unlearned_iou)
+        m2 = "_m2" if args.unlearned_iou else ""
+        policy_path = args.policy_out or args.run_dir / f"calibration_count{m2}.json"
         save_json(policy_path, policy, indent=2)
         print(f"Wrote validation policy {policy_path}")
         if args.calibrate_only:
@@ -260,6 +274,8 @@ def main() -> None:
     result["calibration_policy_md5"] = md5_file(policy_path)
 
     suffix = f"_nms{args.nms_iou:g}" if args.nms_iou is not None and args.nms_iou > 0 else ""
+    if policy.get("unlearned_iou"):
+        suffix += "_m2"
     if args.oracle:
         suffix += "_oracle"
     out_path = args.run_dir / f"metrics_count_test{suffix}.json"

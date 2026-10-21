@@ -32,7 +32,7 @@ from typing import Any
 import numpy as np
 from pycocotools.coco import COCO
 
-from autocheckout.cl_metrics import box_iou
+from autocheckout.cl_metrics import box_iou, load_coco
 from autocheckout.predictions import Predictions
 
 #: Deterministic grid, plan section 6.5: 0.05..0.95 step 0.01 (91 points).
@@ -69,6 +69,30 @@ def dedup_detections(preds: Predictions, iou_threshold: float) -> Predictions:
                 keep[rows[i]] = True
                 suppressed |= ious[i] >= iou_threshold
     return top1.subset(keep)
+
+
+def drop_unlearned(coco_gt: COCO, preds: Predictions, seen: int,
+                   iou_threshold: float) -> tuple[COCO, Predictions]:
+    """cAcc-M2 view (synthetic v2, D16): the images with at least one learned object (label < ``seen``), and
+    the top-1-per-query rows of those images minus every row with IoU >= ``iou_threshold`` against an
+    object of a class not learned yet. Products the shop does not sell yet are not on the counter, so a
+    model that never saw them is not charged for what it reports on them."""
+    if not np.isfinite(iou_threshold) or not 0 < iou_threshold <= 1:
+        raise ValueError("unlearned IoU must be in (0, 1]")
+    anns = coco_gt.dataset.get("annotations", [])
+    kept = {ann["image_id"] for ann in anns if ann["category_id"] < seen}
+    view = load_coco({**coco_gt.dataset, "images": [img for img in coco_gt.dataset["images"] if img["id"] in kept],
+                      "annotations": [ann for ann in anns if ann["image_id"] in kept]})
+    top1 = preds.top1_per_query()
+    keep = np.isin(top1.image_id, list(kept))
+    for image_id in kept:
+        unlearned = [ann["bbox"] for ann in view.imgToAnns[image_id] if ann["category_id"] >= seen]
+        rows = np.flatnonzero(top1.image_id == image_id)
+        if unlearned and len(rows):
+            gt = np.array(unlearned, dtype=np.float64)
+            gt[:, 2:] += gt[:, :2]
+            keep[rows[box_iou(top1.boxes[rows], gt).max(axis=1) >= iou_threshold]] = False
+    return view, top1.subset(keep)
 
 
 def gt_counts(coco_gt: COCO, image_ids: Sequence[int], labels: Sequence[int]) -> np.ndarray:

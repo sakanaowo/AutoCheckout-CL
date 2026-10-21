@@ -79,8 +79,8 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 
 | ID | Task | Trạng thái |
 |---|---|---|
-| P1 | Code cAcc-M2 trong `counting.py`/`eval_count.py` + test | [ ] |
-| P2 | Tính lại cAcc-M2 task 1 của B2 từ `pred_val.npz` → mốc B | [ ] |
+| P1 | Code cAcc-M2 trong `counting.py`/`eval_count.py` + test | [x] |
+| P2 | Tính lại cAcc-M2 task 1 của B2 từ `pred_val.npz` → mốc B | [x] |
 
 ## 4. Nhật ký quyết định trong lúc làm
 
@@ -138,5 +138,6 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | T4.1 bắt đầu: kế hoạch 71.642 cảnh (vật mới ở task 2–5 chiếm 50,0–50,1%), sinh với 16 worker khoảng 11 ảnh/s (ước 1 giờ 50 phút) | `rpc_synth_v2_v1/plans/` |
 | 21/10 | T4.2 xong: lệnh `eval-set` → `rpc_eval_official_v1`: val_full 5.792 ảnh / 71.108 vật, val_task_1..5 = 5.562/3.291/3.100/3.053/3.412 ảnh, test_full 24.000 ảnh / 294.333 vật, nhãn 0..199. Tập so B1/B2 (6.003 ảnh) trùng id, file, box với test mới (chỉ khác trường `group` của split cũ) nên lọc dự đoán theo id là so được | `rpc_eval_official_v1/manifest.json` |
 | 21/10 | T4.3 xong: `tests/test_synthetic_loader.py` (4 test PASS trên pilot + bộ đánh giá): ảnh 640, box khớp bbox gốc < 1px, chỉ nhãn task hiện tại | — |
+| 21/10 | P1: `drop_unlearned` trong `counting.py` + `eval_count --unlearned-iou 0.5` (policy ghi tham số, file kết quả hậu tố `_m2`), 3 test. P2: tính lại B2 task 1 trên val cũ (cùng NMS 0,45, lưới 0,10–0,90): M1 = 73,19% (khớp số cũ), **M2 = 85,79%** trên 1.464 ảnh, ngưỡng 0,27 | `runs/data_preprocessing/synthetic_v2/b2_task1_cacc_m2.json` |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |
