@@ -11,7 +11,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 from collections import Counter, defaultdict
+from multiprocessing import Pool
 from pathlib import Path
+
+import numpy as np
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -22,7 +25,9 @@ from autocheckout.synthetic import (
     design_statistics,
     design_val,
     inventory_cutouts,
+    mask_solidity,
     merge_catalogs,
+    used_cutouts,
 )
 from autocheckout.taskcfg import TaskConfig
 
@@ -139,6 +144,51 @@ def cmd_review_sheets(args) -> None:
     print(f"{len(skus)} SKUs -> {out} ({(len(skus) + args.per_page - 1) // args.per_page} pages)")
 
 
+def solidity_of(path: str) -> float:
+    with Image.open(path) as im:
+        return round(mask_solidity(np.asarray(im.convert("RGBA"))[..., 3]), 3)
+
+
+def cmd_cutout_sheets(args) -> None:
+    """Numbered grid pages of every cutout the generator would use (T1.6 manual review).
+
+    Cells are sorted by SKU, camera and solidity on a dark background, so the gray arc of a turntable
+    left in a mask stands out; a red frame marks solidity below --low-solidity (torn masks).
+    """
+    merged, _ = merge_catalogs([load_json(path)["cutouts"] for path in args.catalogs])
+    used = used_cutouts(merged, load_json(args.skus)["skus"])
+    with Pool(args.workers) as pool:
+        solidity = pool.map(solidity_of, [c["file"] for c in used], chunksize=32)
+    rows = sorted(zip(used, solidity), key=lambda r: (r[0]["rpc_category_id"], r[0]["camera"], r[1]))
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    cell, cols, per_page = args.cell, args.cols, args.cols * args.rows
+    font = ImageFont.load_default()
+    index = []
+    for page, start in enumerate(range(0, len(rows), per_page)):
+        chunk = rows[start:start + per_page]
+        background = tuple(args.background)
+        sheet = Image.new("RGB", (cols * cell, ((len(chunk) + cols - 1) // cols) * cell), background)
+        draw = ImageDraw.Draw(sheet)
+        for k, (cutout, score) in enumerate(chunk):
+            number = start + k
+            x, y = (k % cols) * cell, (k // cols) * cell
+            with Image.open(cutout["file"]) as im:
+                sheet.paste(thumb(im.convert("RGBA"), cell, background), (x, y))
+            low = score < args.low_solidity
+            if low:
+                draw.rectangle([x + 1, y + 1, x + cell - 2, y + cell - 2], outline=(255, 0, 0), width=4)
+            draw.text((x + 4, y + 2), f"{number} s{cutout['rpc_category_id']} c{cutout['camera']}",
+                      fill=(255, 255, 0), font=font)
+            index.append({"number": number, "page": page, "cutout_id": cutout["cutout_id"],
+                          "rpc_category_id": cutout["rpc_category_id"], "camera": cutout["camera"],
+                          "solidity": score, "low_solidity": low})
+        sheet.save(out / f"cutouts_{page:03d}.jpg", quality=88)
+    save_json(out / "index.json", {"low_solidity": args.low_solidity, "n": len(index), "cells": index}, indent=1)
+    print(f"{len(index)} cutouts, {sum(c['low_solidity'] for c in index)} low solidity -> {out} "
+          f"({(len(index) + per_page - 1) // per_page} pages)")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -169,6 +219,18 @@ def main(argv=None) -> None:
     sheets.add_argument("--per-block", type=int, default=6)
     sheets.add_argument("--cell", type=int, default=120)
     sheets.set_defaults(run=cmd_review_sheets)
+
+    grid = sub.add_parser("cutout-sheets", help="numbered grid pages of the cutouts in use (T1.6 review)")
+    grid.add_argument("--catalogs", nargs="+", required=True)
+    grid.add_argument("--skus", required=True)
+    grid.add_argument("--out-dir", required=True)
+    grid.add_argument("--cols", type=int, default=10)
+    grid.add_argument("--rows", type=int, default=10)
+    grid.add_argument("--cell", type=int, default=180)
+    grid.add_argument("--low-solidity", type=float, default=0.85)
+    grid.add_argument("--background", type=int, nargs=3, default=[20, 30, 90])
+    grid.add_argument("--workers", type=int, default=8)
+    grid.set_defaults(run=cmd_cutout_sheets)
 
     args = parser.parse_args(argv)
     args.run(args)

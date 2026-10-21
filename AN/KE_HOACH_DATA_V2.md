@@ -45,10 +45,10 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 | T1.2 | Kiểm kê catalog cutout: hash, camera, nguồn, kích thước, `cutout_set` | `data/processed/rpc_synth_v2_v1/catalog/cutouts_sam_v1.json` | 7.502/7.502 dùng được, 0 lỗi; 7 test PASS. Chặn SKU < 5 làm ở T1.8 khi có nhóm hình dạng | [x] |
 | T1.3 | Lọc val2019: bỏ 208 ảnh làm nền → 5.792 ảnh; đo thống kê thiết kế (số vật/level, kích thước theo SKU, chồng lấn, màu/sáng) | `data/processed/rpc_synth_v2_v1/design/` (val_excluded_backgrounds, design_val, design_statistics, receipt) | 5.792 ảnh (1.933/1.921/1.938), 71.108 vật; từ chối test2019 (test) | [x] |
 | T1.4 | Kiểm tra tương đương SAM: cắt lại 20–30 ảnh nguồn **đã có cutout**, so mask mới với mask cũ | `runs/data_preprocessing/sam_equivalence/comparison.json` | **Đạt:** 42/42 cặp, IoU mask thấp nhất 0,993, trung vị 0,998 (7 cặp trùng tuyệt đối). sam2.1_b.pt SHA-256 `f1a9cf2d…5e2e47` | [x] |
-| T1.5 | Cắt bổ sung camera 0 cho nhóm dạng trụ (drink, canned_food, alcohol, milk; khoảng 51 SKU), mục tiêu 15–20 cutout/SKU, cùng script/tham số/trọng số | `data/processed/cutouts_cam0_v1/` | Số cutout/SKU; không lấy lại cutout đã bị loại | [~] |
-| T1.6 | Duyệt cutout bằng mắt (cả bộ cũ và bộ bổ sung), loại thủ công các lỗi (ví dụ dính mâm xoay: 42437, 42491, 42499) | Danh sách loại có lý do | Ghi vào biên bản; không sửa file gốc | [ ] |
-| T1.7 | Gán **nhóm hình dạng** cho 200 SKU (dẹt/trụ/hộp cứng) và đo tỉ lệ chai/lon đứng–nằm trên mẫu val2019 | Bảng SKU → nhóm, góc dùng; tỉ lệ đứng/nằm | Kiểm tra bằng mắt một mẫu | [~] |
-| T1.8 | Gallery theo SKU/camera/nhóm và **họp duyệt M0** | Gallery + `m0_review.json` | Có người duyệt, ngày, quyết định | [~] |
+| T1.5 | Cắt bổ sung camera 0 cho nhóm dạng trụ (drink, canned_food, alcohol, milk; khoảng 51 SKU), mục tiêu 15–20 cutout/SKU, cùng script/tham số/trọng số | `data/processed/cutouts_cam0_v1/` | 4.047 cutout mới (loại 2.353, chủ yếu vì IoU); gộp với bộ cũ: 11.075 cutout, 474 trùng nguồn giữ bản cũ; camera 0 trung vị 23/SKU | [x] |
+| T1.6 | Duyệt cutout bằng mắt (cả bộ cũ và bộ bổ sung), loại thủ công các lỗi (ví dụ dính mâm xoay: 42437, 42491, 42499) | `catalog/reviews.json` (5.201 cutout: 4.651 giữ / 550 loại); trang tổng hợp `runs/data_preprocessing/m0_review/rejected_00..04.jpg` | Mình duyệt hết 50 + 3 trang; **chờ người dùng xác nhận trang tổng hợp** | [~] |
+| T1.7 | Gán **nhóm hình dạng** cho 200 SKU (dẹt/trụ/hộp cứng) và đo tỉ lệ chai/lon đứng–nằm trên mẫu val2019 | `catalog/skus.json`: 123 flat (camera 2) / 64 upright (camera 0 + 1% camera 2) / 13 mixed (50/50) | Mình xem cả 20 trang tờ duyệt; người dùng chấp nhận 21/10; không SKU nào thiếu cutout | [x] |
+| T1.8 | Gallery theo SKU/camera/nhóm và **họp duyệt M0** | Gallery + `m0_review.json` | Có người duyệt, ngày, quyết định | [!] chờ xác nhận |
 
 ### Giai đoạn 2 — Bộ sinh ảnh (cổng M1)
 
@@ -95,6 +95,11 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | Tư thế đứng của chai/lon | Giữ khoảng 1% (người dùng chọn; đề xuất là 0%) | Val có dưới 0,5%; giữ một ít để phòng quầy thật có chai đứng |
 | 21/10 | Đưa `AN/` lên git? | Commit lên nhánh | Cả nhóm xem được, có lịch sử |
 | 21/10 | Notebook cho M0 | Một notebook `05_synthetic_v2` khi chốt M0 | Đúng quy tắc repo, không lặp việc |
+| 21/10 | Chốt camera theo SKU | Chấp nhận đề xuất: 123 flat / 64 upright / 13 mixed | Sai sót sẽ lộ ra ở gallery pilot M2, sửa được từng SKU trong `skus.json` |
+| 21/10 | Tỉ lệ tư thế cho 13 SKU mixed | 50/50 cố định | Chỉ 6,5% catalog; đơn giản |
+| 21/10 | Cách làm T1.6 | Mình duyệt toàn bộ 4.958 cutout được dùng; nhóm xem trang tổng hợp các cutout bị loại | Lọc tự động không bắt được lỗi dính mâm xoay |
+| 21/10 | Mâm xoay dính vào mask: khoảng 15–20% cutout camera 2, gần như toàn bộ ở SKU trong suốt/trắng | Loại, rồi SKU nào còn < 8 cutout thì cắt thêm ảnh camera 2 từ zip bằng đúng quy trình cũ và duyệt phần mới | Dùng quy trình đã kiểm chứng; viết bước tự xóa mâm thì rủi ro ăn mất bao bì trắng/trong |
+| 21/10 | Mảnh mâm nhỏ ở mép | Loại luôn: thấy mâm là loại | Nhãn bbox/mask phải khớp sản phẩm |
 
 ## 5. Câu hỏi đang chờ
 
@@ -114,4 +119,8 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | T1.4 đạt: SAM chạy 0,19 s/ảnh trên 3060 | `sam_equivalence/` |
 | 21/10 | T1.5 mở rộng từ khoảng 51 lên **cả 200 SKU** (32 ảnh camera 0/SKU, dự kiến còn khoảng 20 sau khi lọc). Lý do: chỉ khoảng 20 phút GPU; tờ duyệt có thể chỉ ra hộp cứng cũng cần góc ngang; cutout không dùng thì bỏ qua | `runs/data_preprocessing/cutouts_cam0_v1/extract.log` |
 | 21/10 | T1.8: lệnh `review-sheets` (mỗi SKU một hàng: crop val, camera 2, camera 0) và hàm `merge_catalogs` gộp catalog bỏ trùng nguồn. Trang chạy thử: chai trong val nằm ngang, khớp camera 0, không khớp camera 2 (nắp). SKU 80 có 3 cutout camera 2 thủng mất phần nắp, lọc tự động không bắt được, cần loại ở T1.6 | — |
+| 21/10 | T1.6 xong phần mình duyệt: bộ cũ + camera 0 loại 404/4.958 (8,1%: 248 camera 2, 156 camera 0). Thêm quy tắc: hộp đứng chụp camera 0 mà thấy rõ mặt thứ hai (≥ khoảng 30% bề rộng) thì loại | `rejects_manual.json` |
+| 21/10 | Cắt bổ sung camera 2 cho 12 SKU thiếu (640 ảnh nguồn từ zip → 364 đạt, 243 không trùng nguồn) và camera 0 cho SKU 121 (2/40 đạt). Duyệt 243 cutout mới: loại 146, chủ yếu dính mâm ở gói trong suốt/trắng | `rejects_supp.json`, `cutouts_cam2_supp_v1/` |
+| 21/10 | Sau duyệt: mọi SKU có ≥ 8 cutout sạch ở góc chính. Tự quyết hai điểm nhỏ: SKU 82/160/166/168 không còn cutout nắp sạch → bỏ phần 1% tư thế đứng (chỉ nằm ngang); SKU 121 (lon nước cốt dừa) chỉ 2 cutout camera 0 → đổi tỉ lệ 70% nắp / 30% thân | `catalog/skus.json` |
+| 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |

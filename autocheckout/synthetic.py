@@ -141,6 +141,24 @@ def alpha_bbox(alpha: np.ndarray) -> list[int] | None:
     return [int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1)]
 
 
+def mask_solidity(alpha: np.ndarray) -> float:
+    """Mask area / convex hull area. Torn or crescent SAM masks score low (about 0.5-0.6)."""
+    import cv2
+
+    mask = (alpha >= 128).astype(np.uint8)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return 0.0
+    hull = cv2.convexHull(np.vstack(contours))
+    return float(mask.sum() / max(cv2.contourArea(hull), 1.0))
+
+
+def used_cutouts(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Cutouts whose camera has a weight for their SKU in the accepted SKU table (D11)."""
+    cameras = {s["rpc_category_id"]: {int(c) for c, w in s["camera_weights"].items() if w > 0} for s in skus}
+    return [c for c in cutouts if c["camera"] in cameras[c["rpc_category_id"]]]
+
+
 def inventory_cutouts(index: dict[str, Any], cutout_set: str, root: str | os.PathLike,
                       train_names: set[str]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     """Catalog records of the usable cutouts of one extraction index, plus the problems found.

@@ -11,7 +11,9 @@ from autocheckout.synthetic import (
     design_statistics,
     design_val,
     inventory_cutouts,
+    mask_solidity,
     merge_catalogs,
+    used_cutouts,
 )
 from synth_rpc import make_raw_rpc
 from tools.resize import merge_annotations
@@ -90,6 +92,24 @@ def test_merge_catalogs_keeps_first_set_for_same_source():
     merged, dropped = merge_catalogs([first, second])
     assert [r["cutout_id"] for r in merged] == ["cam0_v1:2", "sam_v1:1"]
     assert dropped == [{"cutout_id": "cam0_v1:1", "duplicate_of": "sam_v1:1"}]
+
+
+def test_mask_solidity_separates_full_and_crescent_masks():
+    yy, xx = np.mgrid[:100, :100]
+    disc = ((yy - 50) ** 2 + (xx - 50) ** 2 < 40 ** 2).astype(np.uint8) * 255
+    bite = ((yy - 50) ** 2 + (xx - 70) ** 2 < 35 ** 2)
+    crescent = np.where(bite, 0, disc).astype(np.uint8)
+    assert mask_solidity(disc) > 0.95
+    assert mask_solidity(crescent) < 0.7
+    assert mask_solidity(np.zeros((5, 5), np.uint8)) == 0.0
+
+
+def test_used_cutouts_follow_sku_camera_weights():
+    skus = [{"rpc_category_id": 1, "camera_weights": {"2": 1.0}},
+            {"rpc_category_id": 2, "camera_weights": {"0": 0.99, "2": 0.01}}]
+    cutouts = [{"cutout_id": f"x:{i}", "rpc_category_id": sku, "camera": cam}
+               for i, (sku, cam) in enumerate([(1, 0), (1, 2), (2, 0), (2, 1), (2, 2)])]
+    assert [c["cutout_id"] for c in used_cutouts(cutouts, skus)] == ["x:1", "x:2", "x:4"]
 
 
 def write_png(path, alpha):
