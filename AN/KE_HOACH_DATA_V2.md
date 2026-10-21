@@ -100,6 +100,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | Cách làm T1.6 | Mình duyệt toàn bộ 4.958 cutout được dùng; nhóm xem trang tổng hợp các cutout bị loại | Lọc tự động không bắt được lỗi dính mâm xoay |
 | 21/10 | Mâm xoay dính vào mask: khoảng 15–20% cutout camera 2, gần như toàn bộ ở SKU trong suốt/trắng | Loại, rồi SKU nào còn < 8 cutout thì cắt thêm ảnh camera 2 từ zip bằng đúng quy trình cũ và duyệt phần mới | Dùng quy trình đã kiểm chứng; viết bước tự xóa mâm thì rủi ro ăn mất bao bì trắng/trong |
 | 21/10 | Mảnh mâm nhỏ ở mép | Loại luôn: thấy mâm là loại | Nhãn bbox/mask phải khớp sản phẩm |
+| 21/10 | 105 hộp chụp ngang thấy hai mặt (mask sạch) | Giữ loại | Mỗi SKU đã đủ cutout thẳng mặt; tư thế hai mặt không có trên khay |
 
 ## 5. Câu hỏi đang chờ
 
