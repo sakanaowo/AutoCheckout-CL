@@ -118,3 +118,15 @@ def test_fit_scales_matches_val_bbox_area(tmp_path):
     # source 20x40 -> val 60x120 is a factor 3 on the long side; rotated bbox areas are compared, so
     # the fitted factor lies a little below 3
     assert 2.0 < scales["1:2"]["k"] < 3.0 and scales["1:2"]["method"] == "rotated_area"
+
+
+def test_occluded_share_of_scenes_uses_the_lower_visibility(assets):
+    layout = {**LAYOUT, "min_visible": 0.95, "occluded_scene_prob": 0.5, "occluded_min_visible": 0.75}
+    config = {**CONFIG, "layout": layout}
+    outs = [render(assets, recipe(4, seed=s), config) for s in range(12)]
+    flags = [o["resolved"]["occluded"] for o in outs]
+    assert any(flags) and not all(flags)
+    for o in outs:
+        floor = 0.75 if o["resolved"]["occluded"] else 0.95
+        assert o["resolved"]["min_visible"] == floor
+        assert all(a["visible_fraction"] >= floor for a in o["annotations"])

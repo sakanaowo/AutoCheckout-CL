@@ -205,3 +205,20 @@ def test_eval_set_keeps_val_and_test_apart(tmp_path):
     assert [a["category_id"] for a in out("test_full.json")["annotations"]] == [4]
     assert [a["category_id"] for a in out("val_task_2.json")["annotations"]] == [2]
     assert "compare_b12/test_full.json" in out("manifest.json")["files"]
+
+
+def test_a_killed_worker_fails_instead_of_hanging(tmp_path, scene_inputs, monkeypatch):
+    import os
+    import signal
+    from concurrent.futures.process import BrokenProcessPool
+    from autocheckout import compositing
+    recipes, kwargs = scene_inputs
+    real = compositing.write_scene
+
+    def dying(recipe, *args, **kw):
+        if recipe["image_id"] == recipes[2]["image_id"]:
+            os.kill(os.getpid(), signal.SIGKILL)       # what the kernel does when memory runs out
+        return real(recipe, *args, **kw)
+    monkeypatch.setattr(compositing, "write_scene", dying)
+    with pytest.raises(BrokenProcessPool):
+        generate(recipes, tmp_path / "a", workers=2, **kwargs)

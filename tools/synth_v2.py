@@ -385,7 +385,9 @@ def compare_to_val(out: Path, val: dict) -> dict:
 def cmd_verify(args) -> None:
     config = load_config(args.config)
     out = Path(args.out_dir)
-    report = verify_dataset(out, TaskConfig.load(config["task_config"]), min_visible=config["layout"]["min_visible"],
+    layout = config["layout"]
+    min_visible = min(layout["min_visible"], layout.get("occluded_min_visible", 1.0))
+    report = verify_dataset(out, TaskConfig.load(config["task_config"]), min_visible=min_visible,
                             new_ratio=tuple(config["layout"]["new_ratio"]), rle_sample=args.rle_sample)
     report["distributions"] = compare_to_val(out, load_json(config["design_val"]))
     report["checked_at"] = now()

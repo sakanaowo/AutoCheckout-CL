@@ -1,6 +1,6 @@
 {
   "name": "rpc_synth_v2",
-  "version": "v1",
+  "version": "v2",
   "decisions": "docs/project/synthetic-data-v2-decisions-2026-10-21.md",
   "seed": 20261021,
   "task_config": "data/processed/rpc_100-4x25_seed0_native_v1/task_config.json",
@@ -33,11 +33,20 @@
       "medium": 0.1683,
       "hard": 0.1863
     },
-    "min_visible": 0.7,
+    "min_visible": 0.9,
     "position_tries": 60,
     "object_tries": 4,
     "scene_retries": 16,
-    "retry_spread_step": 0.15
+    "retry_spread_step": 0.15,
+    "pack_mode": "compact",
+    "pack_gap": [
+      1.0,
+      1.1
+    ],
+    "pack_center_jitter": 0.3,
+    "compact_prob": 0.8,
+    "occluded_scene_prob": 0.15,
+    "occluded_min_visible": 0.75
   },
   "scale": {
     "fit": "per SKU and camera: median val bbox area / median rotated bbox area of the cutouts (source pixels)",
@@ -88,5 +97,5 @@
       80
     ]
   },
-  "notes": "object_gain = p25..p75 of val/cutout luminance ratio per camera (measured 21/10 on design val); center stats measured on design val; jpeg quality matches val2019 (~75); pilot round 1 (21/10): synth/val median bbox area 0.91 -> scale calibration 1/sqrt(0.91)=1.048; bbox covered p50 below val -> center_std x0.9"
+  "notes": "object_gain = p25..p75 of val/cutout luminance ratio per camera (measured 21/10 on design val); center stats measured on design val; jpeg quality matches val2019 (~75); pilot round 1 (21/10): synth/val median bbox area 0.91 -> scale calibration 1/sqrt(0.91)=1.048; bbox covered p50 below val -> center_std x0.9; layout v2 (o15, 21/10): pixel occlusion measured with SAM box masks on 450 val images (notch share 2.8/4.5/5.2%) -> each object >= 90% visible, compact baskets, 15% of scenes (and baskets too full to lie apart) allow 75%; release v1 (scatter, min_visible 0.7) hid 4x more"
 }

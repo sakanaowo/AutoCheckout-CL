@@ -143,7 +143,16 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
     """RGB image, uint16 owner map (0 = tray, value = instance_id) and per-object visible labels."""
     layout, scale_cfg, photo = config["layout"], config["scale"], config["photometric"]
     objects = recipe["objects"]
+    # a share of the scenes may hide more of each object (real counters: a few overlapping packs)
+    occluded = np.random.default_rng(stable_seed(recipe["seed"], "occluded")).random() \
+        < layout.get("occluded_scene_prob", 0.0)
+    base_layout = layout
     for retry in range(layout["scene_retries"]):
+        # baskets too full to lie apart get the occluded share's visibility on the last retries, as people
+        # stack packs when the counter runs out of room
+        last_resort = "occluded_min_visible" in base_layout and retry >= base_layout["scene_retries"] * 3 // 4
+        layout = {**base_layout, "min_visible": base_layout["occluded_min_visible"]} \
+            if occluded or last_resort else base_layout
         rng = np.random.default_rng(stable_seed(recipe["seed"], "scene", retry))
         quarter_turns = int(rng.integers(4))
         background = np.rot90(load_background(str(Path(backgrounds_dir) / recipe["background"])), quarter_turns)
@@ -242,7 +251,7 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             "visible_fraction": round(visible[instance] / obj["area"], 4),
         })
     return {"image": image, "owner": owner, "annotations": annotations, "jpeg_quality": quality,
-            "resolved": {"retry": retry, "spread": round(spread, 3), "uniform_positions": uniform, "large_first": order is not None, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
+            "resolved": {"retry": retry, "occluded": occluded or last_resort, "min_visible": layout["min_visible"], "spread": round(spread, 3), "uniform_positions": uniform, "large_first": order is not None, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
                          "global": {"gain": round(gain, 4), "offset": round(offset, 3), "noise": round(noise, 3),
                                     "blur": None if blur is None else round(blur, 3)},
                          "objects": resolved}}
@@ -305,7 +314,8 @@ def _write_one(recipe):
 def generate(recipes: list[dict[str, Any]], out_root: str | os.PathLike, *, workers: int = 1,
              progress=None, **render_kwargs) -> dict[str, Any]:
     """Write every scene (resumable). Returns hashes per image id and the failed scenes; a release with
-    failures is incomplete and must not be exported."""
+    failures is incomplete and must not be exported. A worker that dies (e.g. killed when memory runs
+    out) raises ``BrokenProcessPool`` instead of hanging; run again to resume."""
     hashes, failures = {}, {}
     if workers <= 1:
         _init_worker(out_root, render_kwargs)
@@ -313,9 +323,10 @@ def generate(recipes: list[dict[str, Any]], out_root: str | os.PathLike, *, work
         pool = None
     else:
         import multiprocessing
+        from concurrent.futures import ProcessPoolExecutor
 
-        pool = multiprocessing.get_context("fork").Pool(workers, _init_worker, (out_root, render_kwargs))
-        results = pool.imap_unordered(_write_one, recipes, chunksize=8)
+        pool = ProcessPoolExecutor(workers, multiprocessing.get_context("fork"), _init_worker, (out_root, render_kwargs))
+        results = pool.map(_write_one, recipes, chunksize=8)
     try:
         for done, (image_id, sha, error) in enumerate(results, start=1):
             if error:
@@ -326,6 +337,5 @@ def generate(recipes: list[dict[str, Any]], out_root: str | os.PathLike, *, work
                 progress[1](done, len(recipes), len(failures))
     finally:
         if pool:
-            pool.close()
-            pool.join()
+            pool.shutdown(cancel_futures=True)
     return {"hashes": hashes, "failures": failures}
