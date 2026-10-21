@@ -2,6 +2,10 @@
 
 Run from the repo root:
     python -m tools.synth_v2 stats --out-dir data/processed/rpc_synth_v2_v1/design
+    python -m tools.synth_v2 scales --config configs/data/synth_v2.json
+    python -m tools.synth_v2 plan --config configs/data/synth_v2.json --out-dir <release> [--pilot]
+    python -m tools.synth_v2 generate --config configs/data/synth_v2.json --out-dir <release> --workers 16
+    python -m tools.synth_v2 export --config configs/data/synth_v2.json --out-dir <release>
     python -m tools.synth_v2 inventory --index data/archive/cutouts/sam/index.json --cutout-set sam_v1 \
         --root data/archive --out data/processed/rpc_synth_v2_v1/catalog/cutouts_sam_v1.json
 """
@@ -10,6 +14,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
+import shutil
+import time
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from pathlib import Path
@@ -18,10 +25,18 @@ import numpy as np
 
 from PIL import Image, ImageDraw, ImageFont
 
+from autocheckout.compositing import generate, scene_paths
 from autocheckout.io import load_json, save_json
 from autocheckout.model_acceptance import now
 from autocheckout.synthetic import (
+    area_budget,
     background_source_names,
+    basket_patterns,
+    canonical_coco,
+    covered_fractions,
+    export_task_annotations,
+    fit_scales,
+    plan_scenes,
     design_statistics,
     design_val,
     final_catalog,
@@ -29,6 +44,7 @@ from autocheckout.synthetic import (
     mask_solidity,
     merge_catalogs,
     used_cutouts,
+    verify_dataset,
 )
 from autocheckout.taskcfg import TaskConfig
 
@@ -213,6 +229,204 @@ def cmd_finalize(args) -> None:
     print(f"M0: {len(final)} cutouts, min {min(per_sku.values())}/SKU -> {out}")
 
 
+def load_config(path):
+    config = load_json(path)
+    config["_path"], config["_sha256"] = path, sha256_file(path)
+    return config
+
+
+def scales_path(config) -> Path:
+    return Path(config["catalog"]).parent / "scales.json"
+
+
+def cmd_scales(args) -> None:
+    """Fit val-pixel scales per SKU and camera on the design val split (D5)."""
+    config = load_config(args.config)
+    cutouts = load_json(config["catalog"])["cutouts"]
+    scales = fit_scales(cutouts, load_json(config["skus"])["skus"], load_json(config["design_val"]))
+    save_json(scales_path(config), {"created_at": now(), "config_sha256": config["_sha256"],
+                                    "catalog_sha256": sha256_file(config["catalog"]), "scales": scales}, indent=1)
+    ks = np.array([v["k"] for v in scales.values()])
+    print(f"{len(scales)} scales, k p10/p50/p90 {np.percentile(ks, [10, 50, 90]).round(3)} -> {scales_path(config)}")
+
+
+def cmd_plan(args) -> None:
+    config = load_config(args.config)
+    task_config = TaskConfig.load(config["task_config"])
+    design_val = load_json(config["design_val"])
+    patterns = basket_patterns(design_val)
+    sku_area, max_area = area_budget(design_val, config["layout"]["area_budget_quantile"])
+    cutouts = load_json(config["catalog"])["cutouts"]
+    skus = load_json(config["skus"])["skus"]
+    backgrounds = background_source_names(config["backgrounds"])
+    out = Path(args.out_dir)
+    tasks = args.tasks or [t.task_id for t in task_config.data_tasks]
+    for task in tasks:
+        n = config["pilot_images_per_task"] if args.pilot else config["images_per_task"][str(task)]
+        recipes = plan_scenes(task, n, task_config=task_config, cutouts=cutouts, skus=skus, patterns=patterns,
+                              backgrounds=backgrounds, layout=config["layout"], seed=config["seed"],
+                              sku_area=sku_area, max_area=max_area)
+        path = out / "plans" / f"task_{task}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in recipes))
+        objs = [o for r in recipes for o in r["objects"]]
+        print(f"task {task}: {len(recipes)} scenes, {len(objs)} objects, labeled {sum(o['labeled'] for o in objs)}")
+    save_json(out / "plans" / "plan_receipt.json", {"created_at": now(), "config": config["_path"],
+              "config_sha256": config["_sha256"], "pilot": args.pilot, "tasks": tasks,
+              "inputs": {k: sha256_file(config[k]) for k in ("catalog", "skus", "design_val", "task_config")}}, indent=1)
+
+
+def read_plans(out: Path, tasks=None):
+    recipes = []
+    for path in sorted((out / "plans").glob("task_*.jsonl")):
+        if tasks and int(path.stem.split("_")[1]) not in tasks:
+            continue
+        recipes += [json.loads(line) for line in path.read_text().splitlines()]
+    return recipes
+
+
+def render_kwargs(config):
+    cutouts = {c["cutout_id"]: c for c in load_json(config["catalog"])["cutouts"]}
+    return {"cutouts": cutouts, "scales": load_json(scales_path(config))["scales"],
+            "config": {k: config[k] for k in ("layout", "scale", "photometric")}, "backgrounds_dir": config["backgrounds"]}
+
+
+def cmd_generate(args) -> None:
+    config = load_config(args.config)
+    out = Path(args.out_dir)
+    recipes = read_plans(out, args.tasks)
+    if args.limit:
+        recipes = recipes[: args.limit]
+    started, t0 = now(), time.time()
+
+    def progress(done, total, failed):
+        rate = done / (time.time() - t0)
+        print(f"  {done}/{total} failed={failed} {rate:.1f} img/s, ~{(total - done) / rate / 60:.0f} min left", flush=True)
+
+    result = generate(recipes, out, workers=args.workers, progress=(500, progress), **render_kwargs(config))
+    receipt = {"started_at": started, "finished_at": now(), "seconds": round(time.time() - t0, 1),
+               "workers": args.workers, "n": len(recipes), "failures": result["failures"],
+               "config_sha256": config["_sha256"]}
+    save_json(Path(args.run_dir or out / "runs") / f"generate_{started.replace(':', '')}.json", receipt, indent=1)
+    print(f"{len(result['hashes'])} written, {len(result['failures'])} failed, {receipt['seconds']} s")
+    if result["failures"]:
+        raise SystemExit("scene failures: the release is incomplete")
+
+
+def cmd_export(args) -> None:
+    config = load_config(args.config)
+    out = Path(args.out_dir)
+    task_config = TaskConfig.load(config["task_config"])
+    categories = load_json(config["design_val"])["categories"]
+    manifest = {"created_at": now(), "config": config["_path"], "config_sha256": config["_sha256"],
+                "scales_sha256": sha256_file(scales_path(config)), "tasks": {}}
+    for task in sorted({r["generation_task"] for r in read_plans(out)}):
+        recipes = read_plans(out, [task])
+        missing = [r["image_id"] for r in recipes if not (out / scene_paths(r)["label"]).exists()]
+        if missing:
+            raise SystemExit(f"task {task}: {len(missing)} scenes not written, e.g. {missing[:3]}")
+        records = [load_json(out / scene_paths(r)["label"]) for r in recipes]
+        coco = canonical_coco(records, categories)
+        save_json(out / "annotations" / f"task_{task}_rpc.json", coco)
+        files = export_task_annotations(coco, task, task_config)
+        for name, data in files.items():
+            save_json(out / "tasks" / "synth_v2" / name, data)
+        manifest["tasks"][str(task)] = {
+            "images": len(coco["images"]), "objects": len(coco["annotations"]),
+            "labeled": len(files[f"train_task_{task}.json"]["annotations"]),
+            "files": {name: sha256_file(out / "tasks" / "synth_v2" / name) for name in files},
+            "image_sha256": {str(r["recipe"]["image_id"]): r["sha256"]["image"] for r in records}}
+        print(f"task {task}: {manifest['tasks'][str(task)]['images']} images, "
+              f"{manifest['tasks'][str(task)]['objects']} objects, {manifest['tasks'][str(task)]['labeled']} labeled")
+    shutil.copyfile(config["task_config"], out / "task_config.json")
+    save_json(out / "manifest.json", manifest, indent=1)
+
+
+def compare_to_val(out: Path, val: dict) -> dict:
+    """Layout distributions of the release next to the design val split (reported, no PASS threshold)."""
+    def summary(coco):
+        anns = defaultdict(list)
+        for a in coco["annotations"]:
+            anns[a["image_id"]].append(a)
+        per_level, covered, area = defaultdict(list), defaultdict(list), defaultdict(list)
+        for img in coco["images"]:
+            per_level[img["level"]].append(len(anns[img["id"]]))
+            covered[img["level"]] += covered_fractions(img, anns[img["id"]])
+            for a in anns[img["id"]]:
+                area[a["category_id"]].append(a["bbox"][2] * a["bbox"][3] / (img["width"] * img["height"]))
+        return per_level, covered, area
+
+    synth = {"images": [], "annotations": []}
+    for path in sorted((out / "annotations").glob("task_*_rpc.json")):
+        coco = load_json(path)
+        synth["images"] += coco["images"]
+        synth["annotations"] += coco["annotations"]
+    s_lv, s_cov, s_area = summary(synth)
+    v_lv, v_cov, v_area = summary(val)
+    ratio = [np.median(s_area[k]) / np.median(v_area[k]) for k in s_area if k in v_area]
+    return {
+        "objects_per_image": {lv: {"synth_mean": round(float(np.mean(s_lv[lv])), 2), "val_mean": round(float(np.mean(v_lv[lv])), 2)}
+                              for lv in s_lv},
+        "bbox_covered_p50": {lv: {"synth": round(float(np.median(s_cov[lv])), 3), "val": round(float(np.median(v_cov[lv])), 3)}
+                             for lv in s_cov},
+        "sku_bbox_area_ratio_synth_over_val": {q: round(float(np.percentile(ratio, q)), 3) for q in (10, 50, 90)},
+    }
+
+
+def cmd_verify(args) -> None:
+    config = load_config(args.config)
+    out = Path(args.out_dir)
+    report = verify_dataset(out, TaskConfig.load(config["task_config"]), min_visible=config["layout"]["min_visible"],
+                            new_ratio=tuple(config["layout"]["new_ratio"]), rle_sample=args.rle_sample)
+    report["distributions"] = compare_to_val(out, load_json(config["design_val"]))
+    report["checked_at"] = now()
+    save_json(out / "verify_report.json", report, indent=1)
+    print(json.dumps({k: report[k] for k in ("passed", "gates", "counts", "distributions")}, indent=1))
+    if not report["passed"]:
+        raise SystemExit(f"verify failed: {list(report['failures'])}")
+
+
+def cmd_gallery(args) -> None:
+    """M2 review pages: per task, scenes spread over the three levels with new (green, labeled) and
+    old (red, unlabeled) objects outlined, plus side-by-side synth | val pages without boxes."""
+    out, dest = Path(args.out_dir), Path(args.dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    cell, cols = args.cell, 5
+    tasks = sorted({int(p.name.split("_")[1]) for p in (out / "labels").glob("task_*")})
+    for task in tasks:
+        records = [load_json(p) for p in sorted((out / "labels" / f"task_{task}").glob("*.json"))]
+        by_level = defaultdict(list)
+        for r in records:
+            by_level[r["recipe"]["level"]].append(r)
+        picks = [r for lv in ("easy", "medium", "hard") for r in evenly(by_level[lv], args.per_task // 3 + 1)][: args.per_task]
+        sheet = Image.new("RGB", (cols * cell, ((len(picks) + cols - 1) // cols) * cell), "white")
+        for k, r in enumerate(picks):
+            im = Image.open(out / r["file_name"]).convert("RGB")
+            draw = ImageDraw.Draw(im)
+            for a in r["annotations"]:
+                x, y, w, h = a["bbox"]
+                draw.rectangle([x, y, x + w, y + h], outline=(0, 200, 0) if a["labeled"] else (230, 0, 0), width=6)
+            im = im.resize((cell, cell))
+            ImageDraw.Draw(im).text((6, 4), f"{r['recipe']['image_id']} {r['recipe']['level']}", fill=(0, 0, 0))
+            sheet.paste(im, ((k % cols) * cell, (k // cols) * cell))
+        sheet.save(dest / f"task_{task}_boxes.jpg", quality=88)
+    val = load_json(load_config(args.config)["design_val"])
+    val_by_level = defaultdict(list)
+    for img in val["images"]:
+        val_by_level[img["level"]].append(img)
+    for lv in ("easy", "medium", "hard"):
+        synth = [load_json(p) for p in sorted((out / "labels").glob("task_*/*.json"))]
+        synth = evenly([r for r in synth if r["recipe"]["level"] == lv], 6)
+        real = evenly(sorted(val_by_level[lv], key=lambda i: i["id"]), 6)
+        sheet = Image.new("RGB", (6 * cell, 2 * cell), "white")
+        for k, r in enumerate(synth):
+            sheet.paste(Image.open(out / r["file_name"]).convert("RGB").resize((cell, cell)), (k * cell, 0))
+        for k, img in enumerate(real):
+            sheet.paste(Image.open(Path("data/archive") / img["file_name"]).convert("RGB").resize((cell, cell)), (k * cell, cell))
+        sheet.save(dest / f"compare_{lv}_synth_top_val_bottom.jpg", quality=88)
+    print(f"gallery -> {dest}")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -255,6 +469,45 @@ def main(argv=None) -> None:
     grid.add_argument("--background", type=int, nargs=3, default=[20, 30, 90])
     grid.add_argument("--workers", type=int, default=8)
     grid.set_defaults(run=cmd_cutout_sheets)
+
+    sc = sub.add_parser("scales", help="fit val-pixel scales per SKU and camera")
+    sc.add_argument("--config", required=True)
+    sc.set_defaults(run=cmd_scales)
+
+    pl = sub.add_parser("plan", help="scene recipes per task")
+    pl.add_argument("--config", required=True)
+    pl.add_argument("--out-dir", required=True)
+    pl.add_argument("--pilot", action="store_true")
+    pl.add_argument("--tasks", type=int, nargs="*")
+    pl.set_defaults(run=cmd_plan)
+
+    gen = sub.add_parser("generate", help="render planned scenes (resumable)")
+    gen.add_argument("--config", required=True)
+    gen.add_argument("--out-dir", required=True)
+    gen.add_argument("--workers", type=int, default=8)
+    gen.add_argument("--tasks", type=int, nargs="*")
+    gen.add_argument("--limit", type=int, default=0)
+    gen.add_argument("--run-dir")
+    gen.set_defaults(run=cmd_generate)
+
+    ex = sub.add_parser("export", help="canonical and per-task COCO + manifest")
+    ex.add_argument("--config", required=True)
+    ex.add_argument("--out-dir", required=True)
+    ex.set_defaults(run=cmd_export)
+
+    ver = sub.add_parser("verify", help="mechanical gates + distributions vs design val")
+    ver.add_argument("--config", required=True)
+    ver.add_argument("--out-dir", required=True)
+    ver.add_argument("--rle-sample", type=int)
+    ver.set_defaults(run=cmd_verify)
+
+    gal = sub.add_parser("gallery", help="M2 review pages")
+    gal.add_argument("--config", required=True)
+    gal.add_argument("--out-dir", required=True)
+    gal.add_argument("--dest", required=True)
+    gal.add_argument("--per-task", type=int, default=20)
+    gal.add_argument("--cell", type=int, default=420)
+    gal.set_defaults(run=cmd_gallery)
 
     fin = sub.add_parser("finalize", help="M0 gate: final cutout catalog + review record")
     fin.add_argument("--catalogs", nargs="+", required=True)

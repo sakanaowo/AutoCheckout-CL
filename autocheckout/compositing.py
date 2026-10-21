@@ -8,6 +8,8 @@ exact. Cutouts are rotated, never mirrored (printed text must stay readable, D7)
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -64,38 +66,47 @@ def _uniform(rng, bounds):
     return float(rng.uniform(bounds[0], bounds[1]))
 
 
-def _place(rng, sample_object, n_objects, size, layout, level):
-    """Sequential placement; later objects lie on top. Returns placed objects and the owner map."""
+def _place(rng, sample_object, n_objects, size, layout, level, spread=1.0, uniform=False, order=None):
+    """Sequential placement; later objects lie on top. Returns placed objects (paste order), the owner
+    map (value = instance_id = recipe index + 1) and the visible pixel count per instance.
+
+    ``spread`` widens the centre distribution; scene retries raise it so crowded hard scenes fit, and
+    the last half of the retries draw positions uniformly over the tray (``uniform``). ``order`` is the
+    paste order as recipe indices (default: recipe order).
+    """
     owner = np.zeros((size, size), np.uint16)
-    visible, placed = {}, []
+    visible, area, placed = {}, {}, []
     mean = np.array(layout["center_mean"]) * size
-    std = layout["center_std"][level] * size
-    for index in range(n_objects):
+    std = layout["center_std"][level] * size * spread
+    for index in (order if order is not None else range(n_objects)):
+        instance = index + 1
         for _ in range(layout["object_tries"]):
             obj = sample_object(index)
             h, w = obj["mask"].shape
             if h >= size or w >= size:
                 continue
             for _ in range(layout["position_tries"]):
-                cx, cy = rng.normal(mean, std)
-                x = int(np.clip(round(cx - w / 2), 0, size - w))
-                y = int(np.clip(round(cy - h / 2), 0, size - h))
+                if uniform:
+                    x, y = int(rng.integers(0, size - w + 1)), int(rng.integers(0, size - h + 1))
+                else:
+                    cx, cy = rng.normal(mean, std)
+                    x = int(np.clip(round(cx - w / 2), 0, size - w))
+                    y = int(np.clip(round(cy - h / 2), 0, size - h))
                 under = owner[y:y + h, x:x + w][obj["mask"]]
                 ids, counts = np.unique(under[under > 0], return_counts=True)
-                if all((visible[i] - c) / placed[i - 1]["area"] >= layout["min_visible"] for i, c in zip(ids, counts)):
+                if all((visible[i] - c) / area[i] >= layout["min_visible"] for i, c in zip(ids, counts)):
                     for i, c in zip(ids, counts):
                         visible[i] -= int(c)
-                    instance = index + 1
                     owner[y:y + h, x:x + w][obj["mask"]] = instance
                     obj.update(x=x, y=y, area=int(obj["mask"].sum()))
-                    visible[instance] = obj["area"]
+                    visible[instance] = area[instance] = obj["area"]
                     placed.append(obj)
                     break
             else:
                 continue
             break
         else:
-            raise SceneError(f"object {index + 1} of {n_objects} could not be placed")
+            raise SceneError(f"object {instance} of {n_objects} could not be placed")
     return placed, owner, visible
 
 
@@ -111,12 +122,17 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
         size = background.shape[0]
         transforms = []
 
+        def cutout_size(spec):
+            cutout = cutouts[spec["cutout_id"]]
+            k = scales[f"{spec['rpc_category_id']}:{spec['camera']}"]["k"]
+            return k * k * max(cutout["bbox_source"][2:]) ** 2
+
         def sample_object(index):
             spec = objects[index]
             cutout = cutouts[spec["cutout_id"]]
             png_per_source = max(cutout["size"]) / max(cutout["bbox_source"][2:])
             scale = scales[f"{spec['rpc_category_id']}:{spec['camera']}"]["k"] / png_per_source
-            scale *= float(np.exp(rng.normal(0, scale_cfg["jitter_log_sigma"])))
+            scale *= scale_cfg.get("calibration", 1.0) * float(np.exp(rng.normal(0, scale_cfg["jitter_log_sigma"])))
             rgba = load_rgba(cutout["file"])
             scale = min(scale, scale_cfg["max_side_frac"] * size / max(rgba.shape[:2]))
             angle = float(rng.uniform(0, 360))
@@ -125,7 +141,13 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             return {"spec": spec, "rgba": rgba, "mask": rgba[..., 3] >= 128}
 
         try:
-            placed, owner, visible = _place(rng, sample_object, len(objects), size, layout, recipe["level"])
+            spread = 1.0 + layout.get("retry_spread_step", 0.0) * retry
+            uniform = retry >= layout["scene_retries"] // 2
+            order = None
+            if retry >= layout["scene_retries"] * 3 // 4:      # last resort: large objects first
+                order = sorted(range(len(objects)), key=lambda i: -cutout_size(objects[i]))
+            placed, owner, visible = _place(rng, sample_object, len(objects), size, layout, recipe["level"],
+                                            spread, uniform, order)
         except SceneError:
             continue
         break
@@ -189,7 +211,90 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             "visible_fraction": round(visible[instance] / obj["area"], 4),
         })
     return {"image": image, "owner": owner, "annotations": annotations, "jpeg_quality": quality,
-            "resolved": {"retry": retry, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
+            "resolved": {"retry": retry, "spread": round(spread, 3), "uniform_positions": uniform, "large_first": order is not None, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
                          "global": {"gain": round(gain, 4), "offset": round(offset, 3), "noise": round(noise, 3),
                                     "blur": None if blur is None else round(blur, 3)},
                          "objects": resolved}}
+
+
+def scene_paths(recipe: dict[str, Any]) -> dict[str, str]:
+    """Release-relative paths of one scene (formats.md 7.2)."""
+    task, image_id = recipe["generation_task"], recipe["image_id"]
+    return {"image": f"images/task_{task}/{image_id}.jpg", "owner": f"owner_masks/task_{task}/{image_id}.png",
+            "label": f"labels/task_{task}/{image_id}.json"}
+
+
+def _atomic_write(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, path)
+
+
+def write_scene(recipe: dict[str, Any], out_root: str | os.PathLike, **render_kwargs) -> dict[str, Any]:
+    """Render and write image, owner mask and label record; the label is written last, so a scene with
+    a label file is complete and is skipped on resume."""
+    out_root = Path(out_root)
+    paths = scene_paths(recipe)
+    label_path = out_root / paths["label"]
+    if label_path.exists():
+        return json.loads(label_path.read_text())
+    rendered = render_scene(recipe, **render_kwargs)
+    ok, jpeg = cv2.imencode(".jpg", cv2.cvtColor(rendered["image"], cv2.COLOR_RGB2BGR),
+                            [cv2.IMWRITE_JPEG_QUALITY, rendered["jpeg_quality"]])
+    ok_png, png = cv2.imencode(".png", rendered["owner"])
+    if not (ok and ok_png):
+        raise RuntimeError(f"image {recipe['image_id']}: encoding failed")
+    _atomic_write(out_root / paths["image"], jpeg.tobytes())
+    _atomic_write(out_root / paths["owner"], png.tobytes())
+    size = rendered["resolved"]["size"]
+    record = {"recipe": recipe, "resolved": rendered["resolved"], "jpeg_quality": rendered["jpeg_quality"],
+              "file_name": paths["image"], "owner_mask": paths["owner"], "width": size, "height": size,
+              "sha256": {"image": hashlib.sha256(jpeg.tobytes()).hexdigest(),
+                         "owner": hashlib.sha256(png.tobytes()).hexdigest()},
+              "annotations": rendered["annotations"]}
+    _atomic_write(label_path, json.dumps(record, sort_keys=True).encode())
+    return record
+
+
+_WORKER: dict[str, Any] = {}
+
+
+def _init_worker(out_root, render_kwargs):
+    _WORKER.update(out_root=out_root, render_kwargs=render_kwargs)
+
+
+def _write_one(recipe):
+    try:
+        return recipe["image_id"], write_scene(recipe, _WORKER["out_root"], **_WORKER["render_kwargs"])["sha256"], None
+    except SceneError as error:
+        return recipe["image_id"], None, str(error)
+
+
+def generate(recipes: list[dict[str, Any]], out_root: str | os.PathLike, *, workers: int = 1,
+             progress=None, **render_kwargs) -> dict[str, Any]:
+    """Write every scene (resumable). Returns hashes per image id and the failed scenes; a release with
+    failures is incomplete and must not be exported."""
+    hashes, failures = {}, {}
+    if workers <= 1:
+        _init_worker(out_root, render_kwargs)
+        results = map(_write_one, recipes)
+        pool = None
+    else:
+        import multiprocessing
+
+        pool = multiprocessing.get_context("fork").Pool(workers, _init_worker, (out_root, render_kwargs))
+        results = pool.imap_unordered(_write_one, recipes, chunksize=8)
+    try:
+        for done, (image_id, sha, error) in enumerate(results, start=1):
+            if error:
+                failures[image_id] = error
+            else:
+                hashes[image_id] = sha
+            if progress and done % progress[0] == 0:
+                progress[1](done, len(recipes), len(failures))
+    finally:
+        if pool:
+            pool.close()
+            pool.join()
+    return {"hashes": hashes, "failures": failures}

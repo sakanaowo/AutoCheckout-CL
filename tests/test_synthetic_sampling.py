@@ -112,3 +112,15 @@ def test_plan_is_deterministic_and_ids_are_unique():
 def test_infeasible_patterns_fail_explicitly():
     with pytest.raises(ValueError, match="no basket pattern"):
         plan(2, patterns={"easy": [(5,)], "medium": [(4,)]})
+
+
+def test_area_budget_rejects_baskets_that_cannot_fit():
+    cutouts, skus = catalog_and_skus()
+    area = {sku: (0.3 if sku == 1 else 0.05) for sku in range(1, 9)}
+    recipes = plan_scenes(1, 300, task_config=task_config(), cutouts=cutouts, skus=skus, patterns=PATTERNS,
+                          backgrounds=["b.jpg"], layout=LAYOUT, seed=3, sku_area=area,
+                          max_area={"easy": 0.5, "medium": 0.8})
+    for r in recipes:
+        assert sum(area[o["rpc_category_id"]] for o in r["objects"]) <= {"easy": 0.5, "medium": 0.8}[r["level"]]
+    counts = Counter(o["rpc_category_id"] for r in recipes for o in r["objects"])
+    assert counts[1] > 0

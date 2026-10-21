@@ -9,38 +9,84 @@
   "design_val": "data/processed/rpc_synth_v2_v1/design/design_val.json",
   "backgrounds": "data/archive/backgrounds",
   "image_root": "data/archive",
-  "images_per_task": {"1": 21752, "2": 12534, "3": 12129, "4": 11850, "5": 13377},
+  "images_per_task": {
+    "1": 21752,
+    "2": 12534,
+    "3": 12129,
+    "4": 11850,
+    "5": 13377
+  },
   "pilot_images_per_task": 200,
   "layout": {
     "basket_patterns": "sampled from design val images of the same level (n objects, units per SKU)",
-    "new_ratio": [0.4, 0.6],
-    "center_mean": [0.505, 0.552],
-    "center_std": {"easy": 0.157, "medium": 0.187, "hard": 0.207},
+    "new_ratio": [
+      0.4,
+      0.6
+    ],
+    "area_budget_quantile": 99,
+    "center_mean": [
+      0.505,
+      0.552
+    ],
+    "center_std": {
+      "easy": 0.1413,
+      "medium": 0.1683,
+      "hard": 0.1863
+    },
     "min_visible": 0.7,
     "position_tries": 60,
     "object_tries": 4,
-    "scene_retries": 6
+    "scene_retries": 16,
+    "retry_spread_step": 0.15
   },
   "scale": {
     "fit": "per SKU and camera: median val bbox area / median rotated bbox area of the cutouts (source pixels)",
     "standing_fit": "standing pose (camera 2 of upright SKUs): cutout long side = median val short side",
     "jitter_log_sigma": 0.08,
-    "max_side_frac": 0.55
+    "max_side_frac": 0.55,
+    "calibration": 1.048
   },
   "photometric": {
-    "object_gain": {"0": [0.85, 1.05], "2": [0.76, 0.92]},
+    "object_gain": {
+      "0": [
+        0.85,
+        1.05
+      ],
+      "2": [
+        0.76,
+        0.92
+      ]
+    },
     "object_contrast": 0.06,
     "object_color": 0.03,
     "shadow_blur": 0.06,
-    "shadow_strength": [0.15, 0.35],
-    "shadow_offset": [0.01, 0.03],
+    "shadow_strength": [
+      0.15,
+      0.35
+    ],
+    "shadow_offset": [
+      0.01,
+      0.03
+    ],
     "edge_blur": 3,
-    "global_gain": [0.96, 1.04],
+    "global_gain": [
+      0.96,
+      1.04
+    ],
     "global_offset": 6,
-    "noise_sigma": [0.5, 2.0],
+    "noise_sigma": [
+      0.5,
+      2.0
+    ],
     "blur_prob": 0.25,
-    "blur_sigma": [0.4, 0.8],
-    "jpeg_quality": [72, 80]
+    "blur_sigma": [
+      0.4,
+      0.8
+    ],
+    "jpeg_quality": [
+      72,
+      80
+    ]
   },
-  "notes": "object_gain = p25..p75 of val/cutout luminance ratio per camera (measured 21/10 on design val); center stats measured on design val; jpeg quality matches val2019 (~75)"
+  "notes": "object_gain = p25..p75 of val/cutout luminance ratio per camera (measured 21/10 on design val); center stats measured on design val; jpeg quality matches val2019 (~75); pilot round 1 (21/10): synth/val median bbox area 0.91 -> scale calibration 1/sqrt(0.91)=1.048; bbox covered p50 below val -> center_std x0.9"
 }

@@ -190,13 +190,19 @@ class _Cycle:
 
 def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[str, Any]],
                 skus: list[dict[str, Any]], patterns: dict[str, list[tuple[int, ...]]],
-                backgrounds: list[str], layout: dict[str, Any], seed: int) -> list[dict[str, Any]]:
+                backgrounds: list[str], layout: dict[str, Any], seed: int,
+                sku_area: dict[int, float] | None = None, max_area: dict[str, float] | None = None
+                ) -> list[dict[str, Any]]:
     """Recipes of one generation task (formats.md 7.2): which SKUs, units, cutouts and background.
 
     Task 1 holds only task-1 SKUs, all labeled. Task t >= 2 mixes new SKUs (labeled, 40-60 % of the
     objects) with SKUs of earlier tasks (unlabeled, spread evenly over every earlier SKU, D14); future
     SKUs never appear. Per-SKU object counts are balanced greedily. Transforms are drawn at render time
     from the per-image seed, so the plan only fixes content.
+
+    ``sku_area`` (median val bbox area of each SKU, as a fraction of the image) and ``max_area`` (per
+    level) reject baskets whose objects could not fit, e.g. a small-product pattern filled with large
+    bags; the basket is redrawn, each SKU drawn among the (attempt + 1) least used ones.
     """
     rng = np.random.default_rng(stable_seed(seed, "plan", task_id))
     new_skus = [c.rpc_category_id for c in task_config.task(task_id).classes]
@@ -214,43 +220,54 @@ def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[
     image_levels = [image_levels[i] for i in rng.permutation(len(image_levels))]
     units = {"new": Counter({s: 0 for s in new_skus}), "old": Counter({s: 0 for s in old_skus})}
 
-    def pick(pool: str, used: set[int], amount: int) -> int:
+    def pick(pool: str, used: set[int], amount: int, slack: int) -> int:
         counts = units[pool]
-        free = [s for s in counts if s not in used]
-        sku = min(free, key=lambda s: (counts[s], rng.random()))
+        free = sorted((s for s in counts if s not in used), key=lambda s: (counts[s], rng.random()))
+        sku = free[rng.integers(min(len(free), slack + 1))]
         counts[sku] += amount
         return sku
 
-    recipes = []
-    for index, level in enumerate(image_levels):
+    def draw_pattern(level):
         options = patterns[level]
         for _ in range(100):
             pattern = options[rng.integers(len(options))]
             if task_id == 1:
                 if len(pattern) <= len(new_skus):
-                    new_groups = tuple(range(len(pattern)))
-                    break
+                    return pattern, tuple(range(len(pattern)))
                 continue
             subsets = [s for s in new_group_subsets(pattern, layout["new_ratio"])
                        if len(s) <= len(new_skus) and len(pattern) - len(s) <= len(old_skus)]
             if subsets:
-                new_groups = subsets[rng.integers(len(subsets))]
-                break
-        else:
-            raise ValueError(f"task {task_id}, level {level}: no basket pattern fits the new/old rules")
+                return pattern, subsets[rng.integers(len(subsets))]
+        raise ValueError(f"task {task_id}, level {level}: no basket pattern fits the new/old rules")
 
-        objects, used = [], set()
-        for g in sorted(range(len(pattern)), key=lambda g: -pattern[g]):
-            labeled = g in new_groups
-            sku = pick("new" if labeled else "old", used, pattern[g])
-            used.add(sku)
+    recipes = []
+    for index, level in enumerate(image_levels):
+        for attempt in range(200):
+            pattern, new_groups = draw_pattern(level)
+            groups, used = [], set()
+            for g in sorted(range(len(pattern)), key=lambda g: -pattern[g]):
+                pool = "new" if g in new_groups else "old"
+                sku = pick(pool, used, pattern[g], attempt)
+                used.add(sku)
+                groups.append((pool, sku, pattern[g]))
+            area = sum(sku_area[sku] * n for _, sku, n in groups) if sku_area else 0.0
+            if not max_area or area <= max_area[level]:
+                break
+            for pool, sku, n in groups:
+                units[pool][sku] -= n
+        else:
+            raise ValueError(f"task {task_id}, image {index}: no basket within the area budget")
+
+        objects = []
+        for pool, sku, n in groups:
             cams = [int(c) for c, w in sorted(weights[sku].items()) if w > 0 and (sku, int(c)) in cycles]
             probs = np.array([weights[sku][str(c)] for c in cams], float)
-            for _ in range(pattern[g]):
+            for _ in range(n):
                 cam = cams[rng.choice(len(cams), p=probs / probs.sum())]
                 taken = {o["cutout_id"] for o in objects}
                 objects.append({"rpc_category_id": sku, "camera": cam,
-                                "cutout_id": cycles[sku, cam].next(taken), "labeled": labeled})
+                                "cutout_id": cycles[sku, cam].next(taken), "labeled": pool == "new"})
         objects = [objects[i] for i in rng.permutation(len(objects))]
         for k, obj in enumerate(objects, start=1):
             obj["instance_id"] = k
@@ -381,9 +398,9 @@ def rotated_bbox_areas(alpha: np.ndarray, angles=range(0, 180, 15)) -> np.ndarra
 def fit_scales(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]], val_coco: dict[str, Any]) -> dict[str, dict]:
     """Val pixels per source pixel for every (SKU, camera) the SKU table uses.
 
-    Main poses (camera weight >= 0.5, pooled when two cameras share the SKU): the median val bbox area
+    Main poses (every camera of flat and mixed SKUs, pooled; camera weight >= 0.5 of upright SKUs): the median val bbox area
     of the SKU over the median rotated bbox area of its cutouts in source pixels, since val objects lie
-    at random angles too. Minor standing pose (camera 2 of upright SKUs): the cutout long side is set to
+    at random angles too. Minor standing pose (the rare camera of upright SKUs): the cutout long side is set to
     the median short side of the val boxes (the lying diameter). Source pixels are recovered from the
     PNG through ``bbox_source``, because PNGs above 1000 px were downscaled at extraction.
     """
@@ -407,7 +424,8 @@ def fit_scales(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]], val_co
     scales = {}
     for sku in skus:
         sid, weights = sku["rpc_category_id"], {int(c): w for c, w in sku["camera_weights"].items() if w > 0}
-        main = [c for c, w in weights.items() if w >= 0.5]
+        upright = sku.get("shape_group") == "upright"
+        main = [c for c, w in weights.items() if w >= 0.5 or not upright]
         main_stats = [source_stats(c) for cam in main for c in by_key[sid, cam]]
         if not main_stats or not val[sid]["area"]:
             raise ValueError(f"SKU {sid}: no cutouts or val boxes to fit a scale")
@@ -421,3 +439,157 @@ def fit_scales(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]], val_co
             scales[f"{sid}:{cam}"] = {"k": round(k_minor, 5), "method": "standing_short_side",
                                       "n_cutouts": len(minor), "n_val": len(val[sid]["short"])}
     return scales
+
+
+def canonical_coco(records: list[dict[str, Any]], categories: list[dict[str, Any]]) -> dict[str, Any]:
+    """Full-GT COCO of written scenes with RPC category ids (formats.md 7.2), sorted by image id."""
+    images, annotations = [], []
+    for rec in sorted(records, key=lambda r: r["recipe"]["image_id"]):
+        recipe = rec["recipe"]
+        images.append({"id": recipe["image_id"], "file_name": rec["file_name"], "width": rec["width"],
+                       "height": rec["height"], "level": recipe["level"], "generation_task": recipe["generation_task"],
+                       "seed": str(recipe["seed"]), "background_id": recipe["background"],
+                       "owner_mask": rec["owner_mask"], "train_source": "synth_v2"})
+        for ann in rec["annotations"]:
+            annotations.append({"id": len(annotations) + 1, "image_id": recipe["image_id"],
+                                "category_id": ann["rpc_category_id"], "bbox": ann["bbox"], "area": ann["area"],
+                                "segmentation": ann["segmentation"], "iscrowd": 0, "instance_id": ann["instance_id"],
+                                "cutout_id": ann["cutout_id"], "visible_fraction": ann["visible_fraction"],
+                                "labeled": ann["labeled"]})
+    return {"images": images, "annotations": annotations, "categories": categories}
+
+
+def export_task_annotations(coco_rpc: dict[str, Any], task_id: int, task_config) -> dict[str, dict[str, Any]]:
+    """Train file (current task labels only) and audit file (every object) of one generation task.
+
+    Only images generated for ``task_id`` are accepted; RPC ids are mapped to model labels exactly once.
+    """
+    wrong = sorted({img["generation_task"] for img in coco_rpc["images"]} - {task_id})
+    if wrong:
+        raise ValueError(f"task {task_id} export got images with generation_task {wrong}")
+    rpc_to_label = task_config.rpc_to_label()
+    current = {c.rpc_category_id for c in task_config.task(task_id).classes}
+    seen = task_config.seen_classes(task_id)
+    future = sorted({a["category_id"] for a in coco_rpc["annotations"] if rpc_to_label[a["category_id"]] >= seen})
+    if future:
+        raise ValueError(f"task {task_id} scenes contain future SKUs {future}")
+    names = {c.label: c for t in task_config.tasks for c in t.classes}
+
+    def build(keep):
+        anns = [{**a, "category_id": rpc_to_label[a["category_id"]]} for a in coco_rpc["annotations"] if keep(a)]
+        labels = sorted({a["category_id"] for a in anns})
+        cats = [{"id": lb, "name": names[lb].name, "supercategory": names[lb].supercategory,
+                 "rpc_category_id": names[lb].rpc_category_id} for lb in labels]
+        return {"images": coco_rpc["images"], "annotations": anns, "categories": cats}
+
+    return {f"train_task_{task_id}.json": build(lambda a: a["category_id"] in current),
+            f"train_task_{task_id}_gt_full.json": build(lambda a: True)}
+
+
+def area_budget(val_coco: dict[str, Any], quantile: float = 99) -> tuple[dict[int, float], dict[str, float]]:
+    """Median bbox area per SKU and a per-level cap on a basket's summed area, both as image fractions,
+    measured on the design val split (the cap is the ``quantile`` of real baskets)."""
+    images = {img["id"]: img for img in val_coco["images"]}
+    per_sku, per_image = defaultdict(list), defaultdict(float)
+    for ann in val_coco["annotations"]:
+        img = images[ann["image_id"]]
+        frac = ann["bbox"][2] * ann["bbox"][3] / (img["width"] * img["height"])
+        per_sku[ann["category_id"]].append(frac)
+        per_image[ann["image_id"]] += frac
+    by_level = defaultdict(list)
+    for image_id, total in per_image.items():
+        by_level[images[image_id]["level"]].append(total)
+    return ({sku: float(np.median(v)) for sku, v in per_sku.items()},
+            {level: float(np.percentile(v, quantile)) for level, v in by_level.items()})
+
+
+def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: float, quota_tolerance: float = 0.2,
+                   new_ratio: tuple[float, float] = (0.4, 0.6), rle_sample: int | None = None) -> dict[str, Any]:
+    """Mechanical gates of a written release (T3.1). Never repairs anything; returns gate results.
+
+    Checks: image files exist and match their recorded hash; generation_task and future-SKU rules; train
+    files hold only current-task labels mapped once, audit files every object of the same images; bbox
+    and area equal the decoded RLE; visible fraction >= ``min_visible``; per-task new-object share and
+    per-SKU quota balance. ``rle_sample`` limits RLE decoding to every k-th image (full releases).
+    """
+    from pycocotools import mask as mask_utils
+
+    out_root = Path(out_root)
+    failures = defaultdict(list)
+    counts = {}
+    rpc_to_label = task_config.rpc_to_label()
+    for task in task_config.data_tasks:
+        canon_path = out_root / "annotations" / f"task_{task.task_id}_rpc.json"
+        if not canon_path.exists():
+            continue
+        canon = json.loads(canon_path.read_text())
+        train = json.loads((out_root / "tasks/synth_v2" / f"train_task_{task.task_id}.json").read_text())
+        full = json.loads((out_root / "tasks/synth_v2" / f"train_task_{task.task_id}_gt_full.json").read_text())
+        current = {c.label for c in task.classes}
+        seen = task_config.seen_classes(task.task_id)
+        ids = [img["id"] for img in canon["images"]]
+        if len(set(ids)) != len(ids):
+            failures["unique_ids"].append(task.task_id)
+        if [i["id"] for i in train["images"]] != ids or [i["id"] for i in full["images"]] != ids:
+            failures["same_images"].append(task.task_id)
+        for img in canon["images"]:
+            if img["generation_task"] != task.task_id:
+                failures["generation_task"].append(img["id"])
+            path = out_root / img["file_name"]
+            if not path.is_file():
+                failures["image_missing"].append(img["id"])
+        for ann in train["annotations"]:
+            if ann["category_id"] not in current:
+                failures["train_old_or_future_label"].append(ann["id"])
+        if len(full["annotations"]) != len(canon["annotations"]):
+            failures["audit_incomplete"].append(task.task_id)
+        images = {img["id"]: img for img in canon["images"]}
+        new_objects, per_sku = 0, Counter()
+        for k, ann in enumerate(canon["annotations"]):
+            label = rpc_to_label.get(ann["category_id"])
+            if label is None or label >= seen:
+                failures["future_sku"].append(ann["id"])
+                continue
+            if ann["labeled"] != (label in current):
+                failures["labeled_flag"].append(ann["id"])
+            if ann["visible_fraction"] < min_visible - 1e-9:
+                failures["visibility"].append(ann["id"])
+            if label in current:
+                new_objects += 1
+                per_sku[ann["category_id"]] += 1
+            img = images[ann["image_id"]]
+            if rle_sample is None or ann["image_id"] % rle_sample == 0:
+                mask = mask_utils.decode(ann["segmentation"]).astype(bool)
+                ys, xs = np.nonzero(mask)
+                if not len(xs) or mask.shape != (img["height"], img["width"]):
+                    failures["rle"].append(ann["id"])
+                    continue
+                bbox = [int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1)]
+                if bbox != ann["bbox"] or int(mask.sum()) != ann["area"]:
+                    failures["bbox_area_vs_mask"].append(ann["id"])
+        share = new_objects / max(len(canon["annotations"]), 1)
+        if task.task_id > 1 and not new_ratio[0] <= share <= new_ratio[1]:
+            failures["new_share"].append(round(share, 3))
+        if per_sku:
+            mean = sum(per_sku.values()) / len(task.classes)
+            off = {sku: n for sku, n in per_sku.items() if abs(n - mean) > quota_tolerance * mean}
+            missing = [c.rpc_category_id for c in task.classes if c.rpc_category_id not in per_sku]
+            if off or missing:
+                failures["sku_quota"].append({"off": off, "missing": missing})
+        counts[task.task_id] = {"images": len(ids), "objects": len(canon["annotations"]),
+                                "new_objects": new_objects, "new_share": round(share, 4)}
+    planned = sorted(int(p.stem.split("_")[1]) for p in (out_root / "plans").glob("task_*.jsonl"))
+    absent = [t for t in planned if t not in counts]
+    if absent:
+        failures["planned_tasks_exported"].append(absent)
+    for task_id in planned:
+        if task_id in counts:
+            n_plan = sum(1 for _ in (out_root / "plans" / f"task_{task_id}.jsonl").open())
+            if n_plan != counts[task_id]["images"]:
+                failures["planned_tasks_exported"].append({task_id: [n_plan, counts[task_id]["images"]]})
+    gates = {name: name not in failures for name in ("planned_tasks_exported",
+        "unique_ids", "same_images", "generation_task", "image_missing", "train_old_or_future_label",
+        "audit_incomplete", "future_sku", "labeled_flag", "visibility", "rle", "bbox_area_vs_mask",
+        "new_share", "sku_quota")}
+    return {"passed": all(gates.values()), "gates": gates, "counts": counts,
+            "failures": {k: v[:20] for k, v in failures.items()}}

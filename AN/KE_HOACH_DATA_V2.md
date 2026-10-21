@@ -55,16 +55,16 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 | ID | Task | Đầu ra | Kiểm tra | Trạng thái |
 |---|---|---|---|---|
 | T2.1 | Lập kế hoạch cảnh: số vật theo level, tỉ lệ vật mới 40–60% (kẹp `[1, n−1]`), SKU cũ chọn đều, quota cân bằng, seed ổn định | `plan_scenes` + recipe | Test: task 1 chỉ SKU task 1; không SKU tương lai; quota ±20%; seed không phụ thuộc số worker | [x] |
-| T2.2 | Renderer: xoay/scale theo val, chồng lấn, mỗi vật còn thấy ≥ 70%, bóng, màu/sáng; bbox/RLE lấy từ mask cuối | `render_scene` | Test: không lật ảnh, bbox khớp mask, vật nhỏ không mất | [~] |
-| T2.3 | Ghi file, xuất nhãn theo `generation_task`, manifest, chạy tiếp được nếu bị ngắt | `generate_dataset`, CLI | Test: ảnh task 2 không lọt vào task 1; ID lớp chỉ ánh xạ một lần; chạy song song ra đúng từng byte như chạy tuần tự | [ ] |
+| T2.2 | Renderer: xoay/scale theo val, chồng lấn, mỗi vật còn thấy ≥ 70%, bóng, màu/sáng; bbox/RLE lấy từ mask cuối | `render_scene` | Test: không lật ảnh, bbox khớp mask, vật nhỏ không mất | [x] |
+| T2.3 | Ghi file, xuất nhãn theo `generation_task`, manifest, chạy tiếp được nếu bị ngắt | `generate_dataset`, CLI | Test: ảnh task 2 không lọt vào task 1; ID lớp chỉ ánh xạ một lần; chạy song song ra đúng từng byte như chạy tuần tự | [x] |
 
 ### Giai đoạn 3 — Pilot (cổng M2)
 
 | ID | Task | Đầu ra | Kiểm tra | Trạng thái |
 |---|---|---|---|---|
-| T3.1 | Công cụ kiểm tra dữ liệu (`verify_dataset`) | Báo cáo kiểm tra tự động | Test cố ý cài lỗi: phải FAIL đúng chỗ | [ ] |
-| T3.2 | Sinh pilot 200 ảnh/task, đo s/ảnh, MB/ảnh, tỉ lệ đặt vật thất bại | `rpc_synth_v2_pilot_v1` | `verify` đạt | [ ] |
-| T3.3 | Gallery 100 ảnh (5 task × 3 level) + so phân bố với val2019, **họp duyệt M2** | `pilot_review.json` | Có người duyệt | [ ] |
+| T3.1 | Công cụ kiểm tra dữ liệu (`verify_dataset`) | Báo cáo kiểm tra tự động | Test cố ý cài lỗi: phải FAIL đúng chỗ | [x] |
+| T3.2 | Sinh pilot 200 ảnh/task, đo s/ảnh, MB/ảnh, tỉ lệ đặt vật thất bại | `rpc_synth_v2_pilot_v1` | `verify` đạt | [x] |
+| T3.3 | Gallery 100 ảnh (5 task × 3 level) + so phân bố với val2019, **họp duyệt M2** | `pilot_review.json` | Có người duyệt | [!] chờ duyệt M2 |
 
 ### Giai đoạn 4 — Bản đầy đủ (cổng M4)
 
@@ -130,5 +130,8 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | **M0 chốt** (người dùng đồng ý): `catalog/cutouts.json` + `m0_review.json`; notebook `05_synthetic_v2` chạy lại các bước CPU (run `57ab8898`, PASS_M0) | `runs/data_preprocessing/synthetic_v2/57ab8898/summary.json` |
 | 21/10 | Phát hiện: 48% số vật trong ảnh val là bản lặp của một SKU đã có trong ảnh (khách mua nhiều đơn vị). Bộ sinh lấy **kiểu giỏ hàng** (số đơn vị mỗi SKU) từ ảnh val cùng level, thay vì chọn từng vật độc lập. Đo trên val: tâm vật trung bình (0,505; 0,552), độ lệch chuẩn 0,157/0,187/0,207 theo level; độ sáng vật so với cutout: camera 2 khoảng 0,85, camera 0 khoảng 0,95; JPEG val khoảng q75 | `configs/data/synth_v2.json` |
 | 21/10 | T2.1 xong: `plan_scenes` (kiểu giỏ, 40–60% vật mới kẹp [1, n−1], SKU cân bằng, SKU cũ chia đều, cutout không lặp trong ảnh, seed ổn định), 11 test. T2.2 đang làm: `autocheckout/compositing.py` (xoay không lật, đặt vật giữ ≥ 70% phần thấy, bóng, màu/sáng, nhãn từ owner mask, RLE nén) + `fit_scales`, 7 test. **Chưa làm:** chạy `fit_scales` trên dữ liệu thật, writer/export/CLI (T2.3), pilot | — |
+| 21/10 | T2.2–T2.3 xong: `fit_scales` (kích thước theo SKU–camera khớp val), renderer, writer tiếp tục được khi bị ngắt, `generate`/`export`/`verify`/`gallery`. Sửa trong lúc chạy: SKU 121 bị tính nhầm tư thế đứng; cảnh chật thì nới độ rải, rồi đặt đều toàn khay, cuối cùng đặt vật to trước; giới hạn tổng diện tích giỏ (p99 của val) khi lập kế hoạch | `configs/data/synth_v2.json` |
+| 21/10 | T3.1–T3.2: pilot `rpc_synth_v2_pilot_v1` 1.000/1.000 ảnh, 83 s với 16 worker (bản đầy đủ ước khoảng 1,7 giờ); **14/14 kiểm tra tự động đạt** (bắt đúng 5 loại lỗi cố ý cài trong test); tái lập 0/180 file khác giữa 1 và 16 worker. Hiệu chỉnh 1 vòng theo val: kích thước ×1,048, độ rải ×0,9. So với val: số vật/ảnh 7,14/12,31/17,29 vs 7,15/12,38/17,29; độ phủ bbox p50 0,29/0,41/0,47 vs 0,32/0,40/0,46; diện tích bbox theo SKU synth/val trung vị 0,98. Ảnh 1840px (cỡ nền), không phải 1850 như D10 | `rpc_synth_v2_pilot_v1/verify_report.json` |
+| 21/10 | T3.3: gallery `runs/data_preprocessing/synthetic_v2/pilot_v1_gallery/` (5 trang có khung xanh = mới có nhãn, đỏ = cũ không nhãn; 3 trang đặt ảnh ghép trên, ảnh thật dưới). Nhận xét của mình: ảnh thật xếp vật sát nhau thành cụm/hàng, ảnh ghép rải hơn; vật ghép phẳng, không có độ dày | — |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |
