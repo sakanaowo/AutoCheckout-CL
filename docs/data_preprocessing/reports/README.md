@@ -4,6 +4,7 @@ Các báo cáo ghi trạng thái **tại thời điểm thực nghiệm**. Trạ
 
 | Ngày | Báo cáo | Bằng chứng chính |
 |---|---|---|
+| 21/10 | [Ảnh ghép v2 và bộ đánh giá RPC gốc](synth-v2-2026-10-21.md) | 71.642 ảnh, verify 14/14; val 5.792 / test 24.000; mốc B2 cAcc-M2 85,79% |
 | 21/10 | [Synthetic v1 lưu trữ và xóa local](synth-v1-retirement-2026-10-21.md) | Người dùng xác nhận backup Drive; inventory SHA-256 20.004 file, xóa local; ghi rõ 9 ảnh resolved cần restore |
 | 07/10 | [Audit đầu vào](data-audit-2026-10-07.md) | Inventory/COCO và protocol nguồn |
 | 07/10 | [Nghiệm thu tài nguyên](preprocessing-acceptance-2026-10-07.md) | Decode/hash, nền/cutout, 222 case nghi vấn |

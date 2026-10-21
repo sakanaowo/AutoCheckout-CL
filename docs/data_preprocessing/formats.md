@@ -169,14 +169,16 @@ data/processed/rpc_synth_v2_<version>/catalog/
 
 ```text
 data/processed/rpc_synth_v2_<version>/
-├── images/task_<t>/<image_id>.jpg          1850×1850 JPEG
+├── plans/task_<t>.jsonl                     recipe từng cảnh (deterministic, trước khi render)
+├── images/task_<t>/<image_id>.jpg          1840×1840 JPEG (cỡ ảnh nền)
 ├── owner_masks/task_<t>/<image_id>.png     uint16, 0 là nền, giá trị = instance_id
-├── recipes/task_<t>/<image_id>.json        recipe deterministic
+├── labels/task_<t>/<image_id>.json         recipe + transform đã dùng + nhãn từng vật, ghi cuối cùng
 ├── annotations/task_<t>_rpc.json           full GT canonical, category_id RPC 1..200
 ├── tasks/synth_v2/train_task_<t>.json      nhãn model, chỉ lớp task t (đưa vào loader)
 ├── tasks/synth_v2/train_task_<t>_gt_full.json   mọi vật, nhãn model, chỉ để audit
 ├── task_config.json                        bản sao byte-identical của release real v1
-└── manifest.json                           config hash, asset hashes, counts, file hashes
+├── manifest.json                           config hash, asset hashes, counts, file hashes
+└── verify_report.json                      14 kiểm tra tự động + phân bố so với val
 ```
 
 | Trường ảnh (`images[]`) | Ý nghĩa |

@@ -1,5 +1,7 @@
 # Tiến độ AutoCheckout-CL
 
+**21/10/2026 — ảnh ghép v2 đã phát hành:** [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md). `rpc_synth_v2_v1` 71.642 ảnh, verify 14/14; bộ đánh giá `rpc_eval_official_v1` (val 5.792, test 24.000); loader PDP đọc được ở 640. cAcc-M2 có trong `eval_count --unlearned-iou 0.5`; mốc B2 task 1 = 85,79%, đi tiếp khi FULL-SYN ≥ 72,8%. Chưa train FULL-SYN; bước tiếp theo là plan gói train.
+
 **21/10/2026 — chốt quyết định ảnh ghép v2:** [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md); spec/plan đã sửa theo.
 - Train 100% ảnh ghép, 71.642 ảnh, 16 epoch/task.
 - Val = val2019 bỏ 208 ảnh nguồn nền (5.792 ảnh); test = test2019 đầy đủ.

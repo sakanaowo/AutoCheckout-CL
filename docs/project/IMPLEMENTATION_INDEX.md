@@ -1,6 +1,6 @@
 # Chỉ mục triển khai và đầu ra
 
-**Ảnh ghép v2 — mới ở bước kế hoạch:** [quyết định 21/10](synthetic-data-v2-decisions-2026-10-21.md), [thiết kế/bản đồ code](synthetic-data-v2-design-2026-10-20.md), [task breakdown](synthetic-data-v2-plan-2026-10-20.md). Các file `synthetic.py`, `compositing.py`, CLI/notebook v2 trong kế hoạch chưa được tạo; bảng sau vẫn mô tả phần đã có.
+**Ảnh ghép v2 — đã phát hành 21/10:** [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md), [quyết định](synthetic-data-v2-decisions-2026-10-21.md), [thiết kế/bản đồ code](synthetic-data-v2-design-2026-10-20.md), [task breakdown](synthetic-data-v2-plan-2026-10-20.md). Code: [synthetic.py](../../autocheckout/synthetic.py) (catalog, kế hoạch cảnh, scale, export, verify), [compositing.py](../../autocheckout/compositing.py) (render, ghi file), [synth_v2.py](../../tools/synth_v2.py) (CLI, gồm `eval-set`), cAcc-M2 trong [counting.py](../../autocheckout/counting.py)/[eval_count.py](../../tools/eval_count.py); notebook [05](../../notebooks/data_preprocessing/05_synthetic_v2.ipynb); test `tests/test_synthetic_*.py`. Dữ liệu: `data/processed/rpc_synth_v2_v1/`, `rpc_eval_official_v1/`.
 
 **Cập nhật 20/10/2026:** baseline EXP-B1/EXP-B2 đã đủ 5 task; [báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) có metrics, biểu đồ, provenance và giới hạn. Pilot/transition/native kernel và các lần chuyển GPU giữ trong báo cáo có ngày. 16 epochs/task đã hoàn tất, convergence và ablation còn cần nghiên cứu riêng.
 
