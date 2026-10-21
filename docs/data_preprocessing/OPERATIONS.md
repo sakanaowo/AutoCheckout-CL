@@ -1,5 +1,7 @@
 # Vận hành pipeline tiền xử lý
 
+**Thay đổi 21/10/2026:** synthetic **v1** (`data/archive/synth/group/`) đã xóa local theo yêu cầu người dùng, backup nằm trên Drive theo xác nhận của người dùng. Synthetic **v2** sẽ được sinh riêng. Trước khi chạy các bước audit/review/resolution cũ bên dưới, xem [phạm vi phụ thuộc và hướng dẫn restore](reports/synth-v1-retirement-2026-10-21.md). Resolved 202 hiện thiếu 9 ảnh giữ nguồn; receipts/PASS trước đây là lịch sử, không phải chứng nhận đủ dữ liệu local hiện tại.
+
 Cập nhật 08/10/2026. [Chỉ mục triển khai](../project/IMPLEMENTATION_INDEX.md) chỉ code/config/tests; [báo cáo](reports/README.md) lưu kết quả từng run. Các bước audit/review/resolution chạy CPU; GPU train là RTX 4090 trên Vast.ai.
 
 ## Chuẩn bị và đọc kết quả

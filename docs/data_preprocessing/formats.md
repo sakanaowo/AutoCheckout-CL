@@ -1,5 +1,7 @@
 # Định dạng dữ liệu và thư mục
 
+**Quy ước 21/10/2026:** synthetic v1 là bộ 20.000 ảnh/4 task tại `data/archive/synth/group/`, hiện chỉ còn backup Drive theo xác nhận người dùng; local đã xóa. Synthetic v2 sẽ ở `data/processed/rpc_synth_v2_<version>/`. Không nhầm với real release `rpc_100-4x25_seed0_native_v1` vẫn giữ nguyên. [Trạng thái và khôi phục](reports/synth-v1-retirement-2026-10-21.md).
+
 > Phạm vi 07/10/2026: protocol **5 task 100+4×25 đã chốt**. [Notebook split](../../notebooks/data_preprocessing/02_split_and_acceptance.ipynb) đã tạo release native v1 real-only và khóa validation/test. Các ví dụ `/data/rpc`/`checkout_800` phía dưới thuộc pipeline kế thừa; dùng hợp đồng native ở mục 0 cho run hiện tại. Xem [báo cáo split](reports/split-100-4x25-2026-10-07.md), [bàn giao](../project/AGENT_HANDOFF.md) và [kế hoạch](../project/IMPLEMENTATION_PLAN.md).
 
 Tài liệu này là "hợp đồng" giữa các phần code: công cụ dữ liệu (DL1–DL6), code PDP (`pdp/`), công cụ đánh giá (V1–V6) và baseline. Muốn đổi định dạng nào thì sửa ở đây trước, rồi sửa code và test tương ứng.

@@ -1,0 +1,50 @@
+{
+  "dataset": "synthetic-v1",
+  "local_path": "data/archive/synth/group",
+  "status": "LOCAL_REMOVED_BACKUP_USER_CONFIRMED",
+  "started_at": "2026-10-21T09:39:15.068650+07:00",
+  "backup": {
+    "location": "Google Drive",
+    "confirmed_by": "user",
+    "remote_verified": false,
+    "url": null
+  },
+  "files": 20004,
+  "images": 20000,
+  "annotation_files": 4,
+  "bytes": 9873969276,
+  "allocated_bytes": 9915019264,
+  "inventory_path": "runs/data_preprocessing/synth_v1_retirement/inventory.json",
+  "inventory_sha256": "2449768f994c3ae87526f9a095ae09991c31f0069c6d07046ca038642fe477d2",
+  "protected_sha256": {
+    "data/archive/cutouts/sam/index.json": "4adf2a0c42ccd52d5a54affc5a3380625d95430eb4ae3899bfe65367b200d164",
+    "data/processed/rpc_100-4x25_seed0_native_v1/release_manifest.json": "10ed5cbb43fa9dea35b53fc31c38aadd59273697ea8ef82f4cedb4d864252d81",
+    "data/processed/rpc_synth_resolved_202_v1/annotations.json": "cecf49d212fcfa2e4cf0fd673bbcb717daf75f1c6241b95cfd3fd0ad7f3b42a5",
+    "data/processed/rpc_synth_resolved_202_v1/resolution_manifest.json": "13a502406bed7eac7e594b10cea9aeca770926bcad83193ac48684e5050c119c"
+  },
+  "preserved_dirs": {
+    "data/archive/cutouts": 7515,
+    "data/archive/backgrounds": 209,
+    "data/archive/scripts": 12,
+    "data/archive/val2019": 6000,
+    "data/archive/test2019": 24000
+  },
+  "finished_at": "2026-10-21T09:39:30.839609+07:00",
+  "verification": {
+    "target_absent": true,
+    "protected_metadata_hashes_unchanged": true,
+    "preserved_directory_file_counts_unchanged": true,
+    "resolved_202_regenerated_images_present": 193,
+    "resolved_202_missing_source_images": [
+      "data/archive/synth/group/task1/images/001296.jpg",
+      "data/archive/synth/group/task2/images/004444.jpg",
+      "data/archive/synth/group/task3/images/001485.jpg",
+      "data/archive/synth/group/task3/images/003151.jpg",
+      "data/archive/synth/group/task3/images/003782.jpg",
+      "data/archive/synth/group/task3/images/004151.jpg",
+      "data/archive/synth/group/task3/images/004427.jpg",
+      "data/archive/synth/group/task4/images/002227.jpg",
+      "data/archive/synth/group/task4/images/002943.jpg"
+    ]
+  }
+}

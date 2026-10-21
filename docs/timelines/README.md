@@ -4,6 +4,7 @@ Các báo cáo lưu mục đích, thời điểm chạy, cấu hình, artifacts 
 
 | Ngày | Công việc | Báo cáo |
 |---|---|---|
+| 21/10/2026 | Đặt tên synthetic v1/v2; xóa 20.000 ảnh v1 local theo yêu cầu người dùng, backup Drive đã được người dùng xác nhận | [Biên bản và receipt](../data_preprocessing/reports/synth-v1-retirement-2026-10-21.md) |
 | 20/10/2026 | Đọc code/rules và metadata cutout; lập kế hoạch nhánh `feat/synthetic-data-v2`, chưa chạy generator/train | [Thiết kế](../project/synthetic-data-v2-design-2026-10-20.md), [kế hoạch](../project/synthetic-data-v2-plan-2026-10-20.md) |
 | 07/10/2026 | Audit/split 5 task và review nhãn synth | [Tiền xử lý](../data_preprocessing/README.md) |
 | 07/10/2026 | Pilot GPT-6.1 Sol trên 10 ảnh mới | [Pilot Sol](../data_preprocessing/reports/sol-pilot-2026-10-07.md) |

@@ -1,5 +1,16 @@
 # Tiến độ AutoCheckout-CL
 
+**21/10/2026 — chốt quyết định ảnh ghép v2:** [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md); spec/plan đã sửa theo.
+- Train 100% ảnh ghép, 71.642 ảnh, 16 epoch/task.
+- Val = val2019 bỏ 208 ảnh nguồn nền (5.792 ảnh); test = test2019 đầy đủ.
+- Chỉ chạy FULL-SYN; FULL-REAL hoãn.
+- Chọn camera theo hình dạng vật, cắt bổ sung camera 0 cho khoảng 51 SKU dạng trụ (cần token Kaggle).
+- Cổng sau task 1 dùng cAcc-M2, ngưỡng Δ −13/−28 so với B2.
+
+Đây là quyết định và tài liệu; chưa có code, dữ liệu hay train v2.
+
+**21/10/2026 — quản lý dữ liệu:** synthetic cũ được đặt tên **v1**, người dùng xác nhận backup Drive và cho phép xóa `data/archive/synth/group/` local; đã xóa 20.000 JPEG + 4 JSON sau khi lưu inventory SHA-256. [Biên bản](../data_preprocessing/reports/synth-v1-retirement-2026-10-21.md). Cutout/nền/real release giữ nguyên; resolved 202 còn 193 ảnh mới nhưng 9 ảnh nguồn cần restore. Synthetic **v2** chưa sinh; không đổi trạng thái nghiệm thu lịch sử thành kết quả mới.
+
 **Kế hoạch nhánh `feat/synthetic-data-v2`, 20/10/2026:** đã đọc quy tắc tài liệu, pipeline dữ liệu/loader và index cutout; lưu [thiết kế](synthetic-data-v2-design-2026-10-20.md), [kế hoạch](synthetic-data-v2-plan-2026-10-20.md) và [nguồn cuộc họp](../references/meeting-2026-10-20/README.md). Có metadata camera/source cho đủ 7.502 cutout; chưa review semantic hoặc tạo v2. Mốc kế tiếp đề xuất: inventory/gallery nguyên liệu, nhóm chốt trước pilot. Đây là kế hoạch, không phải nghiệm thu generator hay một run train mới.
 
 **Cập nhật 20/10/2026: baseline EXP-B1/EXP-B2 hoàn tất 5 task ngày 15/10, 19:28:27 UTC+7.** [Báo cáo kết quả](FINAL_BACKBONE_COMPARISON_2026-10-20.md) thay trạng thái dừng/chuyển máy ngày 13/10. Pilot/transition, foundation/ConvNeXt adapter, CLI/runner và S6 đã có bằng chứng riêng.

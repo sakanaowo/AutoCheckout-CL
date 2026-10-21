@@ -1,5 +1,15 @@
 # Bàn giao AutoCheckout-CL
 
+**Quyết định ảnh ghép v2, 21/10/2026:** [D1–D21](synthetic-data-v2-decisions-2026-10-21.md) là nguồn hiện hành cho dữ liệu v2 và FULL-SYN. Những điểm khác với mô tả bên dưới:
+- train chỉ dùng ảnh ghép;
+- val/test lấy từ RPC gốc (val2019 bỏ 208 ảnh nguồn nền, test2019 đầy đủ);
+- B1/B2 chỉ so được trên 6.003 ảnh test cũ;
+- chỉ chạy FULL-SYN.
+
+Bước tiếp theo là M0 trong [plan](synthetic-data-v2-plan-2026-10-20.md). Task 1b cần người dùng cung cấp token Kaggle.
+
+**Cập nhật dữ liệu 21/10/2026:** bộ ảnh ghép cũ là **synthetic v1**, đã xóa local `data/archive/synth/group/` theo yêu cầu và xác nhận backup Drive của người dùng. V2 sẽ sinh mới từ cutout/nền; xem [kế hoạch](synthetic-data-v2-plan-2026-10-20.md). [Biên bản v1](../data_preprocessing/reports/synth-v1-retirement-2026-10-21.md) có inventory/checksums và restore. Đường dẫn ảnh v1 trong annotation cũ hiện không còn local; resolved 202 thiếu 9 ảnh giữ nguồn. Không tự chạy lại audit/resolution đầy đủ từ các trạng thái PASS lịch sử bên dưới khi chưa restore nguồn.
+
 **Cập nhật 20/10/2026: BASELINE HAI BACKBONE ĐÃ HOÀN TẤT.** Campaign `vast4090-seed0-640-v1/baseline` có summary COMPLETED lúc 19:28:27 ngày 15/10 UTC+7; EXP-B1 ResNet-50 và EXP-B2 ConvNeXt-V2-Base đều đủ 5 task.
 
 [Báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) giữ bảng đầy đủ, biểu đồ và evidence: final AP50 B1/B2 **62,33%/84,40%**, AP[.50:.95] **51,55%/71,37%**, cAcc **2,58%/21,74%**. Forgetting trung bình B1/B2 **6,63/8,67 điểm**; không kết luận ConvNeXt chống quên tốt hơn.

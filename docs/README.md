@@ -4,7 +4,8 @@ Cập nhật **20/10/2026**. Protocol **5 task 100+4×25, seed 0**. Baseline hai
 
 | Điểm vào | Mục đích |
 |---|---|
-| [Kế hoạch ảnh ghép v2](project/synthetic-data-v2-plan-2026-10-20.md), [thiết kế](project/synthetic-data-v2-design-2026-10-20.md) | Nhánh `feat/synthetic-data-v2`: kiểm kê → pilot → full release → loader; đề xuất chờ nhóm duyệt, chưa triển khai |
+| [Synthetic v1 lưu trên Drive, xóa local](data_preprocessing/reports/synth-v1-retirement-2026-10-21.md) | Quy ước v1/v2, inventory/checksums, phụ thuộc lịch sử và hướng dẫn restore; v2 chưa sinh |
+| [Quyết định ảnh ghép v2](project/synthetic-data-v2-decisions-2026-10-21.md), [kế hoạch](project/synthetic-data-v2-plan-2026-10-20.md), [thiết kế](project/synthetic-data-v2-design-2026-10-20.md) | Nhánh `feat/synthetic-data-v2`: D1–D21 (val/test RPC gốc, 71.642 ảnh, camera theo hình dạng, cổng cAcc-M2); kiểm kê → cắt bổ sung camera 0 → pilot → full release → loader; chưa triển khai |
 | [Báo cáo cuối hai backbone](project/FINAL_BACKBONE_COMPARISON_2026-10-20.md) | Protocol, full metrics, forgetting/counting, biểu đồ, đối chiếu PDP và evidence kiểm tra lại |
 | [Bàn giao](project/AGENT_HANDOFF.md), [snapshot đầu ngày 09/10](project/HANDOFF_2026-10-09.md) | Bàn giao hiện hành và snapshot lịch sử trước kiểm chứng model |
 | [Kết luận processor/loader/PDP foundation](project/PDP_FOUNDATION_ACCEPTANCE.md) | Phạm vi notebook đã hoàn tất, evidence CPU/CUDA, giới hạn và 5 bước tiếp theo |

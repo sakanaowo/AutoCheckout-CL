@@ -4,6 +4,7 @@ Các báo cáo ghi trạng thái **tại thời điểm thực nghiệm**. Trạ
 
 | Ngày | Báo cáo | Bằng chứng chính |
 |---|---|---|
+| 21/10 | [Synthetic v1 lưu trữ và xóa local](synth-v1-retirement-2026-10-21.md) | Người dùng xác nhận backup Drive; inventory SHA-256 20.004 file, xóa local; ghi rõ 9 ảnh resolved cần restore |
 | 07/10 | [Audit đầu vào](data-audit-2026-10-07.md) | Inventory/COCO và protocol nguồn |
 | 07/10 | [Nghiệm thu tài nguyên](preprocessing-acceptance-2026-10-07.md) | Decode/hash, nền/cutout, 222 case nghi vấn |
 | 07/10 | [Split 5 task](split-100-4x25-2026-10-07.md) | Release native, checksum và holdout lock |

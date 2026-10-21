@@ -1,6 +1,6 @@
 # Chỉ mục triển khai và đầu ra
 
-**Ảnh ghép v2 — mới ở bước kế hoạch:** [thiết kế/bản đồ code](synthetic-data-v2-design-2026-10-20.md), [task breakdown](synthetic-data-v2-plan-2026-10-20.md). Các file `synthetic.py`, `compositing.py`, CLI/notebook v2 trong kế hoạch chưa được tạo; bảng sau vẫn mô tả phần đã có.
+**Ảnh ghép v2 — mới ở bước kế hoạch:** [quyết định 21/10](synthetic-data-v2-decisions-2026-10-21.md), [thiết kế/bản đồ code](synthetic-data-v2-design-2026-10-20.md), [task breakdown](synthetic-data-v2-plan-2026-10-20.md). Các file `synthetic.py`, `compositing.py`, CLI/notebook v2 trong kế hoạch chưa được tạo; bảng sau vẫn mô tả phần đã có.
 
 **Cập nhật 20/10/2026:** baseline EXP-B1/EXP-B2 đã đủ 5 task; [báo cáo cuối](FINAL_BACKBONE_COMPARISON_2026-10-20.md) có metrics, biểu đồ, provenance và giới hạn. Pilot/transition/native kernel và các lần chuyển GPU giữ trong báo cáo có ngày. 16 epochs/task đã hoàn tất, convergence và ablation còn cần nghiên cứu riêng.
 
@@ -29,12 +29,13 @@ Các module review/API/resolution là thư viện được notebook gọi, **ch�
 
 | Đường dẫn local, không đưa vào git | Nội dung / vai trò |
 |---|---|
-| `data/archive/` | Nguồn ảnh/COCO/cutout/background giữ nguyên |
+| `data/archive/` | Cutout/background/ảnh thật và metadata giữ nguyên; ngoại lệ synthetic v1 đã xóa local ngày 21/10 theo yêu cầu người dùng |
+| `data/archive/synth/group/` (đã xóa local) | Synthetic v1, backup Drive do người dùng xác nhận; [inventory/restore](../data_preprocessing/reports/synth-v1-retirement-2026-10-21.md) |
 | `data/processed/rpc_100-4x25_seed0_native_v1/` | Real-only release, splits/task JSON, mapping và checksum/test lock |
 | `data/processed/synthetic_annotation_review_v1/review_queue.json` | Queue gốc 222 case, lịch sử detector nghi vấn |
 | `data/processed/synthetic_annotation_review_v1/review_decisions.csv` | Trạng thái hiện tại: 193 regenerate đã áp dụng, 9 giữ, 20 pending |
 | `data/processed/synthetic_annotation_review_v1/ai/` | Request manifest/JSONL, submission state, output/error receipts, accepted/rejected, usage/cost |
-| `data/processed/rpc_synth_resolved_202_v1/` | annotations/resolution manifest; 193 JPEG/NPZ/recipe mới; task_config và 10 task JSON; 9 ảnh giữ trỏ nguồn |
+| `data/processed/rpc_synth_resolved_202_v1/` | annotations/resolution manifest; 193 JPEG/NPZ/recipe còn local; task_config và 10 task JSON; 9 ảnh giữ trỏ v1 đã xóa, cần restore |
 | `runs/data_preprocessing/<workflow>/<run_id>/` | Run metadata, gates, HTML QA và bằng chứng kiểm tra |
 | `runs/notebook_versions/` | Snapshot notebook từng lần chạy, giữ timestamp/output lịch sử |
 
