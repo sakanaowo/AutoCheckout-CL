@@ -72,7 +72,10 @@ def _place(rng, sample_object, n_objects, size, layout, level, spread=1.0, unifo
 
     ``spread`` widens the centre distribution; scene retries raise it so crowded hard scenes fit, and
     the last half of the retries draw positions uniformly over the tray (``uniform``). ``order`` is the
-    paste order as recipe indices (default: recipe order).
+    paste order as recipe indices (default: recipe order). With probability ``pack_prob`` a position is
+    drawn next to an object already placed; ``pack_mode="compact"`` instead tries ``position_tries``
+    spots next to placed objects and keeps the valid one nearest a jittered basket centre, so the
+    basket grows as one cluster, as people pack them.
     """
     owner = np.zeros((size, size), np.uint16)
     visible, area, placed = {}, {}, []
@@ -85,8 +88,25 @@ def _place(rng, sample_object, n_objects, size, layout, level, spread=1.0, unifo
             h, w = obj["mask"].shape
             if h >= size or w >= size:
                 continue
-            for _ in range(layout["position_tries"]):
-                if uniform:
+            compact = bool(placed) and not uniform and layout.get("pack_mode") == "compact" \
+                and rng.random() < layout.get("compact_prob", 1.0)
+            target = rng.normal(mean, std * layout.get("pack_center_jitter", 0.0)) if compact else None
+            best = None
+            for attempt in range(layout["position_tries"]):
+                if compact or (layout.get("pack_prob", 0.0) > 0 and placed and not uniform
+                               and attempt < layout["position_tries"] // 2 and rng.random() < layout["pack_prob"]):
+                    # next to an object already on the tray, centre distance ~ the sum of half sizes
+                    anchor = placed[rng.integers(len(placed))]
+                    ah, aw = anchor["mask"].shape
+                    theta = rng.uniform(0, 2 * np.pi)
+                    gap = rng.uniform(*layout["pack_gap"])
+                    reach = gap * (np.hypot(abs(np.cos(theta)) * aw, abs(np.sin(theta)) * ah)
+                                   + np.hypot(abs(np.cos(theta)) * w, abs(np.sin(theta)) * h)) / 2
+                    cx = anchor["x"] + aw / 2 + reach * np.cos(theta)
+                    cy = anchor["y"] + ah / 2 + reach * np.sin(theta)
+                    x = int(np.clip(round(cx - w / 2), 0, size - w))
+                    y = int(np.clip(round(cy - h / 2), 0, size - h))
+                elif uniform:
                     x, y = int(rng.integers(0, size - w + 1)), int(rng.integers(0, size - h + 1))
                 else:
                     cx, cy = rng.normal(mean, std)
@@ -94,17 +114,25 @@ def _place(rng, sample_object, n_objects, size, layout, level, spread=1.0, unifo
                     y = int(np.clip(round(cy - h / 2), 0, size - h))
                 under = owner[y:y + h, x:x + w][obj["mask"]]
                 ids, counts = np.unique(under[under > 0], return_counts=True)
-                if all((visible[i] - c) / area[i] >= layout["min_visible"] for i, c in zip(ids, counts)):
-                    for i, c in zip(ids, counts):
-                        visible[i] -= int(c)
-                    owner[y:y + h, x:x + w][obj["mask"]] = instance
-                    obj.update(x=x, y=y, area=int(obj["mask"].sum()))
-                    visible[instance] = area[instance] = obj["area"]
-                    placed.append(obj)
-                    break
-            else:
-                continue
-            break
+                if not all((visible[i] - c) / area[i] >= layout["min_visible"] for i, c in zip(ids, counts)):
+                    continue
+                if compact:
+                    # compact baskets: keep the valid spot nearest the basket centre
+                    dist = np.hypot(x + w / 2 - target[0], y + h / 2 - target[1])
+                    if best is None or dist < best[0]:
+                        best = (dist, x, y, ids, counts)
+                    continue
+                best = (0.0, x, y, ids, counts)
+                break
+            if best is not None:
+                _, x, y, ids, counts = best
+                for i, c in zip(ids, counts):
+                    visible[i] -= int(c)
+                owner[y:y + h, x:x + w][obj["mask"]] = instance
+                obj.update(x=x, y=y, area=int(obj["mask"].sum()))
+                visible[instance] = area[instance] = obj["area"]
+                placed.append(obj)
+                break
         else:
             raise SceneError(f"object {instance} of {n_objects} could not be placed")
     return placed, owner, visible
@@ -135,7 +163,10 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             scale *= scale_cfg.get("calibration", 1.0) * float(np.exp(rng.normal(0, scale_cfg["jitter_log_sigma"])))
             rgba = load_rgba(cutout["file"])
             scale = min(scale, scale_cfg["max_side_frac"] * size / max(rgba.shape[:2]))
-            angle = float(rng.uniform(0, 360))
+            if rng.random() < layout.get("aligned_prob", 0.0):     # lying square to the tray edges
+                angle = float(90 * rng.integers(4) + rng.normal(0, layout["aligned_jitter_deg"])) % 360
+            else:
+                angle = float(rng.uniform(0, 360))
             rgba = transform_cutout(rgba, angle, scale)
             transforms.append({"instance_id": spec["instance_id"], "angle": round(angle, 3), "scale": round(scale, 5)})
             return {"spec": spec, "rgba": rgba, "mask": rgba[..., 3] >= 128}

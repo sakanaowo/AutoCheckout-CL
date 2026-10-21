@@ -349,26 +349,34 @@ def compare_to_val(out: Path, val: dict) -> dict:
         for a in coco["annotations"]:
             anns[a["image_id"]].append(a)
         per_level, covered, area = defaultdict(list), defaultdict(list), defaultdict(list)
+        touching = defaultdict(list)
         for img in coco["images"]:
             per_level[img["level"]].append(len(anns[img["id"]]))
-            covered[img["level"]] += covered_fractions(img, anns[img["id"]])
+            fracs = covered_fractions(img, anns[img["id"]])
+            covered[img["level"]] += fracs
+            boxes = np.array([a["bbox"] for a in anns[img["id"]]], float)
+            if len(boxes):
+                span = (boxes[:, 0] + boxes[:, 2]).max() - boxes[:, 0].min(), (boxes[:, 1] + boxes[:, 3]).max() - boxes[:, 1].min()
+                touching[img["level"]].append((boxes[:, 2] * boxes[:, 3]).sum() / (span[0] * span[1]))
             for a in anns[img["id"]]:
                 area[a["category_id"]].append(a["bbox"][2] * a["bbox"][3] / (img["width"] * img["height"]))
-        return per_level, covered, area
+        return per_level, covered, area, touching
 
     synth = {"images": [], "annotations": []}
     for path in sorted((out / "annotations").glob("task_*_rpc.json")):
         coco = load_json(path)
         synth["images"] += coco["images"]
         synth["annotations"] += coco["annotations"]
-    s_lv, s_cov, s_area = summary(synth)
-    v_lv, v_cov, v_area = summary(val)
+    s_lv, s_cov, s_area, s_touch = summary(synth)
+    v_lv, v_cov, v_area, v_touch = summary(val)
     ratio = [np.median(s_area[k]) / np.median(v_area[k]) for k in s_area if k in v_area]
     return {
         "objects_per_image": {lv: {"synth_mean": round(float(np.mean(s_lv[lv])), 2), "val_mean": round(float(np.mean(v_lv[lv])), 2)}
                               for lv in s_lv},
         "bbox_covered_p50": {lv: {"synth": round(float(np.median(s_cov[lv])), 3), "val": round(float(np.median(v_cov[lv])), 3)}
                              for lv in s_cov},
+        "basket_density_p50": {lv: {"synth": round(float(np.median(s_touch[lv])), 3),
+                                    "val": round(float(np.median(v_touch[lv])), 3)} for lv in s_touch},
         "sku_bbox_area_ratio_synth_over_val": {q: round(float(np.percentile(ratio, q)), 3) for q in (10, 50, 90)},
     }
 

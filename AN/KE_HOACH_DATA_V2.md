@@ -64,7 +64,7 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 |---|---|---|---|---|
 | T3.1 | Công cụ kiểm tra dữ liệu (`verify_dataset`) | Báo cáo kiểm tra tự động | Test cố ý cài lỗi: phải FAIL đúng chỗ | [x] |
 | T3.2 | Sinh pilot 200 ảnh/task, đo s/ảnh, MB/ảnh, tỉ lệ đặt vật thất bại | `rpc_synth_v2_pilot_v1` | `verify` đạt | [x] |
-| T3.3 | Gallery 100 ảnh (5 task × 3 level) + so phân bố với val2019, **họp duyệt M2** | `pilot_review.json` | Có người duyệt | [!] chờ duyệt M2 |
+| T3.3 | Gallery 100 ảnh (5 task × 3 level) + so phân bố với val2019, **họp duyệt M2** | `pilot_review.json` | Có người duyệt | [x] M2 duyệt 21/10 |
 
 ### Giai đoạn 4 — Bản đầy đủ (cổng M4)
 
@@ -101,6 +101,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | Mâm xoay dính vào mask: khoảng 15–20% cutout camera 2, gần như toàn bộ ở SKU trong suốt/trắng | Loại, rồi SKU nào còn < 8 cutout thì cắt thêm ảnh camera 2 từ zip bằng đúng quy trình cũ và duyệt phần mới | Dùng quy trình đã kiểm chứng; viết bước tự xóa mâm thì rủi ro ăn mất bao bì trắng/trong |
 | 21/10 | Mảnh mâm nhỏ ở mép | Loại luôn: thấy mâm là loại | Nhãn bbox/mask phải khớp sản phẩm |
 | 21/10 | 105 hộp chụp ngang thấy hai mặt (mask sạch) | Giữ loại | Mỗi SKU đã đủ cutout thẳng mặt; tư thế hai mặt không có trên khay |
+| 21/10 | Bố cục bản đầy đủ (M2) | A: giữ cách rải pilot v1; code xếp gọn để sẵn, mặc định tắt | Khoảng cách giữa các vật và độ chồng bbox đã khớp val; xếp gọn chỉ thu hẹp khoảng trống trong cụm nhưng làm vật bị che thật nhiều hơn (40–47% so với 28–39%) và độ phủ bbox vượt val; sai số tổng 0,099 so với 0,123 |
 
 ## 5. Câu hỏi đang chờ
 
@@ -133,5 +134,6 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | T2.2–T2.3 xong: `fit_scales` (kích thước theo SKU–camera khớp val), renderer, writer tiếp tục được khi bị ngắt, `generate`/`export`/`verify`/`gallery`. Sửa trong lúc chạy: SKU 121 bị tính nhầm tư thế đứng; cảnh chật thì nới độ rải, rồi đặt đều toàn khay, cuối cùng đặt vật to trước; giới hạn tổng diện tích giỏ (p99 của val) khi lập kế hoạch | `configs/data/synth_v2.json` |
 | 21/10 | T3.1–T3.2: pilot `rpc_synth_v2_pilot_v1` 1.000/1.000 ảnh, 83 s với 16 worker (bản đầy đủ ước khoảng 1,7 giờ); **14/14 kiểm tra tự động đạt** (bắt đúng 5 loại lỗi cố ý cài trong test); tái lập 0/180 file khác giữa 1 và 16 worker. Hiệu chỉnh 1 vòng theo val: kích thước ×1,048, độ rải ×0,9. So với val: số vật/ảnh 7,14/12,31/17,29 vs 7,15/12,38/17,29; độ phủ bbox p50 0,29/0,41/0,47 vs 0,32/0,40/0,46; diện tích bbox theo SKU synth/val trung vị 0,98. Ảnh 1840px (cỡ nền), không phải 1850 như D10 | `rpc_synth_v2_pilot_v1/verify_report.json` |
 | 21/10 | T3.3: gallery `runs/data_preprocessing/synthetic_v2/pilot_v1_gallery/` (5 trang có khung xanh = mới có nhãn, đỏ = cũ không nhãn; 3 trang đặt ảnh ghép trên, ảnh thật dưới). Nhận xét của mình: ảnh thật xếp vật sát nhau thành cụm/hàng, ảnh ghép rải hơn; vật ghép phẳng, không có độ dày | — |
+| 21/10 | M2: thêm chế độ xếp gọn (`pack_mode=compact`, `pack_prob`, `aligned_prob`) và chỉ số `basket_density`; thử 12 cấu hình trên 400 ảnh. Không cấu hình nào khớp cả mật độ cụm lẫn độ phủ bbox. Đo thêm: vật có hàng xóm cách < 3% cạnh ảnh 94/97/98% (val 98/99/100%), IoU bbox lớn nhất p90 0,25/0,26/0,26 (val 0,23/0,25/0,26). **Người dùng chọn A**, M2 duyệt | `rpc_synth_v2_pilot_v1/pilot_review.json` |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |
