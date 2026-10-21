@@ -6,6 +6,7 @@ Run from the repo root:
     python -m tools.synth_v2 plan --config configs/data/synth_v2.json --out-dir <release> [--pilot]
     python -m tools.synth_v2 generate --config configs/data/synth_v2.json --out-dir <release> --workers 16
     python -m tools.synth_v2 export --config configs/data/synth_v2.json --out-dir <release>
+    python -m tools.synth_v2 eval-set --config configs/data/synth_v2.json --out-dir data/processed/rpc_eval_official_v1
     python -m tools.synth_v2 inventory --index data/archive/cutouts/sam/index.json --cutout-set sam_v1 \
         --root data/archive --out data/processed/rpc_synth_v2_v1/catalog/cutouts_sam_v1.json
 """
@@ -394,6 +395,44 @@ def cmd_verify(args) -> None:
         raise SystemExit(f"verify failed: {list(report['failures'])}")
 
 
+def cmd_eval_set(args) -> None:
+    """Evaluation set from the RPC originals (formats.md 7.3): filtered val2019, full test2019."""
+    from tools.make_task_json import build_task_coco, images_with
+    from autocheckout.io import md5_file
+    config = load_config(args.config)
+    task_config = TaskConfig.load(config["task_config"])
+    design = Path(config["design_val"]).parent
+    val, merged = load_json(config["design_val"]), load_json(args.merged)
+    test = {"images": [i for i in merged["images"] if i["source"] == "test2019"]}
+    test_ids = {i["id"] for i in test["images"]}
+    test["annotations"] = [a for a in merged["annotations"] if a["image_id"] in test_ids]
+    if {i["source"] for i in val["images"]} != {"val2019"} or {i["id"] for i in val["images"]} & test_ids:
+        raise SystemExit("design val must hold val2019 images only, disjoint from test2019")
+
+    out = Path(args.out_dir)
+    files = {"val_full.json": build_task_coco(val, task_config), "test_full.json": build_task_coco(test, task_config)}
+    for task in task_config.data_tasks:
+        rpc = {c.rpc_category_id for c in task.classes}
+        files[f"val_task_{task.task_id}.json"] = build_task_coco(val, task_config, images_with(val, rpc), rpc)
+    for name, data in files.items():
+        save_json(out / name, data)
+    (out / "compare_b12").mkdir(parents=True, exist_ok=True)
+    for src, dst in ((design / "val_excluded_backgrounds.json", "val_excluded_backgrounds.json"),
+                     (Path(args.compare_test), "compare_b12/test_full.json"),
+                     (Path(config["task_config"]), "task_config.json")):
+        shutil.copyfile(src, out / dst)
+    manifest = {"created_at": now(), "config": config["_path"], "merged": args.merged,
+                "design_val": config["design_val"], "compare_test": args.compare_test, "files": {}}
+    for path in sorted(p for p in out.rglob("*.json") if p.name != "manifest.json"):
+        data = load_json(path)
+        manifest["files"][path.relative_to(out).as_posix()] = {
+            "images": len(data.get("images", [])), "objects": len(data.get("annotations", [])),
+            "md5": md5_file(path), "sha256": sha256_file(path)}
+    save_json(out / "manifest.json", manifest, indent=1)
+    for name, entry in manifest["files"].items():
+        print(f"{name:36s} images {entry['images']:6d}  objects {entry['objects']:7d}")
+
+
 def cmd_gallery(args) -> None:
     """M2 review pages: per task, scenes spread over the three levels with new (green, labeled) and
     old (red, unlabeled) objects outlined, plus side-by-side synth | val pages without boxes."""
@@ -508,6 +547,13 @@ def main(argv=None) -> None:
     ver.add_argument("--out-dir", required=True)
     ver.add_argument("--rle-sample", type=int)
     ver.set_defaults(run=cmd_verify)
+
+    ev = sub.add_parser("eval-set", help="RPC evaluation set: filtered val2019 + full test2019 (formats.md 7.3)")
+    ev.add_argument("--config", required=True)
+    ev.add_argument("--merged", default=f"{RELEASE}/ann/checkout_native.json")
+    ev.add_argument("--compare-test", default=f"{RELEASE}/tasks/real/test_full.json")
+    ev.add_argument("--out-dir", required=True)
+    ev.set_defaults(run=cmd_eval_set)
 
     gal = sub.add_parser("gallery", help="M2 review pages")
     gal.add_argument("--config", required=True)

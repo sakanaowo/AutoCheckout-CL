@@ -177,3 +177,31 @@ def test_verify_fails_when_a_planned_task_is_not_exported(release):
     (out / "plans/task_2.jsonl").write_text("{}\n")
     report = verify_dataset(out, config, min_visible=0.7, quota_tolerance=0.6)
     assert not report["gates"]["planned_tasks_exported"]
+
+
+def test_eval_set_keeps_val_and_test_apart(tmp_path):
+    import argparse
+    import json as _json
+    from tools.synth_v2 import cmd_eval_set
+    config = task_config()
+    (tmp_path / "design").mkdir()
+    (tmp_path / "task_config.json").write_text(_json.dumps(config.to_dict()))
+    img = lambda i, src: {"id": i, "file_name": f"{src}/{i}.jpg", "source": src, "level": "easy"}
+    ann = lambda i, image, rpc: {"id": i, "image_id": image, "category_id": rpc, "bbox": [0, 0, 2, 2], "area": 4,
+                                 "iscrowd": 0}
+    val = {"images": [img(1, "val2019")], "annotations": [ann(1, 1, 10), ann(2, 1, 20)], "categories": CATEGORIES}
+    merged = {"images": [img(1, "val2019"), img(2, "val2019"), img(3, "test2019")],
+              "annotations": [ann(1, 1, 10), ann(2, 1, 20), ann(3, 2, 11), ann(4, 3, 30)], "categories": CATEGORIES}
+    for name, data in (("design/design_val.json", val), ("merged.json", merged), ("compare.json", {"images": []}),
+                       ("design/val_excluded_backgrounds.json", {"files": []}),
+                       ("config.json", {"task_config": str(tmp_path / "task_config.json"),
+                                        "design_val": str(tmp_path / "design/design_val.json")})):
+        (tmp_path / name).write_text(_json.dumps(data))
+    cmd_eval_set(argparse.Namespace(config=str(tmp_path / "config.json"), merged=str(tmp_path / "merged.json"),
+                                    compare_test=str(tmp_path / "compare.json"), out_dir=str(tmp_path / "eval")))
+    out = lambda name: _json.loads((tmp_path / "eval" / name).read_text())
+    assert [i["id"] for i in out("val_full.json")["images"]] == [1]
+    assert [i["id"] for i in out("test_full.json")["images"]] == [3]
+    assert [a["category_id"] for a in out("test_full.json")["annotations"]] == [4]
+    assert [a["category_id"] for a in out("val_task_2.json")["annotations"]] == [2]
+    assert "compare_b12/test_full.json" in out("manifest.json")["files"]

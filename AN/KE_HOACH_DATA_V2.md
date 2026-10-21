@@ -70,8 +70,8 @@ Không thuộc phạm vi file này: train, FSA, cổng dừng sau task 1 (thuộ
 
 | ID | Task | Đầu ra | Kiểm tra | Trạng thái |
 |---|---|---|---|---|
-| T4.1 | Sinh đủ 71.642 ảnh `[21752, 12534, 12129, 11850, 13377]` | Release v2 + manifest | Đủ số ảnh, kiểm tra tự động đạt, không trùng | [ ] |
-| T4.2 | Bộ đánh giá từ RPC gốc: val2019 đã lọc, test2019 đầy đủ, theo task, giữ `level`; thêm tập 6.003 ảnh cũ để so B1/B2 | `eval/` + checksum | Test: 5.792 / 24.000 ảnh, nhãn trong phạm vi các lớp đã học | [ ] |
+| T4.1 | Sinh đủ 71.642 ảnh `[21752, 12534, 12129, 11850, 13377]` | Release v2 + manifest | Đủ số ảnh, kiểm tra tự động đạt, không trùng | [~] đang sinh |
+| T4.2 | Bộ đánh giá từ RPC gốc: val2019 đã lọc, test2019 đầy đủ, theo task, giữ `level`; thêm tập 6.003 ảnh cũ để so B1/B2 | `eval/` + checksum | Test: 5.792 / 24.000 ảnh, nhãn trong phạm vi các lớp đã học | [x] |
 | T4.3 | Smoke test loader 640: tọa độ box, nhãn, thư mục ảnh, không nhãn cũ trong train | Test loader | PASS | [ ] |
 | T4.4 | Báo cáo `synth-v2-<ngày>.md`, cập nhật PROGRESS/chỉ mục | Báo cáo | Link hợp lệ | [ ] |
 
@@ -135,5 +135,7 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 21/10 | T3.1–T3.2: pilot `rpc_synth_v2_pilot_v1` 1.000/1.000 ảnh, 83 s với 16 worker (bản đầy đủ ước khoảng 1,7 giờ); **14/14 kiểm tra tự động đạt** (bắt đúng 5 loại lỗi cố ý cài trong test); tái lập 0/180 file khác giữa 1 và 16 worker. Hiệu chỉnh 1 vòng theo val: kích thước ×1,048, độ rải ×0,9. So với val: số vật/ảnh 7,14/12,31/17,29 vs 7,15/12,38/17,29; độ phủ bbox p50 0,29/0,41/0,47 vs 0,32/0,40/0,46; diện tích bbox theo SKU synth/val trung vị 0,98. Ảnh 1840px (cỡ nền), không phải 1850 như D10 | `rpc_synth_v2_pilot_v1/verify_report.json` |
 | 21/10 | T3.3: gallery `runs/data_preprocessing/synthetic_v2/pilot_v1_gallery/` (5 trang có khung xanh = mới có nhãn, đỏ = cũ không nhãn; 3 trang đặt ảnh ghép trên, ảnh thật dưới). Nhận xét của mình: ảnh thật xếp vật sát nhau thành cụm/hàng, ảnh ghép rải hơn; vật ghép phẳng, không có độ dày | — |
 | 21/10 | M2: thêm chế độ xếp gọn (`pack_mode=compact`, `pack_prob`, `aligned_prob`) và chỉ số `basket_density`; thử 12 cấu hình trên 400 ảnh. Không cấu hình nào khớp cả mật độ cụm lẫn độ phủ bbox. Đo thêm: vật có hàng xóm cách < 3% cạnh ảnh 94/97/98% (val 98/99/100%), IoU bbox lớn nhất p90 0,25/0,26/0,26 (val 0,23/0,25/0,26). **Người dùng chọn A**, M2 duyệt | `rpc_synth_v2_pilot_v1/pilot_review.json` |
+| 21/10 | T4.1 bắt đầu: kế hoạch 71.642 cảnh (vật mới ở task 2–5 chiếm 50,0–50,1%), sinh với 16 worker khoảng 11 ảnh/s (ước 1 giờ 50 phút) | `rpc_synth_v2_v1/plans/` |
+| 21/10 | T4.2 xong: lệnh `eval-set` → `rpc_eval_official_v1`: val_full 5.792 ảnh / 71.108 vật, val_task_1..5 = 5.562/3.291/3.100/3.053/3.412 ảnh, test_full 24.000 ảnh / 294.333 vật, nhãn 0..199. Tập so B1/B2 (6.003 ảnh) trùng id, file, box với test mới (chỉ khác trường `group` của split cũ) nên lọc dự đoán theo id là so được | `rpc_eval_official_v1/manifest.json` |
 | 21/10 | Thử lọc tự động: độ đặc của mask bắt mask thủng/vỡ (SKU 80/163 chỉ 0,50–0,62; có 270 cutout < 0,85); chỉ số pixel trắng sát mép không bắt được dính mâm xoay (42491/42499 ra 0) | — |
 | 21/10 | T1.2 + T1.3: `autocheckout/synthetic.py`, `tools/synth_v2.py` (`inventory`, `stats`), 7 test PASS. Bbox trong ảnh thật chồng nhiều: phần bbox bị bbox khác phủ, trung vị 0,32 (easy) / 0,40 (medium) / 0,46 (hard). Đây là đo trên bbox, không phải che khuất thật; dùng để so pilot với val theo cùng cách đo. Màu khay ngoài vật: RGB trung vị khoảng 143 | `design/design_statistics.json` |
