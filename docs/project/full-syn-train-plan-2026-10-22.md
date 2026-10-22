@@ -4,6 +4,39 @@ Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép 
 
 **Trạng thái:** dữ liệu xong và đã rà lại 22/10; chưa viết code của gói này, chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất).
 
+## 0. Đọc nhanh
+
+**Ý tưởng:** dạy model đếm hàng trên quầy chỉ bằng ảnh ghép (dán ảnh sản phẩm đơn lên nền khay), rồi chấm trên ảnh quầy thật của RPC. Model học tăng dần qua 5 đợt: 100 SKU, rồi 4 đợt mỗi đợt 25 SKU mới.
+
+**Dữ liệu chấm lấy nguyên từ RPC.** Val = val2019 bỏ 208 ảnh đã dùng làm nền ảnh ghép (còn 5.792 ảnh); test = toàn bộ test2019 (24.000 ảnh). Đã so từng ảnh và từng box với file gốc của RPC: khớp 100%. B2 thì khác: B2 gộp ảnh thật lại rồi chia lại (train 22.494, val 1.503, test 6.003), nên test của B2 chỉ có 6.003 ảnh.
+
+**Quy trình gồm các trạm kiểm tra,** để không tốn tiền GPU cho một model hỏng từ đầu:
+
+1. **FSA** (khoảng 6–9 giờ): fine-tune toàn bộ model trên ảnh ghép task 1. B2 không có bước này; B2 khoá phần lớn model ngay từ đầu.
+2. **Kiểm tra sớm:** model FSA đếm thử trên val thật. Dưới 52,8% thì dừng vòng này, sửa ảnh ghép.
+3. **PDP task 1** (khoảng 10 giờ): chạy phương pháp chính (học tăng dần bằng prompt) trên nền model FSA.
+4. **Cổng task 1:** ≥ 72,8% thì đi tiếp. Mốc này bằng B2 trừ 13 điểm, chấp nhận kém B2 một chút vì không dùng ảnh thật để train.
+5. **Task 2–5** (khoảng 33 giờ).
+6. **Chấm test một lần** khi mọi thứ đã chốt, để con số không bị chỉnh theo test.
+
+Trượt ở bước 2 hoặc 4 thì xem model sai ở đâu, sửa tối đa 2 điểm của bộ sinh ảnh, sinh lại ảnh, rồi chạy lại bước 1–4. Làm tối đa 3 vòng; vẫn trượt nặng thì dừng hướng "chỉ ảnh ghép".
+
+**Chấm điểm thế nào:**
+
+- **cAcc** (chỉ số chính): tỉ lệ ảnh mà model đếm **đúng hết** mọi món, giống hoá đơn phải đúng từng dòng. Kèm theo là **AP50** (khoanh box đúng chỗ, đúng loại), cAcc theo mức easy/medium/hard, và các cặp SKU hay nhầm.
+- **M1 / M2:** ảnh val thật có cả SKU model chưa được học (thuộc task sau). M1 tính cả chúng, nên phạt model vì không đếm được thứ chưa ai dạy. M2 bỏ chúng ra trước khi đếm; ngoài đời, món cửa hàng chưa bán thì không nằm trên quầy. Cổng task 1 dùng M2. Ở task 5 model đã học đủ 200 SKU nên M1 = M2.
+- **Ngưỡng đếm:** mỗi box model đưa ra có một điểm tự tin từ 0 đến 1, và chỉ box có điểm trên ngưỡng mới được đếm. Ngưỡng thấp thì đếm thừa, cao thì đếm sót. Ngưỡng luôn chọn trên val, rồi giữ nguyên khi chấm test.
+- **Sau mỗi task:** dự đoán trên val, chọn ngưỡng, ghi cAcc, AP50, mức quên SKU cũ và chất lượng nhãn giả (box mà model task trước tự gán cho SKU cũ trong ảnh mới; đối chiếu được với nhãn đầy đủ của ảnh ghép).
+- **Chấm cuối:** model sau task 5 chấm trên 24.000 ảnh test2019; đây là con số chính, cùng tập test với IncreACO. Bảng phụ so FULL-SYN với B1/B2 trên 6.003 ảnh test cũ, vì B1/B2 đã train trên phần còn lại của test2019 và val2019.
+
+**Thuật ngữ:**
+
+| Từ | Nghĩa |
+|---|---|
+| D1–D21 | Mã các quyết định đã chốt ngày 21/10 trong [tài liệu quyết định](synthetic-data-v2-decisions-2026-10-21.md) (ví dụ D17 = mức cổng task 1) |
+| F14, I3 | Hai bản sửa lỗi nhãn giả. F14 bỏ nhãn giả trùng nhau; I3 bỏ nhãn giả "SKU cũ" đè lên vật có nhãn SKU mới. Tháng 9, bật I3 tăng điểm SKU mới từ 0,683 lên 0,925 |
+| CycleGAN | Mạng AI biến ảnh ghép trông giống ảnh chụp thật. IncreACO dùng nó để tăng cAcc từ khoảng 26,5% (dán thô) lên 74,3%. Gói này **chưa dùng** (D20): ảnh ghép của mình đã làm kỹ hơn dán thô nhiều, CycleGAN có thể làm méo chữ trên bao bì (nhiều SKU chỉ khác nhau ở chữ), và tốn thêm 1–2 ngày GPU. Để dành làm phương án dự phòng nếu hết 3 vòng vẫn trượt |
+
 ## 1. Mục tiêu và tiêu chí xong
 
 1. Chạy đủ 5 task FULL-SYN (protocol 100+4×25, seed 0) nếu qua cổng task 1 (D17–D19).
@@ -54,8 +87,8 @@ Làm trên máy local (CPU/3060); chỉ F0.7 cần GPU thuê, chạy ngắn.
 | F0.1 | Script `configs/exp/native/EXP-FULL-SYN.sh` (+ `EXP-FULL-SYN-FSA.sh`) dựa trên `native/common.sh`. Tạo thư mục nhãn symlink: `train_task_<t>.json` → ảnh ghép; `val_task_<t>.json`, `val_full.json`, `test_full.json` → bộ đánh giá. Đặt `--train_img_dir` và `--test_img_dir` khác nhau. Không đổi file của B1/B2 | 2 script + test trong `tests/test_native_exp_configs.py` | Test kiểm: args đúng bảng mục 3; symlink trỏ đúng file và hash khớp manifest; không file `gt_full` nào lọt vào train |
 | F0.2 | **Kiểm chứng export FSA với ConvNeXt** (test hiện có `test_hf_export_loads_as_the_start_of_pdp_task_1` chỉ chạy ResNet). Rủi ro cụ thể: script B2 truyền `--backbone_pretrained_file`, nên khi PDP nạp `hf_model` thì `runtime.model_config` bật `use_pretrained_backbone`; phải chắc backbone đã fine-tune **không** bị trọng số ImageNet ghi đè | Test round-trip với backbone ConvNeXt nhỏ (timm) | Digest trọng số backbone + encoder + decoder sau khi PDP nạp = digest của FSA; `loading_report.json` không có khóa thiếu ngoài các phần mới của PDP |
 | F0.3 | Cờ `--pred_splits` cho `main.py` (mặc định `val,test`); các vòng cổng task 1 dùng `val` | Sửa `write_task_predictions` + test | Vòng cổng không tạo `pred_test.npz` (không lỡ nhìn test, tiết kiệm khoảng 15–20 phút/task cho 24.000 ảnh); `run_exp.sh` vẫn bổ sung được `pred_test` sau bằng `--predict_only` |
-| F0.4 | Chọn epoch FSA theo val (D21): lưu checkpoint nhẹ mỗi epoch, ghi AP50 val_task_1 mỗi epoch, export `hf_model` từ epoch tốt nhất trong trần 8 epoch (Q1) | Sửa nhỏ trong `main.py`/trainer + test | `hf_model` ghi rõ epoch đã chọn và đường val; chọn chỉ dựa trên val |
-| F0.5 | **Ngưỡng theo nhóm task** (D8): `select_threshold` hiện chỉ chọn một ngưỡng. Chọn mỗi nhóm task một ngưỡng trên val, lưu vector ngưỡng vào policy; test chỉ nạp policy | `autocheckout/counting.py`, `tools/eval_count.py` + test | Policy cũ (một ngưỡng) vẫn chạy; B2 tính lại cho cùng số M1 cũ khi chỉ có một nhóm. Cần trước khi chấm task 2, không cần cho cổng task 1 |
+| F0.4 | Chọn epoch FSA theo val (D21). Epoch cuối chưa chắc tốt nhất (model có thể quá quen ảnh ghép), mà code hiện chỉ lưu model cuối. Cách làm: lưu checkpoint nhẹ mỗi epoch, ghi AP50 val_task_1 mỗi epoch, export `hf_model` từ epoch tốt nhất trong trần 8 epoch (Q1) | Sửa nhỏ trong `main.py`/trainer + test | `hf_model` ghi rõ epoch đã chọn và đường val; chọn chỉ dựa trên val |
+| F0.5 | **Ngưỡng theo nhóm task** (D8). SKU học sớm bị quên dần nên điểm tự tin thấp hơn SKU mới; một ngưỡng chung sẽ đếm sót nhóm này hoặc đếm thừa nhóm kia. `select_threshold` hiện chỉ chọn một ngưỡng. Chọn mỗi nhóm task một ngưỡng trên val, lưu vector ngưỡng vào policy; test chỉ nạp policy | `autocheckout/counting.py`, `tools/eval_count.py` + test | Policy cũ (một ngưỡng) vẫn chạy; B2 tính lại cho cùng số M1 cũ khi chỉ có một nhóm. Cần trước khi chấm task 2, không cần cho cổng task 1 |
 | F0.6 | Log theo handoff mục 6, tối thiểu: hash dữ liệu và config ảnh ghép, số nhãn giả bị I3/F14 loại, **precision/recall nhãn giả so với `train_task_<t>_gt_full.json`**, top-20 cặp nhầm SKU mới→cũ, cAcc theo level, ngưỡng từng nhóm | `task_<t>/task_log.json`, `SUMMARY.md`; xem lại `pdp/ppg_audit.py` | Chạy được trên run smoke; số đếm khớp tay trên 1 batch |
 | F0.7 | Smoke + benchmark trên GPU thuê (`--stop_after_steps`): FSA và PDP mỗi loại vài trăm bước | `runs/.../full_syn_benchmark/` | Đo ảnh/giây và VRAM tối đa của FSA (chưa từng đo) và PDP; chạy tiếp từ checkpoint được; ước lượng lại mục 7 |
 | F0.8 | Script so B1/B2 trên 6.003 ảnh: lọc `pred_test.npz` của FULL-SYN (test 24.000) theo id của `compare_b12/test_full.json` | Tool nhỏ + test | Chạy với B2 trên tập này ra đúng số test cũ của B2. Chỉ cần ở giai đoạn 4 |
