@@ -146,11 +146,14 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
     # a share of the scenes may hide more of each object (real counters: a few overlapping packs)
     occluded = np.random.default_rng(stable_seed(recipe["seed"], "occluded")).random() \
         < layout.get("occluded_scene_prob", 0.0)
-    base_layout = layout
-    for retry in range(layout["scene_retries"]):
+    base_layout, n_retries = layout, layout["scene_retries"]
+    # a basket that found no layout replays its retries at the occluded share's visibility
+    passes = [False, True] if "occluded_min_visible" in layout and not occluded else [False]
+    attempts = [(replay, retry) for replay in passes for retry in range(n_retries)]
+    for attempt, (replay, retry) in enumerate(attempts):
         # baskets too full to lie apart get the occluded share's visibility on the last retries, as people
         # stack packs when the counter runs out of room
-        last_resort = "occluded_min_visible" in base_layout and retry >= base_layout["scene_retries"] * 3 // 4
+        last_resort = replay or ("occluded_min_visible" in base_layout and retry >= n_retries * 3 // 4)
         layout = {**base_layout, "min_visible": base_layout["occluded_min_visible"]} \
             if occluded or last_resort else base_layout
         rng = np.random.default_rng(stable_seed(recipe["seed"], "scene", retry))
@@ -192,7 +195,7 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             continue
         break
     else:
-        raise SceneError(f"image {recipe['image_id']}: no layout after {layout['scene_retries']} retries")
+        raise SceneError(f"image {recipe['image_id']}: no layout after {len(attempts)} retries")
 
     canvas = background.astype(np.float32)
     light = float(rng.uniform(0, 2 * np.pi))
@@ -251,7 +254,7 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             "visible_fraction": round(visible[instance] / obj["area"], 4),
         })
     return {"image": image, "owner": owner, "annotations": annotations, "jpeg_quality": quality,
-            "resolved": {"retry": retry, "occluded": occluded or last_resort, "min_visible": layout["min_visible"], "spread": round(spread, 3), "uniform_positions": uniform, "large_first": order is not None, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
+            "resolved": {"retry": attempt, "occluded": occluded or last_resort, "min_visible": layout["min_visible"], "spread": round(spread, 3), "uniform_positions": uniform, "large_first": order is not None, "background_rot90": quarter_turns, "size": size, "light": round(light, 4),
                          "global": {"gain": round(gain, 4), "offset": round(offset, 3), "noise": round(noise, 3),
                                     "blur": None if blur is None else round(blur, 3)},
                          "objects": resolved}}

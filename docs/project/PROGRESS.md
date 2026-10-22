@@ -1,5 +1,7 @@
 # Tiến độ AutoCheckout-CL
 
+**22/10/2026 — ảnh ghép v2 sinh lại theo bố cục o15:** mỗi vật còn thấy ≥ 90%, 15% cảnh còn thấy ≥ 75%, vì bản A che gấp khoảng 4 lần ảnh thật (đo bằng mask SAM). `rpc_synth_v2_v1` 71.642 ảnh, 0 cảnh lỗi, verify 14/14; [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md) đã cập nhật.
+
 **21/10/2026 — ảnh ghép v2 đã phát hành:** [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md). `rpc_synth_v2_v1` 71.642 ảnh, verify 14/14; bộ đánh giá `rpc_eval_official_v1` (val 5.792, test 24.000); loader PDP đọc được ở 640. cAcc-M2 có trong `eval_count --unlearned-iou 0.5`; mốc B2 task 1 = 85,79%, đi tiếp khi FULL-SYN ≥ 72,8%. Chưa train FULL-SYN; bước tiếp theo là plan gói train.
 
 **21/10/2026 — chốt quyết định ảnh ghép v2:** [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md); spec/plan đã sửa theo.

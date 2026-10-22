@@ -130,3 +130,18 @@ def test_occluded_share_of_scenes_uses_the_lower_visibility(assets):
         floor = 0.75 if o["resolved"]["occluded"] else 0.95
         assert o["resolved"]["min_visible"] == floor
         assert all(a["visible_fraction"] >= floor for a in o["annotations"])
+
+
+def test_basket_without_layout_replays_retries_at_occluded_visibility(assets):
+    # four large packs cannot fit at 95% visible in any regular retry, nor on its last-resort retries
+    root, cutouts, _ = assets
+    large = {f"{k + 1}:2": {"k": 3.2} for k in range(4)}
+    strict = {**LAYOUT, "min_visible": 0.95}
+    config = {**CONFIG, "scale": {**SCALE, "max_side_frac": 0.9}}
+    with pytest.raises(SceneError):
+        render_scene(recipe(4), cutouts=cutouts, scales=large, config={**config, "layout": strict}, backgrounds_dir=root)
+    layout = {**strict, "occluded_scene_prob": 0.0, "occluded_min_visible": 0.6}
+    out = render_scene(recipe(4), cutouts=cutouts, scales=large, config={**config, "layout": layout},
+                       backgrounds_dir=root)
+    assert out["resolved"]["retry"] >= LAYOUT["scene_retries"] and out["resolved"]["min_visible"] == 0.6
+    assert all(a["visible_fraction"] >= 0.6 for a in out["annotations"])
