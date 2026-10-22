@@ -21,6 +21,20 @@ Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép 
 
 Trượt ở bước 2 hoặc 4 thì xem model sai ở đâu, sửa tối đa 2 điểm của bộ sinh ảnh, sinh lại ảnh, rồi chạy lại bước 1–4. Làm tối đa 3 vòng; vẫn trượt nặng thì dừng hướng "chỉ ảnh ghép".
 
+**Model học gì ở từng bước:**
+
+| Bước | Dữ liệu | Học gì | Mục đích |
+|---|---|---|---|
+| FSA | Ảnh ghép task 1, mọi vật (100 SKU) có nhãn | Deformable DETR thường, không prompt, không nhãn giả; **mở khoá toàn bộ** model | Dạy model "nhìn" sản phẩm RPC. B2 bỏ bước này: lõi model giữ nguyên từ COCO/ImageNet, chưa từng thấy sản phẩm RPC |
+| PDP task 1 | Cùng dữ liệu task 1 | Khởi tạo từ FSA; khoá backbone/encoder/decoder, chỉ học **prompt** và bộ phân loại 100 SKU | Dựng bộ máy học tăng dần của PDP (prompt pool, prototype mỗi lớp) để task 2–5 dùng |
+| Task 2–5 | Ảnh ghép: khoảng 50% vật là SKU mới (có nhãn), 50% là SKU cũ (**không nhãn**); không có SKU tương lai | Như paper: lõi vẫn khoá; thêm prompt và lớp cho 25 SKU mới; phần của SKU cũ chỉ chỉnh nhẹ (lr 1e-5). SKU cũ được **gán nhãn giả** | Học SKU mới mà không quên SKU cũ, không cần lưu ảnh cũ |
+
+Nói gọn: **FSA dạy model nhìn, PDP task 1 dựng hệ thống prompt trên nền đó, task 2–5 thêm prompt cho SKU mới.**
+
+**Nhãn giả (PPG, như paper):** model của task trước làm "thầy", quét ảnh mới và đề xuất các vật SKU cũ. Đề xuất có điểm > 0,5 thì được nhận; điểm từ 0,2 đến 0,5 chỉ nhận khi đặc trưng vật gần prototype của lớp đó. FULL-SYN thêm hai bản sửa mà B2 tắt: **F14** (mỗi vật chỉ một nhãn giả) và **I3** (bỏ nhãn giả "SKU cũ" đè lên vật đã có nhãn SKU mới). Code của nhóm đã sửa một số lỗi so với code gốc PDP (F1–F14, xem `docs/references/meeting-2026-10-20/REPORT_20-10.md`), nhưng ý tưởng phương pháp giữ nguyên.
+
+Lợi thế riêng của ảnh ghép: biết chính xác mọi vật SKU cũ nằm đâu (`train_task_<t>_gt_full.json`), nên đo được nhãn giả của "thầy" đúng bao nhiêu, sót bao nhiêu (F0.6). Với ảnh thật của B2 thì không đo được.
+
 **Chấm điểm thế nào:**
 
 - **cAcc** (chỉ số chính): tỉ lệ ảnh mà model đếm **đúng hết** mọi món, giống hoá đơn phải đúng từng dòng. Kèm theo là **AP50** (khoanh box đúng chỗ, đúng loại), cAcc theo mức easy/medium/hard, và các cặp SKU hay nhầm.
