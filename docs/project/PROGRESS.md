@@ -1,5 +1,7 @@
 # Tiến độ AutoCheckout-CL
 
+**22/10/2026 — plan gói train FULL-SYN:** [plan](full-syn-train-plan-2026-10-22.md). Chốt: FSA tối đa 8 epoch chọn theo val, không dự đoán test trong vòng cổng, train trên 4090 vast.ai như B2. Bước tiếp theo: F0.1–F0.6 (code, kiểm chứng export FSA ConvNeXt) trước khi thuê GPU. Ước lượng khoảng 52–58 giờ GPU nếu qua cổng ngay vòng 1. Bản A cũ (23 GB) đã xoá, giữ biên bản ở `runs/data_preprocessing/synthetic_v2/layoutA_record/`.
+
 **22/10/2026 — ảnh ghép v2 sinh lại theo bố cục o15:** mỗi vật còn thấy ≥ 90%, 15% cảnh còn thấy ≥ 75%, vì bản A che gấp khoảng 4 lần ảnh thật (đo bằng mask SAM). `rpc_synth_v2_v1` 71.642 ảnh, 0 cảnh lỗi, verify 14/14; [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md) đã cập nhật.
 
 **21/10/2026 — ảnh ghép v2 đã phát hành:** [báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md). `rpc_synth_v2_v1` 71.642 ảnh, verify 14/14; bộ đánh giá `rpc_eval_official_v1` (val 5.792, test 24.000); loader PDP đọc được ở 640. cAcc-M2 có trong `eval_count --unlearned-iou 0.5`; mốc B2 task 1 = 85,79%, đi tiếp khi FULL-SYN ≥ 72,8%. Chưa train FULL-SYN; bước tiếp theo là plan gói train.

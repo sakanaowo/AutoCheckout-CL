@@ -1,0 +1,128 @@
+# Plan gói train FULL-SYN — 22/10/2026
+
+Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép v2 và chấm trên ảnh RPC thật, theo [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md). Đóng mục R5 và việc mở số 3 (trần epoch FSA, D21) của tài liệu quyết định.
+
+**Trạng thái:** dữ liệu xong và đã rà lại 22/10; chưa viết code của gói này, chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất).
+
+## 1. Mục tiêu và tiêu chí xong
+
+1. Chạy đủ 5 task FULL-SYN (protocol 100+4×25, seed 0) nếu qua cổng task 1 (D17–D19).
+2. Chấm **một lần** trên toàn bộ test2019 (24.000 ảnh) và trên 6.003 ảnh test cũ để so B1/B2.
+3. Mỗi task có log đủ theo [handoff mục 6](../references/meeting-2026-10-20/HANDOFF_ANH_GHEP_VA_TRAIN.md#6-log-bắt-buộc-sau-mỗi-task).
+
+Không làm trong gói này: FULL-REAL (D6), CycleGAN, trộn ảnh thật, LoRA, `--augment`, `--prototype_nearest`, `--freeze_shared_after_task1`, thêm seed.
+
+## 2. Đầu vào đã sẵn sàng
+
+| Gói | Đường dẫn | Ghi chú |
+|---|---|---|
+| Ảnh ghép train | `data/processed/rpc_synth_v2_v1/` | 71.642 ảnh `[21752, 12534, 12129, 11850, 13377]`, verify 14/14, manifest `ad6d899e…`. [Báo cáo](../data_preprocessing/reports/synth-v2-2026-10-21.md) |
+| Nhãn train | `rpc_synth_v2_v1/tasks/synth_v2/train_task_<t>.json` | Nhãn model 0..199; chỉ lớp của task t. `file_name` dạng `images/task_<t>/<id>.jpg`, tương đối với `rpc_synth_v2_v1/` |
+| Nhãn đầy đủ (audit) | `rpc_synth_v2_v1/tasks/synth_v2/train_task_<t>_gt_full.json` | Có cả vật SKU cũ, cờ `labeled`. Chỉ để đo nhãn giả, **không** đưa vào train |
+| Bộ đánh giá | `data/processed/rpc_eval_official_v1/` | `val_task_<t>.json`, `val_full.json` (5.792), `test_full.json` (24.000), `compare_b12/test_full.json` (6.003). `file_name` dạng `val2019/…`, `test2019/…` |
+| Ảnh thật | `data/archive/val2019/`, `data/archive/test2019/` | 1,3 GB + 5,0 GB |
+| Mốc B2 | `data/training/vast4090-seed0-640-v1/baseline/EXP-B2/` | cAcc-M2 task 1 = **85,79%** (`runs/data_preprocessing/synthetic_v2/b2_task1_cacc_m2.json`) |
+
+Rà lại 22/10 (script độc lập, không dùng `verify`): hash của mọi file nhãn và 2.000 ảnh mẫu khớp manifest; không trùng id giữa các task; nhãn train của task t đúng và đủ các lớp của task t; mọi bbox nằm trong ảnh; 208 nền không xuất hiện trong val/test; `task_config.json` của hai gói giống nhau. 34 test dữ liệu/đếm đạt.
+
+**Lên máy GPU chỉ cần khoảng 25 GB:** `rpc_synth_v2_v1/images` (17 GB) + `rpc_synth_v2_v1/tasks` (1,7 GB) + `rpc_eval_official_v1` + `data/archive/{val2019,test2019}`. Không cần `labels/`, `owner_masks/`, `annotations/`.
+
+## 3. Cấu hình FULL-SYN
+
+Giữ mọi thứ như B2 (`data/training/vast4090-seed0-640-v1/baseline/EXP-B2/resolved_cli.json`), trừ các dòng in đậm.
+
+| Mục | B2 | FULL-SYN |
+|---|---|---|
+| Backbone | ConvNeXt-V2-Base `convnextv2_base.fcmae_ft_in22k_in1k` | Giữ |
+| Khởi tạo task 1 | Deformable DETR COCO, khóa backbone/encoder/decoder | **FSA**: fine-tune toàn bộ trên ảnh ghép task 1 (`FINETUNE_ARGS`), `--save_hf 1`, rồi PDP task 1 dùng `--repo_name <FSA>/task_1/hf_model` |
+| Ảnh train | `--train_img_dir data/archive` | **`--train_img_dir data/processed/rpc_synth_v2_v1`** |
+| Ảnh val/test | `--test_img_dir data/archive` | Giữ |
+| Thư mục nhãn | `tasks/real` | **Thư mục symlink** (mục 4, F0.1) |
+| 640px, batch 8, eff. batch 8, 16 epoch/task, seed 0, TF32, `eval_epochs 1`, lr 1e-4 / lr_old 1e-5, prompt 100×10 | | Giữ (D9) |
+| F14 `--pseudo_dedup_iou` | 0 | **0,5** |
+| I3 `--pseudo_gt_iou` | 0 (tắt) | **0,5** |
+| Nhãn giả τ_h / τ_l | 0,5 / 0,2 | Giữ |
+| Đếm | NMS không phân biệt lớp 0,45, một ngưỡng chung | NMS giữ; **ngưỡng theo nhóm task** chọn trên val (D8) |
+| Chỉ số cổng task 1 | — | **cAcc-M2** `--unlearned-iou 0.5` (D16) |
+
+## 4. Giai đoạn 0 — code và kiểm tra trước khi thuê GPU
+
+Làm trên máy local (CPU/3060); chỉ F0.7 cần GPU thuê, chạy ngắn.
+
+| ID | Việc | Đầu ra | Tiêu chí đạt |
+|---|---|---|---|
+| F0.1 | Script `configs/exp/native/EXP-FULL-SYN.sh` (+ `EXP-FULL-SYN-FSA.sh`) dựa trên `native/common.sh`. Tạo thư mục nhãn symlink: `train_task_<t>.json` → ảnh ghép; `val_task_<t>.json`, `val_full.json`, `test_full.json` → bộ đánh giá. Đặt `--train_img_dir` và `--test_img_dir` khác nhau. Không đổi file của B1/B2 | 2 script + test trong `tests/test_native_exp_configs.py` | Test kiểm: args đúng bảng mục 3; symlink trỏ đúng file và hash khớp manifest; không file `gt_full` nào lọt vào train |
+| F0.2 | **Kiểm chứng export FSA với ConvNeXt** (test hiện có `test_hf_export_loads_as_the_start_of_pdp_task_1` chỉ chạy ResNet). Rủi ro cụ thể: script B2 truyền `--backbone_pretrained_file`, nên khi PDP nạp `hf_model` thì `runtime.model_config` bật `use_pretrained_backbone`; phải chắc backbone đã fine-tune **không** bị trọng số ImageNet ghi đè | Test round-trip với backbone ConvNeXt nhỏ (timm) | Digest trọng số backbone + encoder + decoder sau khi PDP nạp = digest của FSA; `loading_report.json` không có khóa thiếu ngoài các phần mới của PDP |
+| F0.3 | Cờ `--pred_splits` cho `main.py` (mặc định `val,test`); các vòng cổng task 1 dùng `val` | Sửa `write_task_predictions` + test | Vòng cổng không tạo `pred_test.npz` (không lỡ nhìn test, tiết kiệm khoảng 15–20 phút/task cho 24.000 ảnh); `run_exp.sh` vẫn bổ sung được `pred_test` sau bằng `--predict_only` |
+| F0.4 | Chọn epoch FSA theo val (D21): lưu checkpoint nhẹ mỗi epoch, ghi AP50 val_task_1 mỗi epoch, export `hf_model` từ epoch tốt nhất trong trần 8 epoch (Q1) | Sửa nhỏ trong `main.py`/trainer + test | `hf_model` ghi rõ epoch đã chọn và đường val; chọn chỉ dựa trên val |
+| F0.5 | **Ngưỡng theo nhóm task** (D8): `select_threshold` hiện chỉ chọn một ngưỡng. Chọn mỗi nhóm task một ngưỡng trên val, lưu vector ngưỡng vào policy; test chỉ nạp policy | `autocheckout/counting.py`, `tools/eval_count.py` + test | Policy cũ (một ngưỡng) vẫn chạy; B2 tính lại cho cùng số M1 cũ khi chỉ có một nhóm. Cần trước khi chấm task 2, không cần cho cổng task 1 |
+| F0.6 | Log theo handoff mục 6, tối thiểu: hash dữ liệu và config ảnh ghép, số nhãn giả bị I3/F14 loại, **precision/recall nhãn giả so với `train_task_<t>_gt_full.json`**, top-20 cặp nhầm SKU mới→cũ, cAcc theo level, ngưỡng từng nhóm | `task_<t>/task_log.json`, `SUMMARY.md`; xem lại `pdp/ppg_audit.py` | Chạy được trên run smoke; số đếm khớp tay trên 1 batch |
+| F0.7 | Smoke + benchmark trên GPU thuê (`--stop_after_steps`): FSA và PDP mỗi loại vài trăm bước | `runs/.../full_syn_benchmark/` | Đo ảnh/giây và VRAM tối đa của FSA (chưa từng đo) và PDP; chạy tiếp từ checkpoint được; ước lượng lại mục 7 |
+| F0.8 | Script so B1/B2 trên 6.003 ảnh: lọc `pred_test.npz` của FULL-SYN (test 24.000) theo id của `compare_b12/test_full.json` | Tool nhỏ + test | Chạy với B2 trên tập này ra đúng số test cũ của B2. Chỉ cần ở giai đoạn 4 |
+
+## 5. Giai đoạn 1–4 — chạy
+
+```text
+G1  FSA trên ảnh ghép task 1  ──►  kiểm tra sớm D18: cAcc-M2 của FSA trên val
+         │ < 52,8% → bỏ PDP task 1, sang vòng chỉnh (mục 6)
+         ▼
+G2  PDP task 1 từ FSA  ──►  cổng D17: cAcc-M2 trên 5.562 ảnh val có SKU task 1
+         │ 🟢 ≥ 72,8%                 🟡 57,8–72,8% / 🔴 < 57,8% → vòng chỉnh (tối đa 3)
+         ▼
+G3  PDP task 2–5 (dùng lại task 1, REUSE_TASK1)  ──►  chọn ngưỡng theo nhóm trên val
+         ▼
+G4  Chấm test một lần: test2019 24.000 ảnh + bảng so B1/B2 trên 6.003 ảnh ──► báo cáo
+```
+
+| Giai đoạn | Lệnh chính | Đầu ra | Kiểm tra |
+|---|---|---|---|
+| G1 FSA | `run_exp.sh configs/exp/native/EXP-FULL-SYN-FSA.sh` | `FSA/task_1/hf_model`, `pred_val.npz`, đường AP50 val theo epoch | `eval_count --run-dir <FSA> --val-ann rpc_eval_official_v1/val_full.json --unlearned-iou 0.5 --calibrate-only`; ghi giờ GPU của FSA riêng (D21) |
+| G2 PDP task 1 | `EXP-FULL-SYN.sh` với `N_TASKS=1`, `--pred_splits val` | `task_1/pred_val.npz`, policy M2 | Δ so với B = 85,79%. Báo cáo kèm M1, AP50, cAcc theo level, bảng nhầm lẫn (D16) |
+| G3 task 2–5 | `EXP-FULL-SYN.sh` với `N_TASKS=5`, `REUSE_TASK1=<run G2>` | `task_2..5`, log nhãn giả | Sau mỗi task xem precision/recall nhãn giả và số bị I3/F14 loại; nếu nhãn giả task 2 có precision thấp rõ (nhiều vật SKU mới bị gán nhãn SKU cũ) thì dừng, báo nhóm trước khi chạy tiếp |
+| G4 chấm cuối | `--predict_only 1` cho `pred_test` các task còn thiếu; `eval_count --policy-in <policy val>`; `eval_cl`; F0.8 | `metrics_count_test.md`, `metrics_cl_test.md`, bảng so B1/B2 | Test chỉ đọc policy đã khóa từ val; ghi config hash ảnh ghép, run id |
+
+## 6. Vòng chỉnh (D4, D19, D20)
+
+- Mỗi vòng **đăng ký trước** tối đa 2 nút, chọn theo chẩn đoán của vòng trước: cân màu/sáng, bóng mềm, làm mờ mép cutout, mức che khuất, phân bố tỉ lệ vật, tỉ lệ vật đứng/nằm, cắt bổ sung cutout. Không đổi số ảnh, không CycleGAN.
+- Đổi nút nào thì sinh lại ảnh ghép thành release mới (`rpc_synth_v2_v2`, ...), có manifest và verify 14/14; không ghi đè `rpc_synth_v2_v1`.
+- Mỗi vòng ghi: nút đã đổi, config hash, cAcc-M2 của FSA và PDP task 1, giờ GPU.
+- Hết 3 vòng: 🟡 thì vẫn chạy task 2–5 và ghi "kỳ vọng ngang B2"; 🔴 thì dừng hướng ảnh ghép thuần.
+- Ứng viên nút theo các giới hạn đã biết của release: giỏ ảnh ghép thưa hơn thật (mật độ cụm 0,77/0,79/0,87 so với 0,82/0,90/0,98), vật ghép phẳng, ảnh thật có vật lạ không nhãn.
+
+## 7. Ước lượng GPU (4090, chờ F0.7 đo lại)
+
+B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi epoch), cả 5 task 42,3 giờ.
+
+| Phần | Ước lượng | Cơ sở |
+|---|---|---|
+| FSA, trần 8 epoch | khoảng 6–9 giờ | 174.000 lượt ảnh; fine-tune toàn bộ ước chậm hơn PDP khoá 1,5–2 lần. **Chưa đo** |
+| PDP task 1 | khoảng 10–11 giờ | Như B2; val_task_1 mới 5.562 ảnh (B2 nhỏ hơn) nên val mỗi epoch thêm khoảng 3 phút |
+| Một vòng cổng (G1 + G2) | khoảng 16–20 giờ, khoảng 7–9 USD | |
+| Task 2–5 | khoảng 33–36 giờ | Như B2, cộng log nhãn giả |
+| Dự đoán test 24.000 ảnh × 5 task | khoảng 1,5 giờ | |
+| **Trọn gói nếu qua cổng ngay vòng 1** | **khoảng 52–58 giờ, khoảng 22–27 USD** | 0,4–0,46 USD/giờ |
+| Mỗi vòng chỉnh thêm | khoảng 16–20 giờ GPU + khoảng 2 giờ CPU sinh lại ảnh | |
+
+## 8. Bẫy riêng của gói này
+
+| Bẫy | Cách tránh |
+|---|---|
+| Backbone FSA bị trọng số ImageNet ghi đè khi PDP nạp | F0.2 trước khi thuê GPU |
+| `train_img_dir` và `test_img_dir` trỏ cùng một gốc như B2 | Ảnh ghép và ảnh thật ở hai gốc khác nhau; F0.1 test |
+| `gt_full` lọt vào train (thành replay SKU cũ) | Thư mục symlink chỉ có `train_task_<t>.json`; F0.1 test |
+| Nhìn test trong các vòng cổng | `--pred_splits val` (F0.3); test chỉ ở G4 |
+| Chọn epoch FSA hay ngưỡng trên test | Chỉ dùng val (D4, D21) |
+| So FULL-SYN với B2 trên val2019 hoặc toàn test2019 | B1/B2 đã train trên val2019 và 16.494 ảnh test2019; chỉ so trên 6.003 ảnh (F0.8) |
+| Mốc B2 đo trên val cũ (1.464 ảnh test2019), FULL-SYN đo trên val2019 | Ghi rõ trong báo cáo; Δ có sai số vài điểm |
+
+## 9. Đã chốt (22/10)
+
+| # | Câu hỏi | Quyết định |
+|---|---|---|
+| Q1 | Trần epoch FSA (D21) | **8 epoch** (chốt), chọn epoch tốt nhất theo AP50 val_task_1. Tháng 9 FSA chạy 6 epoch × 6.000 ảnh (36.000 lượt); 8 × 21.752 = 174.000 lượt, gấp khoảng 5 lần, đủ để đường val bão hòa mà vẫn trong khoảng 6–9 giờ |
+| Q2 | Bỏ dự đoán test trong các vòng cổng (F0.3) | **Có** (chốt) |
+| Q3 | Máy train | **4090 thuê (vast.ai) như B2** (chốt): cùng loại GPU nên so giờ và tốc độ trực tiếp, script chạy tiếp từ checkpoint đã kiểm trên đó |
+
+## 10. Bàn giao
+
+Người làm phần model đọc theo thứ tự: tài liệu này → [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md) → [handoff mục 5–7](../references/meeting-2026-10-20/HANDOFF_ANH_GHEP_VA_TRAIN.md#5-gói-việc-2-train-full-syn) → [báo cáo ảnh ghép v2](../data_preprocessing/reports/synth-v2-2026-10-21.md). Làm F0.1–F0.6 trước, trình kết quả F0.2 và F0.7 rồi mới chạy G1.

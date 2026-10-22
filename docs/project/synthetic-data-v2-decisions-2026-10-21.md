@@ -88,7 +88,7 @@ Tỉ lệ giữ lại cAcc từ task 1 đến task 5: B2 là 0,30, E4 là 0,49. 
 | R2 | Đóng bằng D11 |
 | R3 | Đóng bằng D14 |
 | R4 | Đóng bằng D9/D10; ước lượng dung lượng đã sửa |
-| R5 | Mở: viết plan chi tiết cho gói train, làm song song với gói dữ liệu |
+| R5 | Đóng 22/10: [plan gói train FULL-SYN](full-syn-train-plan-2026-10-22.md) |
 | R6 | Đóng bằng D2/D3; plan Task 6 đã sửa |
 | R7 | Đóng bằng D5; plan Task 1 đã sửa |
 | R8 | Mở: bản sao `REPORT_20-10.md` trong `docs/references/meeting-2026-10-20/` chưa tách Cũ/Mới. Bản mới chưa có trong repo; khi có thì thay và cập nhật SHA-256 trong README |
@@ -114,5 +114,5 @@ Tỉ lệ giữ lại cAcc từ task 1 đến task 5: B2 là 0,30, E4 là 0,49. 
 
 1. **Token Kaggle** để tải `train2019`. Máy này chưa có Kaggle CLI hay token. `scripts/download_rpc.sh` đọc `~/.kaggle/access_token` hoặc `$KAGGLE_API_TOKEN` và tải zip đầy đủ (25,3 GB). API cũng cho tải từng file, nên có thể chỉ lấy khoảng 3.400 ảnh camera 0 cần dùng.
 2. Tỉ lệ chai/lon đứng so với nằm trong val2019, theo nhóm hàng (gallery M0).
-3. Trần số epoch FSA (D21) và plan chi tiết cho gói train (R5).
+3. ~~Trần số epoch FSA (D21) và plan chi tiết cho gói train (R5).~~ Chốt 22/10: trần 8 epoch, chọn epoch tốt nhất theo AP50 val_task_1; [plan](full-syn-train-plan-2026-10-22.md).
 4. Người duyệt gallery M0 và pilot M2.
