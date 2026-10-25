@@ -107,6 +107,8 @@ Câu hỏi phát sinh sẽ được đưa kèm phương án đề xuất; ngư�
 | 22/10 | 3 cảnh hard (1003694, 1005824, 5008992) không xếp được sau 16 lượt | **Chạy lại 16 lượt ở mức 75% khi cả 16 lượt đều hỏng** (người dùng chọn, thay vì bỏ 3 cảnh). 71.639 ảnh đã sinh không đổi, giữ đúng số ảnh đã chốt | Thử riêng: ở mức 75% cả 3 cảnh xếp được sau 0–5 lượt; cấu hình cũ chỉ dành 4 lượt cuối cho mức 75% |
 | 22/10 | Xoá bản A cũ `rpc_synth_v2_layoutA_superseded` (23 GB) | Xoá (người dùng đồng ý) | o15 đã thay; manifest/plan receipt/verify report giữ ở `runs/data_preprocessing/synthetic_v2/layoutA_record/` |
 | 22/10 | Gói train FULL-SYN: trần epoch FSA / dự đoán test ở vòng cổng / máy train | **8 epoch chọn theo AP50 val; bỏ test ở vòng cổng; 4090 vast.ai như B2** (người dùng chọn theo đề xuất) | `docs/project/full-syn-train-plan-2026-10-22.md` |
+| 25/10 | Hình thức chạy gói train FULL-SYN | **Code F0.1–F0.8 + notebook training mới + cập nhật tài liệu + gói dữ liệu đẩy lên Drive trên nhánh này; người dùng tự ssh vào vast để setup dữ liệu, code, môi trường rồi chạy.** Notebook là log chạy, đi song song với log của code dưới `data/` (gitignore) | Ý của người dùng; plan mục 4.1 |
+| 25/10 | Số notebook, ngưỡng dừng nhãn giả, gói Drive | **2 notebook: smoke `04` + `05_full_syn_r<N>` (mỗi vòng một file mới để đối chứng); dừng khi precision nhãn giả task 2 < 0,5; một tar đẩy lên `drive:AutoCheckout/2026-10-25` (stream thẳng chỉ khoảng 2 MB/s nên dừng; đóng gói ở local, người dùng tự upload); người dùng tự push** | Cổng là ngưỡng số nên chạy liền một mạch, không để GPU thuê ngồi chờ; plan mục 4.1 |
 
 ## 5. Câu hỏi đang chờ
 

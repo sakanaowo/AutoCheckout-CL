@@ -2,7 +2,7 @@
 
 Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép v2 và chấm trên ảnh RPC thật, theo [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md). Đóng mục R5 và việc mở số 3 (trần epoch FSA, D21) của tài liệu quyết định.
 
-**Trạng thái:** dữ liệu xong và đã rà lại 22/10; chưa viết code của gói này, chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất).
+**Trạng thái:** dữ liệu xong và đã rà lại 22/10; chưa viết code của gói này, chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất). Q4 (hình thức chạy: notebook mới, gói dữ liệu trên Drive, người dùng tự setup máy vast) chốt 25/10, xem mục 4.1. **F0.2 đạt 25/10:** `test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1` dùng ConvNeXt-V2 atto, truyền `--backbone_pretrained_file` như B2. Sau khi PDP task 1 nạp `hf_model`, digest của backbone + encoder + decoder bằng đúng digest của FSA, nghĩa là trọng số ImageNet không ghi đè lên backbone đã fine-tune. Khóa thiếu khi nạp chỉ có prompt và `class_embed`. Gói dữ liệu: `data/packages/full_syn_rpc_synth_v2_v1_20261025.tar` (25 GB, 101.681 file dữ liệu, md5 `13066bcff65cc42047c969e127c08114`), chờ người dùng upload.
 
 ## 0. Đọc nhanh
 
@@ -107,6 +107,35 @@ Làm trên máy local (CPU/3060); chỉ F0.7 cần GPU thuê, chạy ngắn.
 | F0.7 | Smoke + benchmark trên GPU thuê (`--stop_after_steps`): FSA và PDP mỗi loại vài trăm bước | `runs/.../full_syn_benchmark/` | Đo ảnh/giây và VRAM tối đa của FSA (chưa từng đo) và PDP; chạy tiếp từ checkpoint được; ước lượng lại mục 7 |
 | F0.8 | Script so B1/B2 trên 6.003 ảnh: lọc `pred_test.npz` của FULL-SYN (test 24.000) theo id của `compare_b12/test_full.json` | Tool nhỏ + test | Chạy với B2 trên tập này ra đúng số test cũ của B2. Chỉ cần ở giai đoạn 4 |
 
+### 4.1 Hình thức triển khai (người dùng chốt 25/10)
+
+Phần việc trên nhánh `feat/synthetic-data-v2`:
+
+1. Viết code F0.1–F0.8.
+2. Tạo **notebook training mới** trong `notebooks/training/` để chạy gói FULL-SYN. Notebook chỉ gọi code của gói, logic train nằm trong code. Notebook dùng lại `autocheckout/training_workflow.py`, thêm các phase FULL-SYN vào đó, và dùng lại `tools/execute_training_notebook.py`. Notebook cũ (01–03 của B1/B2) giữ nguyên làm lịch sử.
+3. Cập nhật tài liệu: plan này, README của notebooks và runbook.
+4. **Đóng gói dữ liệu cần trên GPU** để đẩy lên Drive bằng `scripts/pack_full_syn_data.sh`. Script ghi một file tar `data/packages/<tên>.tar` ở local; người dùng tự upload bằng các lệnh rclone mà script in ra. Lần stream thẳng lên Drive ngày 25/10 chỉ đạt khoảng 2 MB/s nên đã dừng. Gói gồm phần dữ liệu ở mục 2 và pretrained `data/pretrained/hf-cache`, kèm `SHA256SUMS` của từng file để kiểm lại sau khi giải nén, và `tar.md5` để so với MD5 mà Drive ghi nhận.
+
+Người dùng tự push nhánh, tự ssh vào máy 4090 vast.ai và setup dữ liệu (tải gói từ Drive), code (lấy nhánh này từ git) và môi trường (theo [README môi trường](../environment/README.md)), rồi chạy notebook trên máy đó.
+
+**Hai notebook:**
+
+| Notebook | Khi nào chạy | Nội dung |
+|---|---|---|
+| `04_full_syn_smoke` | Một lần trên mỗi máy mới, khoảng 30–60 phút | F0.7: kiểm tra GPU, môi trường, gói dữ liệu so với `SHA256SUMS`; FSA và PDP mỗi loại vài trăm bước; đo ảnh/giây, VRAM; thử dừng rồi chạy tiếp. Người dùng xem kết quả rồi mới chạy notebook kế tiếp |
+| `05_full_syn_r<N>` | Mỗi vòng một **file mới** và một campaign mới (vòng chỉnh sau tạo `_r2`, `_r3`), để giữ lịch sử đối chứng giữa các vòng. Bị ngắt giữa chừng thì chạy tiếp bằng chính file của vòng đó | G1 → G4 chạy liền một mạch, các cell cổng tự dừng (bảng dưới) |
+
+Các cổng chỉ dùng ngưỡng số đã chốt, nên notebook chạy liền một mạch, không phải chờ người duyệt giữa chừng trong lúc GPU thuê vẫn tính tiền:
+
+| Cổng | Điều kiện dừng |
+|---|---|
+| Sau G1 (D18) | cAcc-M2 của FSA < 52,8% |
+| Sau G2 (D17, D19) | 🟡 hoặc 🔴 ở vòng 1–2. Ở vòng 3: 🟡 thì chạy tiếp và ghi "kỳ vọng ngang B2"; 🔴 thì dừng hướng ảnh ghép thuần |
+| Sau task 2 (G3) | Precision nhãn giả so với `gt_full` < **0,5** (người dùng chốt 25/10) |
+| Trước G4 | Chưa đủ 5 task hoặc chưa có policy chọn trên val; hoặc đã có kết quả test (chỉ chấm một lần) |
+
+**Log:** notebook là **log chạy**, đi song song với log do code ghi. Cell output ghi cấu hình, hash, tiến độ và kết quả từng trạm kiểm tra; bản notebook có output được commit vào git. Log đầy đủ do code ghi (checkpoint, `train.log`, `step_metrics.jsonl`, predictions, policy, các bản notebook đã chạy) nằm dưới `data/training/<campaign>/`, thư mục này bị gitignore.
+
 ## 5. Giai đoạn 1–4 — chạy
 
 ```text
@@ -125,7 +154,7 @@ G4  Chấm test một lần: test2019 24.000 ảnh + bảng so B1/B2 trên 6.003
 |---|---|---|---|
 | G1 FSA | `run_exp.sh configs/exp/native/EXP-FULL-SYN-FSA.sh` | `FSA/task_1/hf_model`, `pred_val.npz`, đường AP50 val theo epoch | `eval_count --run-dir <FSA> --val-ann rpc_eval_official_v1/val_full.json --unlearned-iou 0.5 --calibrate-only`; ghi giờ GPU của FSA riêng (D21) |
 | G2 PDP task 1 | `EXP-FULL-SYN.sh` với `N_TASKS=1`, `--pred_splits val` | `task_1/pred_val.npz`, policy M2 | Δ so với B = 85,79%. Báo cáo kèm M1, AP50, cAcc theo level, bảng nhầm lẫn (D16) |
-| G3 task 2–5 | `EXP-FULL-SYN.sh` với `N_TASKS=5`, `REUSE_TASK1=<run G2>` | `task_2..5`, log nhãn giả | Sau mỗi task xem precision/recall nhãn giả và số bị I3/F14 loại; nếu nhãn giả task 2 có precision thấp rõ (nhiều vật SKU mới bị gán nhãn SKU cũ) thì dừng, báo nhóm trước khi chạy tiếp |
+| G3 task 2–5 | `EXP-FULL-SYN.sh` với `N_TASKS=5`, `REUSE_TASK1=<run G2>` | `task_2..5`, log nhãn giả | Sau mỗi task xem precision/recall nhãn giả và số bị I3/F14 loại; nếu nhãn giả task 2 có precision thấp rõ (nhiều vật SKU mới bị gán nhãn SKU cũ; ngưỡng < 0,5, mục 4.1) thì dừng, báo nhóm trước khi chạy tiếp |
 | G4 chấm cuối | `--predict_only 1` cho `pred_test` các task còn thiếu; `eval_count --policy-in <policy val>`; `eval_cl`; F0.8 | `metrics_count_test.md`, `metrics_cl_test.md`, bảng so B1/B2 | Test chỉ đọc policy đã khóa từ val; ghi config hash ảnh ghép, run id |
 
 ## 6. Vòng chỉnh (D4, D19, D20)
@@ -162,13 +191,14 @@ B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi
 | So FULL-SYN với B2 trên val2019 hoặc toàn test2019 | B1/B2 đã train trên val2019 và 16.494 ảnh test2019; chỉ so trên 6.003 ảnh (F0.8) |
 | Mốc B2 đo trên val cũ (1.464 ảnh test2019), FULL-SYN đo trên val2019 | Ghi rõ trong báo cáo; Δ có sai số vài điểm |
 
-## 9. Đã chốt (22/10)
+## 9. Đã chốt (22/10, 25/10)
 
 | # | Câu hỏi | Quyết định |
 |---|---|---|
 | Q1 | Trần epoch FSA (D21) | **8 epoch** (chốt), chọn epoch tốt nhất theo AP50 val_task_1. Tháng 9 FSA chạy 6 epoch × 6.000 ảnh (36.000 lượt); 8 × 21.752 = 174.000 lượt, gấp khoảng 5 lần, đủ để đường val bão hòa mà vẫn trong khoảng 6–9 giờ |
 | Q2 | Bỏ dự đoán test trong các vòng cổng (F0.3) | **Có** (chốt) |
 | Q3 | Máy train | **4090 thuê (vast.ai) như B2** (chốt): cùng loại GPU nên so giờ và tốc độ trực tiếp, script chạy tiếp từ checkpoint đã kiểm trên đó |
+| Q4 | Hình thức chạy (25/10) | **Notebook training mới + gói dữ liệu trên Drive; người dùng tự setup máy vast** (người dùng chốt). Notebook là log chạy commit vào git, song song với log của code dưới `data/`. Hai notebook: smoke `04` và `05_full_syn_r<N>`, mỗi vòng một file mới; tự dừng khi precision nhãn giả task 2 < 0,5 (mục 4.1) |
 
 ## 10. Bàn giao
 

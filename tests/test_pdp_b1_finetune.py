@@ -47,3 +47,37 @@ def test_hf_export_loads_as_the_start_of_pdp_task_1(tmp_path, monkeypatch):
     for key in ("model.input_proj.0.0.weight", "class_embed.0.weight", "model.encoder.layers.0.fc1.weight"):
         torch.testing.assert_close(trainer.model.state_dict()[key], saved[key])
     assert hasattr(trainer.model.model, "prompts")  # PDP adds its prompts on top of the FSA weights
+
+
+def test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1(tmp_path, monkeypatch):
+    """FULL-SYN F0.2: the B2 config passes --backbone_pretrained_file, so PDP task 1 builds its ConvNeXt from
+    the ImageNet file before loading hf_model; the fine-tuned backbone, encoder and decoder must win."""
+    import timm
+    from safetensors.torch import load_file, save_file
+    from timm.models._features import FeatureListNet
+
+    from autocheckout.model_state import state_digest
+
+    # ConvNeXt returns channels-last views; the CPU GroupNorm backward of torch 2.2 rejects them
+    # ("Expected memory formats of X and dY are same"). Same values, contiguous layout; CUDA is unaffected.
+    forward = FeatureListNet.forward
+    monkeypatch.setattr(FeatureListNet, "forward", lambda self, x: [f.contiguous() for f in forward(self, x)])
+    imagenet = tmp_path / "imagenet.safetensors"
+    save_file(timm.create_model("convnextv2_atto").state_dict(), str(imagenet))
+    backbone = ("--backbone", "convnextv2_atto", "--backbone_pretrained_file", str(imagenet))
+    run_main(tmp_path / "fsa", monkeypatch, *FINETUNE, *backbone, "--n_tasks", "1", "--save_hf", "1")
+    fsa = tmp_path / "fsa" / "run" / "task_1"
+    saved = torch.load(fsa / "task_final.pth", map_location="cpu")["model"]
+
+    (tmp_path / "pdp").mkdir()
+    trainer = make_trainer(pdp_args(tmp_path / "pdp", "--repo_name", str(fsa / "hf_model"), *backbone), task_id=1)
+    loaded = trainer.model.state_dict()
+    parts = ("model.backbone.", "model.encoder.", "model.decoder.")
+    shared = sorted(k for k in saved if k.startswith(parts) and ".prompts." not in k)
+    assert shared and set(shared) <= set(loaded)
+    assert state_digest({k: loaded[k] for k in shared}) == state_digest({k: saved[k] for k in shared})
+    # the check can fail: fine-tuning moved the backbone away from the ImageNet file
+    stem = next(k for k in shared if k.startswith("model.backbone.") and k.endswith("stem_0.weight"))
+    assert not torch.equal(saved[stem], load_file(str(imagenet))["stem.0.weight"])
+    missing = trainer.loading_report["loading_info"]["missing_keys"]
+    assert missing and all(".prompts." in k or k.startswith("class_embed.") for k in missing)
