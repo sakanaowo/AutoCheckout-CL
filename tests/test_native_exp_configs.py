@@ -95,3 +95,38 @@ def test_native_runner_reuses_an_existing_calibration_policy(tmp_path):
     assert result.returncode == 0, result.stderr
     counting = [line for line in calls(tmp_path) if "tools.eval_count" in line]
     assert len(counting) == 1 and "--policy-in" in counting[0]
+
+
+def resolved_args(name, **env):
+    config = REPO_ROOT / "configs/exp/native" / f"{name}.sh"
+    result = subprocess.run(
+        ["bash", "-ec", 'source "$CONFIG"; printf "%s\\0" "${ARGS[@]}"'],
+        capture_output=True, text=True,
+        env={**os.environ, "CONFIG": str(config), "REPO": str(REPO_ROOT), "RAW_ROOT": "/fixture/raw",
+             "TASK_DIR": "/fixture/links", "TASK_CFG": "/fixture/eval/task_config.json",
+             "SYNTH_ROOT": "/fixture/synth", **env},
+    )
+    return result, (main_args(result.stdout.split("\0")[:-1]) if result.returncode == 0 else None)
+
+
+def test_full_syn_configs_follow_the_plan_table():
+    """FULL-SYN F0.1 (plan section 3): B2 everywhere except the training images, the FSA start, F14 and I3."""
+    _, b2 = resolved_args("EXP-B2")
+    _, pdp = resolved_args("EXP-FULL-SYN", FSA_HF="/fixture/fsa/task_1/hf_model")
+    _, fsa = resolved_args("EXP-FULL-SYN-FSA")
+    for args in (pdp, fsa):
+        assert args.train_img_dir == "/fixture/synth" and args.test_img_dir == "/fixture/raw"
+        assert args.task_ann_dir == "/fixture/links" and args.task_config == "/fixture/eval/task_config.json"
+        assert args.backbone == b2.backbone and args.n_classes == 225 and args.seed == 0 and args.augment == 0
+    assert pdp.repo_name == "/fixture/fsa/task_1/hf_model"
+    assert pdp.pseudo_dedup_iou == pdp.pseudo_gt_iou == 0.5 and b2.pseudo_dedup_iou == b2.pseudo_gt_iou == 0
+    differ = {k for k in vars(b2) if getattr(pdp, k) != getattr(b2, k)}
+    assert differ == {"train_img_dir", "repo_name", "pseudo_dedup_iou", "pseudo_gt_iou"}  # same TASK_DIR/TASK_CFG given
+    assert fsa.use_prompts == fsa.local_query == 0 and fsa.pseudo == "none" and fsa.freeze == ""
+    assert fsa.optim_groups == "detr" and fsa.save_hf == 1 and fsa.select_best_epoch == 1
+    assert fsa.repo_name == b2.repo_name and fsa.backbone_pretrained_file == b2.backbone_pretrained_file
+
+
+def test_full_syn_configs_refuse_missing_inputs():
+    assert resolved_args("EXP-FULL-SYN-FSA", SYNTH_ROOT="")[0].returncode != 0
+    assert "FSA_HF" in resolved_args("EXP-FULL-SYN")[0].stderr

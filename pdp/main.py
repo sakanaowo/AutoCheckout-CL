@@ -25,8 +25,9 @@ from datasets.coco_eval import CocoEvaluator
 from engine import local_trainer, Evaluator
 from inference import write_predictions
 from augment import TrainAugment
-from checkpointing import ResumeCheckpoint, PlannedTrainingStop, ResumeAudit, TrainingProgress, remove_resume_checkpoints, resume_path
+from checkpointing import ResumeCheckpoint, PlannedTrainingStop, ResumeAudit, TrainingProgress, remove_resume_checkpoints, resume_path, restore_best_epoch
 import runtime
+from autocheckout.io import save_json
 from autocheckout.runinfo import RunInfo
 
 # from transformers import AutoImageProcessor
@@ -228,6 +229,12 @@ def get_args_parser():
                         help='R1: minutes between resume checkpoints within an epoch (also saved every epoch)')
     parser.add_argument('--predict_only', default=0, type=int,
                         help='F9/V1: skip training, load task_<t>/task_final.pth and rewrite pred_{val,test}.npz')
+    parser.add_argument('--select_best_epoch', default=0, type=int,
+                        help='FULL-SYN F0.4: after training, keep the epoch with the best val_task AP50 (FSA); '
+                             'task_final.pth, hf_model and the predictions come from it')
+    parser.add_argument('--pred_splits', default='val,test', type=str,
+                        help="FULL-SYN F0.3: comma-separated splits written as pred_<split>.npz after each task; 'val' "
+                             'keeps the gate rounds away from test (written later with --predict_only 1)')
 
     # Fixes of the original code (IMPLEMENTATION_PLAN.md 6.3); 0 restores the original behaviour (pilot P1)
     parser.add_argument('--init_new_prompts', default=1, type=int,
@@ -344,11 +351,11 @@ def make_pl_trainer(args):
                       logger=CSVLogger(save_dir=args.output_dir, name="lightning_logs"))
 
 def write_task_predictions(args, trainer, task_id, processor):
-    """F9/V1: predictions of the task's final model on the full val and test files (pred_<split>.npz)."""
+    """F9/V1: predictions of the task's final model on the full files of --pred_splits (pred_<split>.npz)."""
     device = torch.device('cuda' if args.accelerator == 'gpu' else 'cpu')
     trainer.model.to(device)
     ann_dir = args.pred_ann_dir or args.task_ann_dir
-    for split in ('val', 'test'):
+    for split in args.pred_splits.split(','):
         write_predictions(trainer.model, args, ann_file=os.path.join(ann_dir, f'{split}_full.json'),
                           out_file=os.path.join(args.output_dir, f'pred_{split}.npz'), task_id=task_id,
                           seen_classes=trainer.seen_classes, split=split, processor=processor, device=device)
@@ -455,12 +462,18 @@ def run_task(args, task_id, output_root, processor=None):
         budget.update(optimizer_steps=lightning.global_step,
                       optimizer_steps_this_session=lightning.global_step-trainer.resume_verification['restored_step'],
                       resume_verification=trainer.resume_verification)
+        if args.select_best_epoch:
+            budget['selected_epoch'] = restore_best_epoch(args.output_dir, trainer.model)
+            print(f"Selected epoch {budget['selected_epoch']['epoch']} (val AP50 {budget['selected_epoch']['AP50']:.4f})",
+                  file=args.log_file)
         trainer.save_task_final(final_path)
         remove_resume_checkpoints(args.output_dir)
         if args.save_hf:
             hf_dir = os.path.join(args.output_dir, 'hf_model')
             trainer.model.save_pretrained(hf_dir)
             processor.save_pretrained(hf_dir)
+            if args.select_best_epoch:
+                save_json(os.path.join(hf_dir, 'epoch_selection.json'), budget['selected_epoch'], indent=2)
 
     write_task_predictions(args, trainer, task_id, processor)
     run_info.finish(mode='predict' if args.predict_only else 'train', resumed_from=ckpt_path,
@@ -470,6 +483,9 @@ def run_task(args, task_id, output_root, processor=None):
 def main(args):
     if args.eval:
         raise SystemExit('--eval is replaced by --predict_only 1 (predictions are written after each task, F9)')
+    splits = args.pred_splits.split(',')
+    if not splits or len(set(splits)) != len(splits) or set(splits) - {'val', 'test'}:
+        raise SystemExit(f'--pred_splits must list val and/or test once each, got {args.pred_splits!r}')
     seed_everything(args.seed, workers=True)
     torch.set_float32_matmul_precision('high' if args.tf32 else 'highest')
     torch.backends.cudnn.allow_tf32 = bool(args.tf32)

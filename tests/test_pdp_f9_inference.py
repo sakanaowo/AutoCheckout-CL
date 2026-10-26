@@ -78,3 +78,19 @@ def test_tasks_write_prediction_files_and_validation_does_not_use_the_teacher(tm
     after = load_predictions(run / "task_2" / "pred_test.npz")
     np.testing.assert_allclose(after.score, before.score, rtol=1e-5)
     np.testing.assert_array_equal(after.label, before.label)
+
+
+def test_gate_rounds_write_val_predictions_only_and_test_comes_later(tmp_path, monkeypatch):
+    """FULL-SYN F0.3: --pred_splits val leaves no pred_test.npz; predict-only adds it without retraining."""
+    args = run_main(tmp_path, monkeypatch, "--n_tasks", "1", "--pred_splits", "val")
+    task = tmp_path / "run" / "task_1"
+    assert (task / "pred_val.npz").is_file() and not (task / "pred_test.npz").exists()
+    final = (task / "task_final.pth").stat().st_mtime_ns
+    val = (task / "pred_val.npz").stat().st_mtime_ns
+
+    import main as pdp_main
+
+    args.predict_only, args.pred_splits, args.output_dir = 1, "test", str(tmp_path / "run")
+    pdp_main.main(args)
+    assert load_predictions(task / "pred_test.npz").meta["split"] == "test"
+    assert (task / "task_final.pth").stat().st_mtime_ns == final and (task / "pred_val.npz").stat().st_mtime_ns == val

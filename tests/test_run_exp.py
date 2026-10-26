@@ -12,19 +12,20 @@ from conftest import REPO_ROOT
 FAKE_PYTHON = r"""#!/usr/bin/env bash
 echo "$*" >> "$CALLS"
 if [[ $1 == main.py ]]; then
-    out=""; task=""; predict=0
+    out=""; task=""; predict=0; splits=val,test
     while [[ $# -gt 0 ]]; do
         case $1 in
             --output_dir) out=$2; shift ;;
             --start_task) task=$2; shift ;;
             --predict_only) predict=$2; shift ;;
+            --pred_splits) splits=$2; shift ;;
         esac
         shift
     done
     [[ -n ${FAIL_TASK:-} && $task == "$FAIL_TASK" ]] && exit 3
     mkdir -p "$out/task_$task"
     [[ $predict == 1 ]] || touch "$out/task_$task/task_final.pth"
-    touch "$out/task_$task/pred_val.npz" "$out/task_$task/pred_test.npz"
+    for split in ${splits//,/ }; do touch "$out/task_$task/pred_$split.npz"; done
 fi
 """
 
@@ -94,3 +95,21 @@ def test_shutdown_happens_even_after_an_error(tmp_path):
     assert result.returncode != 0
     assert (tmp_path / "shutdown").exists()
     assert not any("tools.eval" in c for c in calls(tmp_path))
+
+
+def test_val_only_predictions_then_test_by_predict_only(tmp_path):
+    """FULL-SYN F0.3: with PRED_SPLITS=val a task is done without pred_test.npz; PRED_SPLITS=test adds it later
+    by predict-only, without training again."""
+    assert run(tmp_path, PRED_SPLITS="val", SKIP_EVAL="1").returncode == 0
+    trained = main_calls(calls(tmp_path))
+    assert len(trained) == 2 and all("--pred_splits val" in c and "--predict_only" not in c for c in trained)
+    task_dir = tmp_path / "runs" / "demo" / "task_1"
+    assert (task_dir / "pred_val.npz").exists() and not (task_dir / "pred_test.npz").exists()
+
+    assert run(tmp_path, PRED_SPLITS="val", SKIP_EVAL="1").returncode == 0
+    assert main_calls(calls(tmp_path)) == []
+
+    assert run(tmp_path, PRED_SPLITS="test", SKIP_EVAL="1").returncode == 0
+    added = main_calls(calls(tmp_path))
+    assert len(added) == 2 and all("--pred_splits test" in c and c.endswith("--predict_only 1") for c in added)
+    assert (task_dir / "pred_test.npz").exists()

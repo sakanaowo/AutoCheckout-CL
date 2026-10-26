@@ -19,6 +19,7 @@ from autocheckout.model_acceptance import now
 from autocheckout.io import save_json
 
 LAST = 'last.ckpt'
+BEST_WEIGHTS, BEST_RECORD = 'best_epoch_model.pth', 'best_epoch.json'
 
 
 class PlannedTrainingStop(Exception):
@@ -116,10 +117,41 @@ class TrainingProgress(pl.Callback):
 
 def remove_resume_checkpoints(task_dir):
     """Called once the task's final weights are saved; resume checkpoints are 0.5 GiB each."""
-    for name in (LAST, LAST + '.prev', LAST + '.tmp'):
+    for name in (LAST, LAST + '.prev', LAST + '.tmp', BEST_WEIGHTS, BEST_WEIGHTS + '.tmp'):
         path = os.path.join(task_dir, name)
         if os.path.exists(path):
             os.remove(path)
+
+
+def record_epoch(task_dir, epoch, optimizer_step, ap50, model):
+    """FULL-SYN F0.4: keep the weights of the epoch with the best val AP50 (the earliest one on ties).
+
+    Called after each validation; the record survives an interruption, so a resumed task keeps comparing
+    with the best epoch seen before. Returns True when this epoch is the new best."""
+    import torch
+
+    record = Path(task_dir) / BEST_RECORD
+    if record.is_file() and ap50 <= json.loads(record.read_text())['AP50']:
+        return False
+    weights = Path(task_dir) / BEST_WEIGHTS
+    torch.save(model.state_dict(), str(weights) + '.tmp')
+    os.replace(str(weights) + '.tmp', weights)
+    save_json(record, {'epoch': epoch, 'optimizer_step': optimizer_step, 'AP50': ap50, 'scope': 'val_task',
+                       'timestamp': now()}, indent=2)
+    return True
+
+
+def restore_best_epoch(task_dir, model):
+    """Load the best epoch's weights into model; returns its record and the val AP50 of every epoch."""
+    import torch
+
+    record = Path(task_dir) / BEST_RECORD
+    if not record.is_file():
+        raise RuntimeError(f'no validation recorded in {task_dir}: --select_best_epoch needs --eval_epochs 1')
+    model.load_state_dict(torch.load(Path(task_dir) / BEST_WEIGHTS, map_location='cpu'))
+    curve = [json.loads(p.read_text()) for p in sorted(Path(task_dir).glob('val_epoch_*.json'))]
+    return {**json.loads(record.read_text()), 'curve': [{'epoch': c['epoch'], 'AP50': c['metrics']['AP50']}
+                                                        for c in curve]}
 
 
 class ResumeCheckpoint(pl.Callback):

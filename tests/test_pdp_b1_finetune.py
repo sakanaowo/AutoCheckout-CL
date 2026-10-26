@@ -81,3 +81,46 @@ def test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1(tmp_path
     assert not torch.equal(saved[stem], load_file(str(imagenet))["stem.0.weight"])
     missing = trainer.loading_report["loading_info"]["missing_keys"]
     assert missing and all(".prompts." in k or k.startswith("class_embed.") for k in missing)
+
+
+def test_fsa_keeps_the_epoch_with_the_best_val_ap50(tmp_path, monkeypatch):
+    """FULL-SYN F0.4: task_final.pth and hf_model come from the best val epoch, recorded with the whole curve."""
+    import json
+
+    import checkpointing
+
+    saved = {}
+    record = checkpointing.record_epoch
+
+    def keep_copy(task_dir, epoch, step, ap50, model):
+        # epoch 0 wins whatever the toy AP50 is, so the final weights must differ from the last epoch's
+        ap50 = 1.0 - epoch
+        if record(task_dir, epoch, step, ap50, model):
+            saved["best"] = {k: v.clone() for k, v in model.state_dict().items()}
+        saved["last"] = {k: v.clone() for k, v in model.state_dict().items()}
+
+    import engine
+
+    monkeypatch.setattr(engine, "record_epoch", keep_copy)
+    run_main(tmp_path, monkeypatch, *FINETUNE, "--n_tasks", "1", "--epochs", "2", "--save_hf", "1",
+             "--select_best_epoch", "1")
+    task = tmp_path / "run" / "task_1"
+    selection = json.loads((task / "hf_model" / "epoch_selection.json").read_text())
+    assert selection["epoch"] == 0 and [c["epoch"] for c in selection["curve"]] == [0, 1]
+    final = torch.load(task / "task_final.pth", map_location="cpu")["model"]
+    assert all(torch.equal(final[k], v) for k, v in saved["best"].items())
+    assert any(not torch.equal(final[k], v) for k, v in saved["last"].items())
+    assert not (task / checkpointing.BEST_WEIGHTS).exists()
+
+
+def test_best_epoch_record_keeps_the_earliest_maximum(tmp_path):
+    import checkpointing
+
+    model = torch.nn.Linear(2, 1)
+    assert checkpointing.record_epoch(tmp_path, 0, 10, 0.5, model)
+    with torch.no_grad():
+        model.weight += 1
+    assert not checkpointing.record_epoch(tmp_path, 1, 20, 0.5, model)  # a tie keeps epoch 0
+    fresh = torch.nn.Linear(2, 1)
+    best = checkpointing.restore_best_epoch(tmp_path, fresh)
+    assert best["epoch"] == 0 and not torch.equal(fresh.weight, model.weight)

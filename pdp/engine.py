@@ -22,6 +22,7 @@ from models.configuration_deformable_detr import DeformableDetrConfig
 from models.modeling_deformable_detr import DeformableDetrForObjectDetection
 from ppg import prototype_matrix, select_candidates, select_pseudo_labels
 from inference import predict_batch
+from checkpointing import record_epoch
 import runtime
 from autocheckout.io import save_json
 from autocheckout.model_acceptance import now
@@ -585,6 +586,8 @@ class local_trainer(pl.LightningModule):
 					 'scope': 'val_task', 'metrics': metrics}, indent=2)
 				for name, value in metrics.items():
 					self.log('val_' + name, value, on_step=False, on_epoch=True)
+				if getattr(self.args, 'select_best_epoch', 0):
+					record_epoch(self.args.output_dir, self.current_epoch, self.trainer.global_step, metrics['AP50'], self.model)
 				self.evaluator.print_coco_stats(self.current_epoch, stats, self.print_count)
 				self.print_count = 1
 				if self.args.viz:

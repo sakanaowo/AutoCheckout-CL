@@ -11,6 +11,8 @@
 #   - a task with task_final.pth and both prediction files is skipped;
 #   - a task with task_final.pth but a missing prediction file only gets its predictions rewritten;
 #   - otherwise the task is trained (main.py resumes from task_<t>/last.ckpt if it exists).
+# PRED_SPLITS (default val,test) are the prediction files a finished task must have; they are passed to main.py
+# as --pred_splits (FULL-SYN gate rounds use val only, test is added later).
 # With --shutdown the VM is stopped when the script ends, also after an error.
 set -euo pipefail
 
@@ -19,6 +21,7 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 DATA=${DATA:-/data/rpc}
 RUNS=${RUNS:-/data/runs}
 PYTHON=${PYTHON:-python}
+PRED_SPLITS=${PRED_SPLITS:-val,test}
 SHUTDOWN_CMD=${SHUTDOWN_CMD:-sudo shutdown -h now}
 
 if [[ ${2:-} == --shutdown ]]; then
@@ -41,8 +44,12 @@ fi
 for t in $(seq "${START_TASK:-1}" "$N_TASKS"); do
     task_dir=$RUN_DIR/task_$t
     mode=()
+    missing=0
+    for split in ${PRED_SPLITS//,/ }; do
+        [[ -f $task_dir/pred_$split.npz ]] || missing=1
+    done
     if [[ -f $task_dir/task_final.pth ]]; then
-        if [[ -f $task_dir/pred_val.npz && -f $task_dir/pred_test.npz ]]; then
+        if [[ $missing == 0 ]]; then
             echo "-- task $t: done, skipped"
             continue
         fi
@@ -52,7 +59,7 @@ for t in $(seq "${START_TASK:-1}" "$N_TASKS"); do
         echo "-- task $t: training ($(date '+%F %T'))"
     fi
     (cd "$REPO/pdp" && $PYTHON main.py "${ARGS[@]}" --output_dir "$RUN_DIR" --start_task "$t" --n_tasks "$t" \
-        "${mode[@]+"${mode[@]}"}")
+        --pred_splits "$PRED_SPLITS" "${mode[@]+"${mode[@]}"}")
 done
 
 if [[ -n ${SKIP_EVAL:-} ]]; then
