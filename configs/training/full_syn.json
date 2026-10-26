@@ -10,6 +10,7 @@
   "resolution": 640,
   "batch_size": 8,
   "effective_batch": 8,
+  "fsa_batch_size": 4,
   "num_workers": 8,
   "tf32": true,
   "fsa_epochs": 8,

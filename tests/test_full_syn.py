@@ -127,6 +127,22 @@ def test_an_enforced_gate_stops_the_round_and_the_next_stages(tmp_path):
     assert "too low" in (tmp_path / "SUMMARY.md").read_text()
 
 
+def test_fsa_runs_at_its_own_physical_batch_with_the_same_effective_batch(tmp_path):
+    """FSA trains the whole model and runs out of the 4090's memory at the PDP batch of 8; it accumulates instead."""
+    from autocheckout import full_syn
+    settings = dict(campaign_id="dry", round=1, artifact_root=str(tmp_path), dry_run=True, batch_size=8,
+                    effective_batch=8, fsa_batch_size=4, resolution=640, fsa_epochs=8, epochs=16)
+    plan = full_syn.prepare(settings)
+    fsa = full_syn._environment(plan, full_syn.FSA, tmp_path)
+    pdp = full_syn._environment(plan, full_syn.PDP, tmp_path)
+    assert (fsa["BATCH_SIZE"], fsa["EFFECTIVE_BATCH"]) == ("4", "8")
+    assert (pdp["BATCH_SIZE"], pdp["EFFECTIVE_BATCH"]) == ("8", "8")
+    with pytest.raises(ValueError, match="multiple of physical batch"):
+        full_syn.prepare({**settings, "campaign_id": "odd", "fsa_batch_size": 3})
+    same = full_syn.prepare({**settings, "campaign_id": "same", "fsa_batch_size": 8})
+    assert full_syn._environment(same, full_syn.FSA, tmp_path)["BATCH_SIZE"] == "8"
+
+
 @pytest.mark.slow
 def test_dry_round_runs_every_stage_and_resumes_without_training_again(tmp_path):
     """The CPU fixture through smoke, G1-G4 (gates reported, not enforced); a second pass trains nothing and the

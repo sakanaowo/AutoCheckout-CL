@@ -155,8 +155,12 @@ def prepare(settings: dict) -> dict:
     if not 1 <= round_id <= MAX_ROUNDS:
         raise ValueError(f'round must be 1..{MAX_ROUNDS} (D19)')
     physical, effective = int(settings['batch_size']), int(settings['effective_batch'])
-    if physical < 1 or effective < physical or effective % physical:
-        raise ValueError('effective batch must be a positive multiple of physical batch (one GPU)')
+    # FSA trains the whole model, so its activations do not fit at the PDP batch: batch 8 runs out of the 4090's
+    # 24 GB at step 0, batch 4 peaks at 15.8 GiB. FSA keeps the effective batch with gradient accumulation.
+    fsa_physical = int(settings.get('fsa_batch_size', physical))
+    for batch in (physical, fsa_physical):
+        if batch < 1 or effective < batch or effective % batch:
+            raise ValueError('effective batch must be a positive multiple of physical batch (one GPU)')
     if dry:
         release, eval_root, images, model = _toy_releases(root / 'fixture')
         synth_root = raw = images
@@ -185,6 +189,7 @@ def prepare(settings: dict) -> dict:
                 raw_root=str(raw), task_dir=str(task_dir), task_config=str(task_config), model_config=str(model),
                 detector_dir=detector, backbone_weights=backbone,
                 resolution=96 if dry else int(settings['resolution']), batch_size=physical, effective_batch=effective,
+                fsa_batch_size=fsa_physical,
                 num_workers=0 if dry else int(settings.get('num_workers', 8)), tf32=bool(settings.get('tf32', False)),
                 fsa_epochs=1 if dry else int(settings['fsa_epochs']), epochs=1 if dry else int(settings['epochs']),
                 checkpoint_every_minutes=float(settings.get('checkpoint_every_minutes', 2)),
@@ -247,10 +252,11 @@ def _environment(plan: dict, experiment: str, runs: Path, **values) -> dict[str,
     from autocheckout.training_workflow import REPO
 
     root = Path(plan['root'])
+    batch = plan.get('fsa_batch_size', plan['batch_size']) if experiment == FSA else plan['batch_size']
     return dict(EXP=experiment, RUNS=str(runs), REPO=str(REPO), RAW_ROOT=plan['raw_root'], TASK_DIR=plan['task_dir'],
                 TASK_CFG=plan['task_config'], SYNTH_ROOT=plan['synth_root'], DETECTOR_DIR=plan['detector_dir'],
                 BACKBONE_WEIGHTS=plan['backbone_weights'], RESOLUTION=str(plan['resolution']),
-                BATCH_SIZE=str(plan['batch_size']), EFFECTIVE_BATCH=str(plan['effective_batch']),
+                BATCH_SIZE=str(batch), EFFECTIVE_BATCH=str(plan['effective_batch']),
                 NUM_WORKERS=str(plan['num_workers']), TF32=str(int(plan['tf32'])),
                 CKPT_EVERY_MINUTES=str(plan['checkpoint_every_minutes']), VERIFY_RESUME='1', REQUIRE_KERNEL='0',
                 EVALUATE='0', PYTHON=sys.executable, PYTHONUNBUFFERED='1', HF_HUB_OFFLINE='1',
@@ -669,12 +675,13 @@ def stage_smoke(plan: dict, steps: int = 200) -> dict:
                        fsa_hf=plan['detector_dir'], stop_after=steps)
             report['pdp'] = _speed(pdp)
 
-    def hours(images, epochs, seconds):
-        return round(math.ceil(math.ceil(images / plan['batch_size']) / (plan['effective_batch'] // plan['batch_size']))
+    def hours(images, epochs, seconds, batch=plan['batch_size']):
+        return round(math.ceil(math.ceil(images / batch) / (plan['effective_batch'] // batch))
                      * epochs * seconds / 3600, 2)
 
     images = plan['train_images']
-    estimate = {'fsa': hours(images[0], plan['fsa_epochs'], report['fsa']['seconds_per_step'])}
+    estimate = {'fsa': hours(images[0], plan['fsa_epochs'], report['fsa']['seconds_per_step'],
+                             plan.get('fsa_batch_size', plan['batch_size']))}
     if 'pdp' in report:
         seconds = report['pdp']['seconds_per_step']
         # B2 on the 4090: a task >= 2 image took 1.47x a task 1 image (teacher forward), validation included

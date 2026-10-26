@@ -86,6 +86,7 @@ Giữ mọi thứ như B2 (`data/training/vast4090-seed0-640-v1/baseline/EXP-B2/
 | Ảnh val/test | `--test_img_dir data/archive` | Giữ |
 | Thư mục nhãn | `tasks/real` | **Thư mục symlink** (mục 4, F0.1) |
 | 640px, batch 8, eff. batch 8, 16 epoch/task, seed 0, TF32, `eval_epochs 1`, lr 1e-4 / lr_old 1e-5, prompt 100×10 | | Giữ (D9) |
+| Batch của FSA | — | **4 × tích luỹ 2 = eff. batch 8** (`fsa_batch_size`). Đo 26/10 trên 4090: FSA mở khoá toàn bộ model nên batch 8 hết 24 GB ngay bước 0; batch 4 đạt đỉnh 15,8 GiB, khoảng 1,0 s/bước. PDP vẫn 8/8 như B2 |
 | F14 `--pseudo_dedup_iou` | 0 | **0,5** |
 | I3 `--pseudo_gt_iou` | 0 (tắt) | **0,5** |
 | Nhãn giả τ_h / τ_l | 0,5 / 0,2 | Giữ |
