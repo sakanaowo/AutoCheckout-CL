@@ -9,7 +9,10 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from autocheckout.io import load_json
+import numpy as np
+
+from autocheckout.io import load_json, md5_file
+from autocheckout.predictions import load_predictions, save_predictions
 
 N_TASKS = 5
 
@@ -52,3 +55,29 @@ def link_tasks(release: Path, eval_root: Path, target: Path) -> dict[str, str]:
             link.symlink_to(source.resolve())
         hashes[name] = digest
     return hashes
+
+
+def subset_run(run_dir: Path, ann_path: Path, target: Path, split: str = 'test') -> Path:
+    """F0.8: a run folder holding only the images of ``ann_path`` (the 6,003 old test images of B1/B2), so the
+    usual evaluators compare FULL-SYN with B1/B2 on the same images. Each task's pred_<split>.npz is filtered by
+    image id and re-tagged with the md5 of ``ann_path``; task_final.pth is linked, so a policy calibrated on val
+    still matches its checkpoint."""
+    ann = load_json(ann_path)
+    ids = np.array(sorted(image['id'] for image in ann['images']))
+    ann_md5 = md5_file(ann_path)
+    for task in sorted(Path(run_dir).glob('task_*')):
+        source = task / f'pred_{split}.npz'
+        if not source.is_file():
+            continue
+        preds = load_predictions(source)
+        if not np.isin(ids, preds.image_id).all():
+            raise ValueError(f'{source} lacks images of {ann_path}')
+        subset = preds.subset(np.isin(preds.image_id, ids))
+        subset.meta.update(ann_md5=ann_md5, subset_of={'file': str(source), 'md5': md5_file(source),
+                                                       'ann_md5': preds.meta.get('ann_md5')})
+        out = target / task.name
+        save_predictions(out / source.name, subset)
+        final = out / 'task_final.pth'
+        if not final.is_symlink():
+            final.symlink_to((task / 'task_final.pth').resolve())
+    return target

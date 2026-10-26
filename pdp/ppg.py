@@ -53,7 +53,7 @@ def prototype_matrix(class_prototypes, num_old_classes, device):
 
 def select_pseudo_labels(scores, labels, boxes, features, prototypes, valid, *, mode, tau_high, tau_low,
                          sim_thresh, nearest_prototype=False, gt_boxes=None, gt_iou=0.0, dedup_iou=0.0,
-                         return_keep=False):
+                         return_keep=False, stats=None):
     """Pseudo-labels of one image from its candidates (outputs of select_candidates for that image).
 
     features: [k, D] teacher query features of the candidates.
@@ -68,6 +68,8 @@ def select_pseudo_labels(scores, labels, boxes, features, prototypes, valid, *, 
     object that is already labelled (their features match its prototype), and the duplicates compound over
     the tasks (E4 audit, 30/09: 3.7% of the pseudo-labels at task 2, 31% at task 5).
     Returns (boxes [n, 4], labels [n]), plus the boolean mask over the candidates if return_keep (V4).
+    stats (a Counter, FULL-SYN F0.6) adds the pseudo-labels selected by the thresholds/prototypes and how many of
+    them I3 and F14 drop.
     """
     keep = scores > tau_high
     if mode == 'ppg':
@@ -83,12 +85,19 @@ def select_pseudo_labels(scores, labels, boxes, features, prototypes, valid, *, 
             keep[medium] = verified
     elif mode != 'threshold':
         raise ValueError(f'unknown pseudo-label mode {mode!r}')
+    if stats is not None:
+        stats['selected'] += int(keep.sum())
     if gt_iou > 0 and gt_boxes is not None and len(gt_boxes) and keep.any():
+        before = int(keep.sum())
         overlap = box_iou(cxcywh_to_xyxy(boxes), cxcywh_to_xyxy(gt_boxes.to(boxes.dtype))).max(dim=1).values
         keep &= overlap < gt_iou
+        if stats is not None:
+            stats['dropped_i3'] += before - int(keep.sum())
     if dedup_iou > 0 and keep.sum() > 1:
         kept = torch.nonzero(keep).squeeze(1)
         survivors = kept[nms(cxcywh_to_xyxy(boxes[kept]).float(), scores[kept].float(), dedup_iou)]
+        if stats is not None:
+            stats['dropped_f14'] += int(keep.sum()) - len(survivors)
         keep = torch.zeros_like(keep)
         keep[survivors] = True
     if return_keep:

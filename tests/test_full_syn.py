@@ -68,3 +68,38 @@ EVAL = REPO_ROOT / "data/processed/rpc_eval_official_v1"
 def test_released_files_match_their_manifests(tmp_path):
     hashes = link_tasks(RELEASE, EVAL, tmp_path / "links")
     assert len(hashes) == 2 * N_TASKS + 2
+
+
+def test_subset_run_scores_the_old_test_images_with_the_val_policy(tmp_path):
+    """F0.8: predictions on the full test, filtered to the B1/B2 test images, evaluate like a run made on them."""
+    from autocheckout.full_syn import subset_run
+    from autocheckout.io import md5_file, save_json
+    from autocheckout.predictions import load_predictions, save_predictions
+    from tests.coco_helpers import make_ann, make_gt, make_image, make_preds, three_task_config
+    from tools import eval_count
+
+    cfg = three_task_config()
+    full = make_gt(images=[make_image(i) for i in (1, 2, 3)],
+                   annotations=[make_ann(i, i, 0, [0, 0, 10, 10]) for i in (1, 2, 3)], num_labels=6)
+    old = {**full, "images": full["images"][:2], "annotations": full["annotations"][:2]}
+    for name, gt in (("val_full.json", full), ("test_full.json", full), ("old_test.json", old)):
+        save_json(tmp_path / name, gt)
+    run = tmp_path / "run"
+    (run / "task_1").mkdir(parents=True)
+    (run / "task_1/task_final.pth").write_bytes(b"weights")
+    rows = [(1, 0, 0, 0.9, [0, 0, 10, 10]), (2, 0, 0, 0.9, [0, 0, 10, 10]), (3, 0, 1, 0.9, [0, 0, 10, 10])]  # image 3: wrong SKU
+    for split in ("val", "test"):
+        meta = {"task_id": 1, "seen_classes": 2, "split": split, "ann_md5": md5_file(tmp_path / f"{split}_full.json")}
+        save_predictions(run / f"task_1/pred_{split}.npz", make_preds(rows, meta))
+    policy = eval_count.calibrate_run(run, tmp_path / "val_full.json", cfg)
+
+    subset = subset_run(run, tmp_path / "old_test.json", tmp_path / "compare")
+    assert sorted(set(load_predictions(subset / "task_1/pred_test.npz").image_id.tolist())) == [1, 2]
+    full_result = eval_count.evaluate_policy(run, tmp_path / "test_full.json", cfg, policy)
+    old_result = eval_count.evaluate_policy(subset, tmp_path / "old_test.json", cfg, policy)
+    assert full_result["stages"][1]["test"]["overall"]["cAcc"] == pytest.approx(2 / 3)
+    assert old_result["stages"][1]["test"]["overall"]["cAcc"] == pytest.approx(1.0)
+
+    save_json(tmp_path / "other.json", {**full, "images": [make_image(9)], "annotations": []})
+    with pytest.raises(ValueError, match="lacks images"):
+        subset_run(run, tmp_path / "other.json", tmp_path / "bad")

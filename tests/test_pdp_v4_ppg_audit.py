@@ -39,3 +39,6 @@ def test_audit_end_to_end(tmp_path, monkeypatch):
         sum(v for k, v in b.items() if k != "precision") for b in result["branches"].values())
     assert sum(sum(v for k, v in s.items() if k != "recall") for s in result["by_supercategory"].values()) \
         == result["earlier_objects"]
+    filters = result["filters"]  # FULL-SYN F0.6: what survives I3/F14 is what the branches classify
+    assert filters["selected"] - filters["dropped_i3"] - filters["dropped_f14"] == counts.get("tp", 0) + counts.get(
+        "wrong_class", 0) + counts.get("fp", 0) + counts.get("duplicate", 0)

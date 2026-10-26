@@ -1,5 +1,6 @@
 """F6: pseudo-labels of earlier classes (PPG) — candidate selection, prototype check, label range."""
 
+from collections import Counter
 from types import SimpleNamespace
 
 import torch
@@ -100,9 +101,11 @@ def test_i3_drops_pseudo_labels_overlapping_current_task_boxes():
     scores, labels, queries, cand_boxes = select_candidates(logits, boxes, PREV, topk=2)
     gt = boxes[0, [1]] + torch.tensor([0.005, 0.0, 0.0, 0.0])  # a current-task box on query 1's object
     kwargs = dict(mode="ppg", tau_high=0.5, tau_low=0.2, sim_thresh=0.5, gt_boxes=gt)
+    stats = Counter()
     _, kept = select_pseudo_labels(scores[0], labels[0], cand_boxes[0], features[0, queries[0]], protos, valid,
-                                   gt_iou=0.5, **kwargs)
+                                   gt_iou=0.5, stats=stats, **kwargs)
     assert kept.tolist() == [0]
+    assert stats == {"selected": 2, "dropped_i3": 1}  # FULL-SYN F0.6: audit counts
     _, kept_off = select_pseudo_labels(scores[0], labels[0], cand_boxes[0], features[0, queries[0]], protos,
                                        valid, gt_iou=0.0, **kwargs)
     assert sorted(kept_off.tolist()) == [0, 1]
@@ -135,7 +138,9 @@ def test_f14_keeps_one_pseudo_label_per_object():
     kwargs = dict(mode="ppg", tau_high=0.5, tau_low=0.2, sim_thresh=0.5)
     _, off = select_pseudo_labels(scores[0], labels[0], cand_boxes[0], feats, protos, valid, **kwargs)
     assert sorted(off.tolist()) == [1, 1, 2]  # the duplicate is accepted by the prototype branch
+    stats = Counter()
     kept_boxes, on = select_pseudo_labels(scores[0], labels[0], cand_boxes[0], feats, protos, valid,
-                                          dedup_iou=0.5, **kwargs)
-    assert sorted(on.tolist()) == [1, 2]  # the higher-scoring label of the object stays, the other object too
+                                          dedup_iou=0.5, stats=stats, **kwargs)
+    assert sorted(on.tolist()) == [1, 2]
+    assert stats == {"selected": 3, "dropped_f14": 1}  # the higher-scoring label of the object stays, the other object too
     assert any(torch.equal(box, boxes[0, 0]) for box in kept_boxes)

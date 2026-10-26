@@ -7,7 +7,8 @@ images of task t whose every object is annotated (train_task_<t>_gt_full.json, n
 training), and compares the pseudo-labels with the annotations of the earlier classes:
 - precision of each branch (high confidence, prototype-verified) and recall of the earlier objects;
 - the same per supercategory of the annotated class;
-- confusions (pseudo-label of one SKU on an object of another), with the share inside one supercategory.
+- confusions (pseudo-label of one SKU on an object of another), with the share inside one supercategory;
+- how many selected pseudo-labels I3 (current-task box) and F14 (duplicate) drop.
 Writes <run>/task_<t>/ppg_audit.json.
 """
 
@@ -63,6 +64,7 @@ def audit(trainer, loader, config, device):
     by_super = defaultdict(Counter)     # supercategory of the annotated class -> tp / missed
     confusions = Counter()              # (pseudo label, true label) of wrong-class pseudo-labels
     old_objects = 0
+    filters = Counter()                 # selected pseudo-labels, and those dropped by I3 / F14 (F0.6)
     prototypes, valid = prototype_matrix(trainer.class_prototypes, prev, device)
     for batch in loader:
         pixels, mask = batch['pixel_values'].to(device), batch['pixel_mask'].to(device)
@@ -79,7 +81,7 @@ def audit(trainer, loader, config, device):
                 tau_high=args.pseudo_thresh_high, tau_low=args.pseudo_thresh_low,
                 sim_thresh=args.prototype_sim_thresh, nearest_prototype=bool(args.prototype_nearest),
                 gt_boxes=gt_boxes[current].to(device), gt_iou=args.pseudo_gt_iou, dedup_iou=args.pseudo_dedup_iou,
-                return_keep=True)
+                return_keep=True, stats=filters)
             kept_scores = scores[i][keep]
             is_high = (kept_scores > args.pseudo_thresh_high).cpu()
             outcomes, matched = match_pseudo_labels(
@@ -110,6 +112,7 @@ def audit(trainer, loader, config, device):
         'recall': round(total_found / old_objects, 4) if old_objects else None,
         'branches': {name: {**counts, 'precision': precision(counts)} for name, counts in branch.items()},
         'all': {**sum(branch.values(), Counter()), 'precision': precision(sum(branch.values(), Counter()))},
+        'filters': {name: filters[name] for name in ('selected', 'dropped_i3', 'dropped_f14')},
         'by_supercategory': {name: {**counts, 'recall': round(counts['found'] / sum(counts.values()), 4)}
                              for name, counts in sorted(by_super.items())},
         'confusions_top': [{'pseudo': p, 'true': t, 'count': n, 'same_supercategory': supercategory[p] == supercategory[t]}
