@@ -4,7 +4,7 @@
 #   bash scripts/pack_full_syn_data.sh [synthetic release]
 #
 # Writes data/packages/<name>.tar and its receipts in data/packages/<name>/ (SHA256SUMS of every file, also
-# inside the tar; tar.md5, which Drive reports as the file's md5), then prints the upload commands. Paths in the
+# inside the tar; tar.md5, the md5 Drive must report for the tar), then prints the upload commands. Paths in the
 # tar are relative to the repo root: extract it at the repo root on the GPU machine, then run
 # `sha256sum -c data/packages/<name>/SHA256SUMS` there. Hashing takes long; an existing SHA256SUMS is reused.
 set -euo pipefail
@@ -39,8 +39,7 @@ tar -cf - "$RECEIPTS/SHA256SUMS" "$RECEIPTS/PACKAGE.txt" "${PATHS[@]}" \
 mv "data/packages/$NAME.tar.part" "data/packages/$NAME.tar"
 echo "wrote $REPO/data/packages/$NAME.tar ($(du -h "data/packages/$NAME.tar" | cut -f1), md5 $(cat "$RECEIPTS/tar.md5"))"
 cat <<EOF
-Upload (DEST e.g. drive:AutoCheckout/$(date +%F)); Drive's md5 of the tar must equal tar.md5:
+Upload (DEST e.g. drive:AutoCheckout/$(date +%F)); Drive's md5 of the tar must be $(cat "$RECEIPTS/tar.md5"):
   rclone copy -P --drive-chunk-size 64M $REPO/data/packages/$NAME.tar DEST/
-  rclone copy $REPO/$RECEIPTS DEST/$NAME/
-  rclone md5sum DEST/$NAME.tar; cat $REPO/$RECEIPTS/tar.md5
+  rclone md5sum DEST/$NAME.tar
 EOF

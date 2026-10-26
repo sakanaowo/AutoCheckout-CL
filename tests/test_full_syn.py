@@ -54,7 +54,8 @@ def test_links_refuse_changed_files_and_foreign_files(tmp_path):
 
     release, eval_root = toy_releases(tmp_path / "again")
     (tmp_path / "again/links").mkdir()
-    (tmp_path / "again/links/train_task_1_gt_full.json").symlink_to(release / "tasks/synth_v2/train_task_1_gt_full.json")
+    audit_file = release / "tasks/synth_v2/train_task_1_gt_full.json"
+    (tmp_path / "again/links/train_task_1_gt_full.json").symlink_to(audit_file)
     with pytest.raises(ValueError, match="not FULL-SYN inputs"):
         link_tasks(release, eval_root, tmp_path / "again/links")
 
@@ -87,7 +88,8 @@ def test_subset_run_scores_the_old_test_images_with_the_val_policy(tmp_path):
     run = tmp_path / "run"
     (run / "task_1").mkdir(parents=True)
     (run / "task_1/task_final.pth").write_bytes(b"weights")
-    rows = [(1, 0, 0, 0.9, [0, 0, 10, 10]), (2, 0, 0, 0.9, [0, 0, 10, 10]), (3, 0, 1, 0.9, [0, 0, 10, 10])]  # image 3: wrong SKU
+    # image 3: wrong SKU
+    rows = [(1, 0, 0, 0.9, [0, 0, 10, 10]), (2, 0, 0, 0.9, [0, 0, 10, 10]), (3, 0, 1, 0.9, [0, 0, 10, 10])]
     for split in ("val", "test"):
         meta = {"task_id": 1, "seen_classes": 2, "split": split, "ann_md5": md5_file(tmp_path / f"{split}_full.json")}
         save_predictions(run / f"task_1/pred_{split}.npz", make_preds(rows, meta))
@@ -103,3 +105,52 @@ def test_subset_run_scores_the_old_test_images_with_the_val_policy(tmp_path):
     save_json(tmp_path / "other.json", {**full, "images": [make_image(9)], "annotations": []})
     with pytest.raises(ValueError, match="lacks images"):
         subset_run(run, tmp_path / "other.json", tmp_path / "bad")
+
+
+@pytest.mark.parametrize("value,round_id,decision", [
+    (0.728, 1, "go"), (0.7279, 1, "stop"), (0.60, 2, "stop"), (0.60, 3, "go"), (0.578, 3, "go"), (0.5779, 3, "stop"),
+])
+def test_task1_gate_follows_d17_and_d19(value, round_id, decision):
+    from autocheckout.full_syn import task1_decision
+    assert task1_decision(value, round_id)[1] == decision
+
+
+def test_an_enforced_gate_stops_the_round_and_the_next_stages(tmp_path):
+    from autocheckout.full_syn import GateStop, _finish, _gate, _require
+    plan = dict(root=str(tmp_path), dry_run=False, campaign_id="c", round=1, release_config_sha256="x", input_sha256={},
+                train_images=[1] * N_TASKS)
+    gate = _gate(plan, "D18 FSA early check", "stop", "too low")
+    with pytest.raises(GateStop, match="too low"):
+        _finish(plan, "fsa", {"cAcc_m2": 0.1}, gate)
+    with pytest.raises(GateStop):
+        _require(plan, "fsa")
+    assert "too low" in (tmp_path / "SUMMARY.md").read_text()
+
+
+@pytest.mark.slow
+def test_dry_round_runs_every_stage_and_resumes_without_training_again(tmp_path):
+    """The CPU fixture through smoke, G1-G4 (gates reported, not enforced); a second pass trains nothing and the
+    test is not scored again."""
+    from autocheckout import full_syn
+    settings = dict(campaign_id="dry", round=1, artifact_root=str(tmp_path), dry_run=True, batch_size=1,
+                    effective_batch=2, resolution=640, fsa_epochs=8, epochs=16, audit_images=4)
+    plan = full_syn.prepare(settings)
+    smoke = full_syn.stage_smoke(plan, steps=1)
+    assert smoke["fsa"]["optimizer_steps"] == 2 and smoke["fsa"]["resume_verification"]["state_equal"]
+    stages = [full_syn.stage_fsa, full_syn.stage_task1, full_syn.stage_tasks, full_syn.stage_final_test]
+    first = [stage(plan) for stage in stages]
+    assert first[0]["gate"]["decision"] in ("go", "stop") and not first[0]["gate"]["enforced"]
+    run = tmp_path / "dry_run/dry/runs/EXP-FULL-SYN"
+    for task in range(2, N_TASKS + 1):
+        log = json.loads((run / f"task_{task}/task_log.json").read_text())
+        assert {"cAcc_m1_groups", "pseudo_labels", "confusions_top20", "cAcc_by_level"} <= set(log)
+    assert all((run / f"task_{t}/pred_test.npz").is_file() for t in range(1, N_TASKS + 1))
+    assert "compare_b12" in first[3] and (tmp_path / "dry_run/dry/SUMMARY.md").is_file()
+
+    again = full_syn.prepare(settings)
+    assert full_syn.stage_fsa(again)["cAcc_m2"] == first[0]["cAcc_m2"]
+    assert full_syn.stage_final_test(again)["finished_at"] == first[3]["finished_at"]
+    logs = sorted((tmp_path / "dry_run/dry/attempts/fsa").glob("*/*_runner.log"), key=lambda p: p.stat().st_mtime)
+    assert "done, skipped" in logs[-1].read_text()
+    with pytest.raises(ValueError, match="new campaign_id"):
+        full_syn.prepare({**settings, "audit_images": 8})  # a changed setting needs a new campaign (round)

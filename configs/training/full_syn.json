@@ -1,0 +1,20 @@
+{
+  "campaign_id": "full-syn-r1",
+  "round": 1,
+  "artifact_root": "data/training",
+  "dry_run": true,
+  "release_root": "data/processed/rpc_synth_v2_v1",
+  "eval_root": "data/processed/rpc_eval_official_v1",
+  "raw_root": "data/archive",
+  "pretrained_root": "data/pretrained/hf-cache",
+  "resolution": 640,
+  "batch_size": 8,
+  "effective_batch": 8,
+  "num_workers": 8,
+  "tf32": true,
+  "fsa_epochs": 8,
+  "epochs": 16,
+  "checkpoint_every_minutes": 2,
+  "audit_images": 1000,
+  "smoke_steps": 200
+}

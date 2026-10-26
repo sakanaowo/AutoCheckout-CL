@@ -2,7 +2,7 @@
 
 Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép v2 và chấm trên ảnh RPC thật, theo [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md). Đóng mục R5 và việc mở số 3 (trần epoch FSA, D21) của tài liệu quyết định.
 
-**Trạng thái:** dữ liệu xong và đã rà lại 22/10; chưa viết code của gói này, chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất). Q4 (hình thức chạy: notebook mới, gói dữ liệu trên Drive, người dùng tự setup máy vast) chốt 25/10, xem mục 4.1. **F0.2 đạt 25/10:** `test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1` dùng ConvNeXt-V2 atto, truyền `--backbone_pretrained_file` như B2. Sau khi PDP task 1 nạp `hf_model`, digest của backbone + encoder + decoder bằng đúng digest của FSA, nghĩa là trọng số ImageNet không ghi đè lên backbone đã fine-tune. Khóa thiếu khi nạp chỉ có prompt và `class_embed`. Gói dữ liệu: `data/packages/full_syn_rpc_synth_v2_v1_20261025.tar` (25 GB, 101.681 file dữ liệu, md5 `13066bcff65cc42047c969e127c08114`), chờ người dùng upload.
+**Trạng thái (26/10):** dữ liệu xong và đã rà lại 22/10. **Code F0.1–F0.6, F0.8, workflow và hai notebook đã xong** (bảng "Đã làm" ở mục 4.1); còn F0.7, phải chạy trên máy GPU thuê. Chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất). Q4 (hình thức chạy: notebook mới, gói dữ liệu trên Drive, người dùng tự setup máy vast) chốt 25/10, xem mục 4.1. **F0.2 đạt 25/10:** `test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1` dùng ConvNeXt-V2 atto, truyền `--backbone_pretrained_file` như B2. Sau khi PDP task 1 nạp `hf_model`, digest của backbone + encoder + decoder bằng đúng digest của FSA, nghĩa là trọng số ImageNet không ghi đè lên backbone đã fine-tune. Khóa thiếu khi nạp chỉ có prompt và `class_embed`. Gói dữ liệu: `data/packages/full_syn_rpc_synth_v2_v1_20261025.tar` (25 GB, 101.681 file dữ liệu, md5 `13066bcff65cc42047c969e127c08114`), chờ người dùng upload.
 
 ## 0. Đọc nhanh
 
@@ -133,6 +133,21 @@ Các cổng chỉ dùng ngưỡng số đã chốt, nên notebook chạy liền 
 | Sau G2 (D17, D19) | 🟡 hoặc 🔴 ở vòng 1–2. Ở vòng 3: 🟡 thì chạy tiếp và ghi "kỳ vọng ngang B2"; 🔴 thì dừng hướng ảnh ghép thuần |
 | Sau task 2 (G3) | Precision nhãn giả so với `gt_full` < **0,5** (người dùng chốt 25/10) |
 | Trước G4 | Chưa đủ 5 task hoặc chưa có policy chọn trên val; hoặc đã có kết quả test (chỉ chấm một lần) |
+
+**Đã làm (26/10):**
+
+| ID | Code | Bằng chứng |
+|---|---|---|
+| F0.1 | `configs/exp/native/EXP-FULL-SYN.sh`, `EXP-FULL-SYN-FSA.sh`, `full_syn.sh`; `full_syn.link_tasks` | `test_full_syn_configs_follow_the_plan_table`: khác B2 đúng 4 tham số (ảnh train, `repo_name`, F14, I3). Symlink khớp sha256 của cả hai manifest trên dữ liệu thật; thư mục có file `gt_full` thì bị từ chối |
+| F0.2 | không cần sửa code | Xem dòng trạng thái đầu tài liệu |
+| F0.3 | `--pred_splits` (`main.py`), `PRED_SPLITS` (`run_exp.sh`) | Vòng cổng không ghi `pred_test.npz`; sau đó predict-only thêm `pred_test` mà không train lại |
+| F0.4 | `--select_best_epoch` (`main.py`, `checkpointing.record_epoch`) | `task_final.pth` và `hf_model` lấy từ epoch có AP50 val cao nhất; giữ epoch sớm nhất khi bằng điểm; vẫn đúng sau khi chạy tiếp từ checkpoint; đường val ghi trong `hf_model/epoch_selection.json` |
+| F0.5 | `counting.select_group_thresholds`, `eval_count --group-thresholds` | Trên B2, chạy một ngưỡng ra đúng policy cũ ở cả 5 stage. Ngưỡng theo nhóm nâng val cAcc stage 2–5 từ 0,552/0,304/0,230/0,205 lên 0,598/0,403/0,274/0,228 (chọn và chấm trên cùng val nên lạc quan) |
+| F0.6 | `ppg_audit` đếm số nhãn bị I3/F14 loại; `full_syn.score_val`, `task_<t>/task_log.json`, `SUMMARY.md` | Audit chạy trước khi train task t, vì nhãn giả của task t do model task t−1 sinh ra. Nhờ vậy cổng precision < 0,5 ở task 2 dừng trước khi tốn giờ GPU |
+| F0.8 | `full_syn.subset_run` | Chấm B2 qua đường lọc này ra đúng số test cũ ở cả 5 stage (stage 5 cAcc 0,2174) |
+| Workflow | `autocheckout/full_syn.py`: `prepare`, `stage_smoke/fsa/task1/tasks/final_test` | Dry run trên CPU đi qua mọi stage, chạy lại thì không train lại; đổi settings trong campaign cũ thì bị từ chối. Hai notebook chạy hết qua `tools.execute_training_notebook --dry-run` |
+
+Cách chạy trên máy vast: [runbook mục 7](TRAINING_NOTEBOOK_RUNBOOK.md#7-full-syn-trên-máy-vastai-26102026).
 
 **Log:** notebook là **log chạy**, đi song song với log do code ghi. Cell output ghi cấu hình, hash, tiến độ và kết quả từng trạm kiểm tra; bản notebook có output được commit vào git. Log đầy đủ do code ghi (checkpoint, `train.log`, `step_metrics.jsonl`, predictions, policy, các bản notebook đã chạy) nằm dưới `data/training/<campaign>/`, thư mục này bị gitignore.
 

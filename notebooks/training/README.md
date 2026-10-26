@@ -14,8 +14,10 @@ Chỉ bắt đầu sau khi các notebook trong [modeling](../modeling/README.md)
 | [01_task1_pilot.ipynb](01_task1_pilot.ipynb) | Pilot EXP-B1/B2 cùng budget; dry run có interruption/resume |
 | [02_task_transition.ipynb](02_task_transition.ipynb) | Task 1→2, teacher/PPG/prototype/current-task subset; parent từ pilot |
 | [03_five_task_baseline.ipynb](03_five_task_baseline.ipynb) | Baseline mới đủ 5 task; snapshot metrics/policy ngay sau mỗi task |
+| [04_full_syn_smoke.ipynb](04_full_syn_smoke.ipynb) | FULL-SYN F0.7: kiểm gói dữ liệu, smoke FSA/PDP, resume, giây/bước và VRAM trên máy GPU mới |
+| [05_full_syn_r1.ipynb](05_full_syn_r1.ipynb) | FULL-SYN vòng 1: G1 FSA → G2 PDP task 1 → G3 task 2–5 → G4 test một lần, cổng tự dừng; vòng sau là file `_r<N>` mới |
 
-[Runbook chi tiết](../../docs/project/TRAINING_NOTEBOOK_RUNBOOK.md) hướng dẫn settings, copy/upload data/weights, tmux, đọc logs, resume và download artifacts. [Báo cáo dry run](../../docs/project/TRAINING_NOTEBOOK_DRY_RUN.md) giữ evidence local.
+[Runbook chi tiết](../../docs/project/TRAINING_NOTEBOOK_RUNBOOK.md) (FULL-SYN trên vast.ai: mục 7) hướng dẫn settings, copy/upload data/weights, tmux, đọc logs, resume và download artifacts. [Báo cáo dry run](../../docs/project/TRAINING_NOTEBOOK_DRY_RUN.md) giữ evidence local.
 
 Mọi artifacts mới ghi dưới `data/training/`; template settings ở [notebooks.json](../../configs/training/notebooks.json), mặc định CPU dry run. Real baseline dùng `dry_run=false`, budget đã khóa 16 epochs/task. Khi chuyển máy, truyền `--settings data/training/settings_baseline_4080.json`; notebook 03 vẫn giữ default legacy 4090 nếu không override. Executor dùng đúng interpreter, lưu live outputs mỗi 15 giây và không giới hạn thời gian cell train.
 

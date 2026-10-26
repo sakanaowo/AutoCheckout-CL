@@ -1,5 +1,7 @@
 # Tiến độ AutoCheckout-CL
 
+**26/10/2026 — code gói FULL-SYN xong:** F0.1–F0.6, F0.8, `autocheckout/full_syn.py` và hai notebook ([04 smoke](../../notebooks/training/04_full_syn_smoke.ipynb), [05 vòng 1](../../notebooks/training/05_full_syn_r1.ipynb)); dry run của cả hai notebook đạt. Trên B2, F0.5 và F0.8 tái lập đúng số cũ. Còn F0.7 (smoke trên 4090) rồi G1. Cách chạy: [runbook mục 7](TRAINING_NOTEBOOK_RUNBOOK.md#7-full-syn-trên-máy-vastai-26102026).
+
 **25/10/2026 — hình thức chạy gói FULL-SYN:** trên nhánh này viết code F0.1–F0.8, tạo notebook training mới, cập nhật tài liệu và đóng gói dữ liệu lên Drive; người dùng tự setup máy 4090 vast.ai rồi chạy notebook. Notebook là log chạy commit vào git, song song với log của code dưới `data/training/` ([plan mục 4.1](full-syn-train-plan-2026-10-22.md#41-hình-thức-triển-khai-người-dùng-chốt-2510)).
 
 **22/10/2026 — plan gói train FULL-SYN:** [plan](full-syn-train-plan-2026-10-22.md). Chốt: FSA tối đa 8 epoch chọn theo val, không dự đoán test trong vòng cổng, train trên 4090 vast.ai như B2. Bước tiếp theo: F0.1–F0.6 (code, kiểm chứng export FSA ConvNeXt) trước khi thuê GPU. Ước lượng khoảng 52–58 giờ GPU nếu qua cổng ngay vòng 1. Bản A cũ (23 GB) đã xoá, giữ biên bản ở `runs/data_preprocessing/synthetic_v2/layoutA_record/`.

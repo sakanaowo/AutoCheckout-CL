@@ -198,3 +198,65 @@ rsync -a --partial --info=progress2 -e 'ssh -p PORT' \
 ```
 
 Data/artifacts không vào Git. Giữ code/config/notebook template trong Git, và toàn bộ campaign dưới data để có thể tiếp tục hoặc đối chiếu kết quả.
+
+## 7. FULL-SYN trên máy vast.ai (26/10/2026)
+
+[Plan FULL-SYN](full-syn-train-plan-2026-10-22.md), mục 4.1. Hai notebook mới: [04_full_syn_smoke](../../notebooks/training/04_full_syn_smoke.ipynb) (một lần trên mỗi máy) và [05_full_syn_r1](../../notebooks/training/05_full_syn_r1.ipynb) (vòng 1; vòng chỉnh sau là file mới `05_full_syn_r<N>.ipynb` với `campaign_id` và `round` mới). Notebook gọi `autocheckout/full_syn.py`; train vẫn đi qua `scripts/run_exp.sh` và `pdp/main.py`. Notebook 01–03 giữ nguyên làm lịch sử B1/B2.
+
+Thuê máy: RTX 4090, đĩa khoảng 100 GB (dữ liệu 26 GB, môi trường, artifact; thêm 25 GB nếu tải file tar về rồi mới giải nén). Trên máy:
+
+```bash
+# 1. Code: nhánh đã push
+git clone -b feat/synthetic-data-v2 https://github.com/sakanaowo/AutoCheckout-CL.git /workspace/AutoCheckout-CL
+cd /workspace/AutoCheckout-CL
+
+# 2. Môi trường (docs/environment/README.md)
+conda env create -f configs/environment/pdp.yml && conda activate pdp
+python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
+python -m pip install -r requirements.txt && python -m pip install -e .
+
+# 3. Dữ liệu: copy ~/.config/rclone/rclone.conf của máy local sang, rồi tải và giải nén cùng lúc (không cần 25 GB cho file tar)
+rclone cat drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar | tar -x -C /workspace/AutoCheckout-CL
+# tùy chọn, kiểm đủ 101.681 file (lâu); notebook 04 kiểm 300 file ngẫu nhiên và mọi ảnh mà nhãn liệt kê
+sha256sum -c --quiet data/packages/full_syn_rpc_synth_v2_v1_20261025/SHA256SUMS
+
+# 4. Settings của vòng 1
+cp configs/training/full_syn.json data/training/settings_full_syn_r1.json   # sửa "dry_run": false
+```
+
+Chạy trong tmux (`tmux new -s fullsyn`; Ctrl+B rồi D để thoát ra, `tmux attach -t fullsyn` để vào lại):
+
+```bash
+python -m tools.execute_training_notebook --notebook notebooks/training/04_full_syn_smoke.ipynb \
+  --settings data/training/settings_full_syn_r1.json --live-notebook notebooks/training/04_full_syn_smoke.ipynb
+# xem smoke/smoke_report.json (giờ/bước, VRAM, resume) rồi mới chạy vòng 1
+python -m tools.execute_training_notebook --notebook notebooks/training/05_full_syn_r1.ipynb \
+  --settings data/training/settings_full_syn_r1.json --live-notebook notebooks/training/05_full_syn_r1.ipynb
+```
+
+`--live-notebook` ghi output vào chính notebook trong repo: đó là log chạy được commit sau. Log đầy đủ nằm trong `data/training/full-syn-r1/`:
+
+```text
+data/training/full-syn-r1/
+  plan.json                  # settings, sha256 các file nhãn, md5 pretrained, khóa cho cả vòng
+  inputs/tasks/              # symlink: train_task_<t>.json (ảnh ghép), val/test (ảnh thật); không có gt_full
+  smoke/                     # notebook 04: run thử, smoke_report.json
+  runs/EXP-FULL-SYN-FSA/     # G1: task_1/hf_model (+ epoch_selection.json), pred_val, policy, metrics val
+  runs/EXP-FULL-SYN/         # G2-G4: task_<t>/ (ppg_audit.json, task_log.json, pred_val/test), policy, metrics
+  compare_b12/EXP-FULL-SYN/  # G4: dự đoán test lọc theo 6.003 ảnh test cũ của B1/B2
+  stages/<stage>.json        # kết quả và quyết định cổng của fsa, task1, tasks, final_test
+  SUMMARY.md                 # bảng tổng hợp của vòng
+  attempts/<stage>/<id>/     # execution.json (git, lệnh, trạng thái) + log runner từng lệnh
+  notebook_executions/       # bản notebook đã chạy của executor
+```
+
+Ngắt giữa chừng (mất SSH, Ctrl+C, máy khởi động lại): chạy lại cùng lệnh. Bước đã xong được bỏ qua, task dở chạy tiếp từ `last.ckpt`; test đã chấm thì chỉ in lại. Một cell báo `GateStop` nghĩa là một cổng của plan đã dừng vòng: đọc `SUMMARY.md` và `stages/*.json`, rồi quyết định vòng chỉnh theo mục 6 của plan.
+
+Xong thì kéo campaign về máy local trước khi trả máy, rồi commit notebook có output:
+
+```bash
+rsync -a --partial --info=progress2 -e 'ssh -p PORT' \
+  USER@HOST:/workspace/AutoCheckout-CL/data/training/full-syn-r1/ data/training/full-syn-r1/
+```
+
+Dry run local trên CPU, không cần GPU hay dữ liệu thật: `python -m tools.execute_training_notebook --notebook notebooks/training/05_full_syn_r1.ipynb --settings data/training/settings_full_syn_r1.json --dry-run` (fixture 6 nhãn, cổng chỉ báo, không dừng). Bản dry run 26/10 của hai notebook chạy hết, exit 0.
