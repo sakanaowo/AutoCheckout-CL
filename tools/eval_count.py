@@ -29,9 +29,11 @@ from autocheckout.counting import (
     dedup_detections,
     drop_unlearned,
     gt_counts,
+    label_thresholds,
     oracle_by_level,
     pred_counts,
     scores_by_level,
+    select_group_thresholds,
     select_threshold,
     validated_grid,
 )
@@ -78,10 +80,11 @@ def _validated_predictions(path: Path, coco: COCO, cfg: TaskConfig, stage: int,
 def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
                   thresholds: Sequence[float] = CALIBRATION_GRID,
                   nms_ious: Sequence[float] = (0.45,), stages: Sequence[int] | None = None,
-                  unlearned_iou: float | None = None) -> dict[str, Any]:
+                  unlearned_iou: float | None = None, group_thresholds: bool = False) -> dict[str, Any]:
     """Choose one counting policy per checkpoint using validation inputs exclusively. With ``unlearned_iou``
     (cAcc-M2), each stage is scored on the images with learned objects, without the predictions on
-    objects of classes not learned yet (``drop_unlearned``)."""
+    objects of classes not learned yet (``drop_unlearned``). With ``group_thresholds`` (FULL-SYN F0.5), each
+    stage also gets one threshold per learned task (``select_group_thresholds``), chosen at the stage's NMS."""
     thresholds = validated_grid(thresholds, "threshold grid")
     nms_ious = validated_grid(nms_ious, "NMS grid")
     val_md5 = md5_file(val_ann_path)
@@ -101,6 +104,12 @@ def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
             threshold, scores = select_threshold(scored, processed, labels, thresholds)
             candidates.append(dict(score_threshold=threshold, nms_iou=nms_iou, val_scores=scores))
         best = min(candidates, key=lambda p: (-p["val_scores"]["cAcc"], p["score_threshold"], p["nms_iou"]))
+        if group_thresholds:
+            processed = dedup_detections(preds, best["nms_iou"]) if best["nms_iou"] else preds.top1_per_query()
+            groups = [list(cfg.task(t).labels) for t in range(1, stage + 1)]
+            vector, scores = select_group_thresholds(scored, processed, groups, thresholds)
+            best = {**best, "group_thresholds": {f"task_{t}": v for t, v in enumerate(vector, 1)},
+                    "single_threshold_val_scores": best["val_scores"], "val_scores": scores}
         policies[str(stage)] = {
             **best, "task_id": stage, "seen_classes": len(labels), "val_images": len(scored.getImgIds()),
             "candidates": candidates,
@@ -112,7 +121,8 @@ def calibrate_run(run_dir: Path, val_ann_path: Path, cfg: TaskConfig, *,
         "task_config": cfg.name, "task_config_sha256": _config_digest(cfg),
         "val_ann": str(val_ann_path), "val_ann_md5": val_md5,
         "threshold_grid": thresholds, "nms_grid": nms_ious, "tie_break": POLICY_TIE_BREAK,
-        "unlearned_iou": unlearned_iou, "zero_gt_class_handling": ZERO_GT_NOTE, "stages": policies,
+        "unlearned_iou": unlearned_iou, "group_thresholds": group_thresholds,
+        "zero_gt_class_handling": ZERO_GT_NOTE, "stages": policies,
     }
 
 
@@ -139,6 +149,13 @@ def evaluate_policy(run_dir: Path, test_ann_path: Path, cfg: TaskConfig, policy:
             raise ValueError(f"task_{stage}: checkpoint differs from the calibrated policy")
         threshold, nms_iou = selected["score_threshold"], selected["nms_iou"]
         validated_grid([threshold], "policy threshold grid")
+        groups = selected.get("group_thresholds")
+        if groups is not None:
+            if sorted(groups) != [f"task_{t}" for t in range(1, stage + 1)]:
+                raise ValueError(f"task_{stage}: policy group thresholds must cover tasks 1..{stage}")
+            validated_grid(list(groups.values()), "policy group thresholds")
+            threshold = label_thresholds([list(cfg.task(t).labels) for t in range(1, stage + 1)],
+                                         [groups[f"task_{t}"] for t in range(1, stage + 1)])
         validated_grid([nms_iou], "policy NMS grid")
         preds = _validated_predictions(path, coco, cfg, stage, "test", test_md5)
         labels = list(range(cfg.seen_classes(stage)))
@@ -147,7 +164,8 @@ def evaluate_policy(run_dir: Path, test_ann_path: Path, cfg: TaskConfig, policy:
         processed = dedup_detections(preds, nms_iou) if nms_iou else preds.top1_per_query()
         results[stage] = {
             "task_id": stage, "seen_classes": len(labels), "nms_iou": nms_iou,
-            "threshold": {"value": threshold, "cAcc_val": selected["val_scores"]["cAcc"]},
+            "threshold": {"value": selected["score_threshold"], "groups": groups,
+                          "cAcc_val": selected["val_scores"]["cAcc"]},
             "test": scores_by_level(scored, processed, labels, threshold),
             "test_by_task": scores_by_task_group(scored, processed, cfg, stage, threshold),
         }
@@ -205,7 +223,10 @@ def to_markdown(result: dict[str, Any]) -> str:
     for stage in sorted(result["stages"]):
         s = result["stages"][stage]
         t = s["test"]["overall"]
-        row = (f"| {stage} | {_fmt(s['nms_iou'])} | {_fmt(s['threshold']['value'])} | "
+        threshold = s["threshold"]
+        shown = "/".join(f"{v:.2f}" for v in threshold["groups"].values()) if threshold.get("groups") \
+            else _fmt(threshold["value"])
+        row = (f"| {stage} | {_fmt(s['nms_iou'])} | {shown} | "
                f"{_fmt(s['threshold']['cAcc_val'])} | {_fmt(t['cAcc'])} | {_fmt(t['ACD'])} | "
                f"{_fmt(t['mCCD'])} | {_fmt(t['mCIoU'])} |")
         if show_oracle:
@@ -240,6 +261,8 @@ def main() -> None:
     parser.add_argument("--unlearned-iou", type=float,
                         help="cAcc-M2: score images with learned objects, dropping predictions with this IoU "
                              "against objects of classes not learned yet (synthetic v2 D16: 0.5)")
+    parser.add_argument("--group-thresholds", action="store_true",
+                        help="FULL-SYN F0.5: one score threshold per learned task, selected on val")
     parser.add_argument("--oracle", action="store_true",
                         help="explicit test-selected diagnostic; never used for policy")
     args = parser.parse_args()
@@ -247,7 +270,7 @@ def main() -> None:
     cfg = TaskConfig.load(args.task_config)
     if args.policy_in:
         if args.threshold_grid is not None or args.nms_grid is not None or args.nms_iou is not None or args.policy_out \
-                or args.unlearned_iou is not None:
+                or args.unlearned_iou is not None or args.group_thresholds:
             parser.error("--policy-in cannot be combined with calibration settings")
         policy = load_json(args.policy_in)
         policy_path = args.policy_in
@@ -260,8 +283,8 @@ def main() -> None:
         nms_ious = [float(x) for x in args.nms_grid.split(",")] if args.nms_grid else [
             0.45 if args.nms_iou is None else args.nms_iou]
         policy = calibrate_run(args.run_dir, args.val_ann, cfg, thresholds=thresholds, nms_ious=nms_ious,
-                               unlearned_iou=args.unlearned_iou)
-        m2 = "_m2" if args.unlearned_iou else ""
+                               unlearned_iou=args.unlearned_iou, group_thresholds=args.group_thresholds)
+        m2 = ("_m2" if args.unlearned_iou else "") + ("_groups" if args.group_thresholds else "")
         policy_path = args.policy_out or args.run_dir / f"calibration_count{m2}.json"
         save_json(policy_path, policy, indent=2)
         print(f"Wrote validation policy {policy_path}")
@@ -276,6 +299,8 @@ def main() -> None:
     suffix = f"_nms{args.nms_iou:g}" if args.nms_iou is not None and args.nms_iou > 0 else ""
     if policy.get("unlearned_iou"):
         suffix += "_m2"
+    if policy.get("group_thresholds"):
+        suffix += "_groups"
     if args.oracle:
         suffix += "_oracle"
     out_path = args.run_dir / f"metrics_count_test{suffix}.json"

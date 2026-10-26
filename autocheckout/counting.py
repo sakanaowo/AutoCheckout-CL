@@ -117,10 +117,11 @@ def pred_counts(
 
 
 def count_matrix(
-    top1: Predictions, image_ids: Sequence[int], labels: Sequence[int], threshold: float
+    top1: Predictions, image_ids: Sequence[int], labels: Sequence[int], threshold: float | np.ndarray
 ) -> np.ndarray:
     """Like ``pred_counts`` for rows that are already one per query (``top1_per_query()``), so
-    threshold sweeps compute the top-1 rows once."""
+    threshold sweeps compute the top-1 rows once. ``threshold`` is one score threshold, or an array indexed by
+    label (one threshold per task group, ``label_thresholds``)."""
     counts = np.zeros((len(image_ids), len(labels)), dtype=np.int64)
     if len(top1) == 0 or len(image_ids) == 0 or len(labels) == 0:
         return counts
@@ -128,7 +129,7 @@ def count_matrix(
     labels_arr = np.asarray(labels, dtype=np.int64)
     image_order = np.argsort(image_ids_arr)
     label_order = np.argsort(labels_arr)
-    keep = top1.score >= threshold
+    keep = top1.score >= (np.asarray(threshold)[top1.label] if np.ndim(threshold) else threshold)
     rows_img, rows_label = top1.image_id[keep], top1.label[keep].astype(np.int64)
     # position of each row's image / label in the requested lists; rows not in the lists are dropped
     i = np.clip(np.searchsorted(image_ids_arr, rows_img, sorter=image_order), 0, len(image_ids_arr) - 1)
@@ -202,6 +203,49 @@ def select_threshold(
         if best_scores is None or scores["cAcc"] > best_scores["cAcc"]:
             best_threshold, best_scores = float(threshold), scores
     return best_threshold, best_scores
+
+
+def label_thresholds(groups: Sequence[Sequence[int]], thresholds: Sequence[float]) -> np.ndarray:
+    """Per-label threshold array from one threshold per group of labels (the classes of each task)."""
+    result = np.full(max(max(g) for g in groups) + 1, np.inf)
+    for group, threshold in zip(groups, thresholds, strict=True):
+        result[list(group)] = threshold
+    return result
+
+
+def select_group_thresholds(
+    coco_gt: COCO, preds: Predictions, groups: Sequence[Sequence[int]], thresholds: Sequence[float] = THRESHOLD_GRID,
+    max_passes: int = 10,
+) -> tuple[list[float], dict[str, float]]:
+    """FULL-SYN F0.5 (synthetic v2 D8): one score threshold per task group, maximising cAcc on validation.
+
+    Classes learned early are forgotten little by little and get lower scores than new ones, so one threshold
+    undercounts one group or overcounts the other. Coordinate ascent from the best single threshold: each group in
+    turn takes the grid value with the highest cAcc, the others fixed; only a strictly higher cAcc replaces the
+    current value (ties keep it, then the smaller threshold), until a pass changes nothing. With one group this is
+    ``select_threshold``."""
+    thresholds = validated_grid(thresholds, "threshold grid")
+    labels = sorted(label for group in groups for label in group)
+    image_ids = sorted(coco_gt.getImgIds())
+    gt = gt_counts(coco_gt, image_ids, labels)
+    top1 = preds.top1_per_query()
+
+    def score(vector):
+        return counting_scores(count_matrix(top1, image_ids, labels, label_thresholds(groups, vector)), gt)
+
+    single, best_scores = select_threshold(coco_gt, preds, labels, thresholds)
+    best = [single] * len(groups)
+    for _ in range(max_passes):
+        changed = False
+        for g in range(len(groups)):
+            for threshold in thresholds:
+                candidate = [*best[:g], threshold, *best[g + 1:]]
+                scores = score(candidate)
+                if scores["cAcc"] > best_scores["cAcc"]:
+                    best, best_scores, changed = candidate, scores, True
+        if not changed:
+            break
+    return best, best_scores
 
 
 def validated_grid(values: Sequence[float], name: str) -> list[float]:

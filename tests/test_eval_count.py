@@ -146,3 +146,49 @@ def test_m2_policy_is_saved_and_applied_on_test(tmp_path, monkeypatch):
     assert load_json(run_dir / "calibration_count_m2.json")["unlearned_iou"] == 0.5
     result = load_json(run_dir / "metrics_count_test_m2.json")
     assert result["unlearned_iou"] == 0.5 and not (run_dir / "metrics_count_test.json").exists()
+
+
+def _forgetting_case(tmp_path):
+    """Stage 2: the old object (label 0) scores 0.3, the new one (label 2) 0.9 with a stray 0.4 box. No single
+    threshold counts both images right; 0.3 for task 1 and above 0.4 for task 2 does."""
+    from tests.coco_helpers import make_preds
+    cfg = three_task_config()
+    cfg.save(tmp_path / "tasks.json")
+    gt = make_gt(images=[make_image(1), make_image(2)],
+                 annotations=[make_ann(1, 1, 0, [0, 0, 10, 10]), make_ann(2, 2, 2, [0, 0, 10, 10])], num_labels=6)
+    rows = [(1, 0, 0, 0.3, [0, 0, 10, 10]), (2, 0, 2, 0.9, [0, 0, 10, 10]), (2, 1, 2, 0.4, [40, 40, 50, 50])]
+    run_dir = tmp_path / "run"
+    for split in ("val", "test"):
+        save_json(tmp_path / f"{split}_full.json", gt)
+        meta = {"task_id": 2, "seen_classes": cfg.seen_classes(2), "split": split,
+                "ann_md5": md5_file(tmp_path / f"{split}_full.json")}
+        save_predictions(run_dir / "task_2" / f"pred_{split}.npz", make_preds(rows, meta))
+    return cfg, gt, make_preds(rows), run_dir
+
+
+def test_group_thresholds_count_forgotten_and_new_classes_right(tmp_path):
+    from autocheckout.cl_metrics import load_coco
+    from autocheckout.counting import select_group_thresholds, select_threshold
+    cfg, gt, preds, _ = _forgetting_case(tmp_path)
+    single, single_scores = select_threshold(load_coco(gt), preds, [0, 1, 2, 3])
+    assert single_scores["cAcc"] == pytest.approx(0.5)
+    vector, scores = select_group_thresholds(load_coco(gt), preds, [[0, 1], [2, 3]])
+    assert scores["cAcc"] == pytest.approx(1.0) and vector[0] <= 0.3 < 0.4 < vector[1] <= 0.9
+    one, one_scores = select_group_thresholds(load_coco(gt), preds, [[0, 1, 2, 3]])
+    assert one == [single] and one_scores == single_scores  # one group = the single threshold
+
+
+def test_group_threshold_policy_is_chosen_on_val_and_applied_on_test(tmp_path):
+    cfg, _, _, run_dir = _forgetting_case(tmp_path)
+    policy = eval_count.calibrate_run(run_dir, tmp_path / "val_full.json", cfg, group_thresholds=True)
+    stage = policy["stages"]["2"]
+    assert set(stage["group_thresholds"]) == {"task_1", "task_2"} and stage["val_scores"]["cAcc"] == pytest.approx(1.0)
+    assert stage["single_threshold_val_scores"]["cAcc"] == pytest.approx(0.5)
+    result = eval_count.evaluate_policy(run_dir, tmp_path / "test_full.json", cfg, policy)
+    assert result["stages"][2]["test"]["overall"]["cAcc"] == pytest.approx(1.0)
+    assert "/" in eval_count.to_markdown(result)  # one threshold per group in the table
+
+    single = eval_count.calibrate_run(run_dir, tmp_path / "val_full.json", cfg)
+    assert "group_thresholds" not in single["stages"]["2"]  # old policies keep one threshold
+    assert eval_count.evaluate_policy(run_dir, tmp_path / "test_full.json", cfg, single)["stages"][2]["test"][
+        "overall"]["cAcc"] == pytest.approx(0.5)
