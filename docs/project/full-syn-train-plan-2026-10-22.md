@@ -196,7 +196,7 @@ B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi
 | **Trọn gói nếu qua cổng ngay vòng 1** | **khoảng 52–58 giờ, khoảng 22–27 USD** | **khoảng 34,5 giờ wall (12:43 26/10 → 23:10 27/10), khoảng 14–16 USD** | 0,4–0,46 USD/giờ |
 | Mỗi vòng chỉnh thêm | khoảng 16–20 giờ GPU + khoảng 2 giờ CPU sinh lại ảnh | theo đo: khoảng 11 giờ GPU | |
 
-Ước lượng lấy giờ của B2 làm cơ sở. Vòng 1 nhanh hơn B2 khoảng 35–40% trên cùng loại GPU: PDP 5 task mất 27,6 giờ, B2 mất 42,3 giờ. Chưa tìm nguyên nhân. Số bước khớp với F0.7: PDP task 1 có 43.504 bước × 0,406 s ≈ 4,9 giờ, cộng val mỗi epoch.
+Ước lượng lấy giờ của B2 làm cơ sở, nhưng B2 đã train/resume qua 4090, L4 và 4080 SUPER ([so sánh backbone](FINAL_BACKBONE_COMPARISON_2026-10-20.md)), nên giờ của B2 không so trực tiếp với vòng này. Số bước khớp với F0.7: PDP task 1 có 43.504 bước × 0,406 s ≈ 4,9 giờ, cộng val mỗi epoch.
 
 ## 8. Bẫy riêng của gói này
 
@@ -256,16 +256,17 @@ Ngưỡng chọn trên chính tập val nên số val hơi lạc quan.
 | 4 | 94,38% | 25,40% / 25,68% | 94,34% | 25,27% / 25,62% | 89,72% | 22,29% |
 | 5 | **94,79%** | **43,53% / 44,00%** | **94,94%** | **43,15% / 43,68%** | 84,40% | 21,74% |
 
-So B2 trên 6.003 ảnh cũ sau task 5 (FULL-SYN một ngưỡng 0,15 / theo nhóm; B2 một ngưỡng 0,35):
+So B1/B2 trên 6.003 ảnh cũ sau task 5 (FULL-SYN một ngưỡng 0,15 / theo nhóm; B1/B2 một ngưỡng 0,42/0,35; số B1/B2 từ [so sánh backbone](FINAL_BACKBONE_COMPARISON_2026-10-20.md)):
 
-| Chỉ số | FULL-SYN | B2 |
-|---|---|---|
-| cAcc | 43,15% / 43,68% | 21,74% |
-| cAcc easy / medium / hard (một ngưỡng) | 62,4 / 40,5 / 26,7 | 35,46 / 21,28 / 8,59 |
-| ACD (thấp là tốt) | 1,674 / 1,653 | 3,919 |
-| mCCD (thấp là tốt) | 0,143 / 0,141 | 0,317 |
-| mCIoU | 0,876 / 0,877 | 0,747 |
-| Quên trung bình (AP50) | −0,49 | 8,67 |
+| Chỉ số | FULL-SYN | B1 | B2 |
+|---|---|---|---|
+| AP50 | 94,94% | 62,33% | 84,40% |
+| cAcc | 43,15% / 43,68% | 2,58% | 21,74% |
+| cAcc easy / medium / hard (một ngưỡng) | 62,4 / 40,5 / 26,7 | 6,42 / 1,32 / 0,00 | 35,46 / 21,28 / 8,59 |
+| ACD (thấp là tốt) | 1,674 / 1,653 | 8,831 | 3,919 |
+| mCCD (thấp là tốt) | 0,143 / 0,141 | 0,743 | 0,317 |
+| mCIoU | 0,876 / 0,877 | 0,453 | 0,747 |
+| Quên trung bình (AP50) | −0,49 | 6,63 | 8,67 |
 
 Trên toàn test2019, quên trung bình là −0,33.
 
