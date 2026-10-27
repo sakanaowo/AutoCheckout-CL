@@ -2,7 +2,7 @@
 
 Nhánh `feat/synthetic-data-v2`. Gói này train **FULL-SYN** trên ảnh ghép v2 và chấm trên ảnh RPC thật, theo [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md). Đóng mục R5 và việc mở số 3 (trần epoch FSA, D21) của tài liệu quyết định.
 
-**Trạng thái (26/10):** dữ liệu xong và đã rà lại 22/10. **Code F0.1–F0.6, F0.8, workflow và hai notebook đã xong** (bảng "Đã làm" ở mục 4.1); còn F0.7, phải chạy trên máy GPU thuê. Chưa train. Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất). Q4 (hình thức chạy: notebook mới, gói dữ liệu trên Drive, người dùng tự setup máy vast) chốt 25/10, xem mục 4.1. **F0.2 đạt 25/10:** `test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1` dùng ConvNeXt-V2 atto, truyền `--backbone_pretrained_file` như B2. Sau khi PDP task 1 nạp `hf_model`, digest của backbone + encoder + decoder bằng đúng digest của FSA, nghĩa là trọng số ImageNet không ghi đè lên backbone đã fine-tune. Khóa thiếu khi nạp chỉ có prompt và `class_embed`. Gói dữ liệu: `data/packages/full_syn_rpc_synth_v2_v1_20261025.tar` (25 GB, 101.681 file dữ liệu, md5 `13066bcff65cc42047c969e127c08114`), chờ người dùng upload.
+**Trạng thái (27/10):** **vòng 1 chạy xong trên 4090 vast.ai, qua mọi cổng; kết quả ở [mục 11](#11-kết-quả-vòng-1-2710).** Trên 6.003 ảnh test cũ, cAcc sau task 5 là 43,15% so với B2 21,74%; AP50 94,94% so với 84,40%. Mới một seed. F0.7 đạt 26/10. Trước đó: dữ liệu xong và đã rà lại 22/10. Code F0.1–F0.8, workflow và hai notebook đã xong (bảng "Đã làm" ở mục 4.1). Q1–Q3 ở mục 9 đã chốt 22/10 (người dùng chọn theo đề xuất). Q4 (hình thức chạy: notebook mới, gói dữ liệu trên Drive, người dùng tự setup máy vast) chốt 25/10, xem mục 4.1. **F0.2 đạt 25/10:** `test_convnext_fsa_export_keeps_the_finetuned_backbone_in_pdp_task_1` dùng ConvNeXt-V2 atto, truyền `--backbone_pretrained_file` như B2. Sau khi PDP task 1 nạp `hf_model`, digest của backbone + encoder + decoder bằng đúng digest của FSA, nghĩa là trọng số ImageNet không ghi đè lên backbone đã fine-tune. Khóa thiếu khi nạp chỉ có prompt và `class_embed`. Gói dữ liệu: `data/packages/full_syn_rpc_synth_v2_v1_20261025.tar` (25 GB, 101.681 file dữ liệu, md5 `13066bcff65cc42047c969e127c08114`), chờ người dùng upload.
 
 ## 0. Đọc nhanh
 
@@ -38,7 +38,7 @@ Lợi thế riêng của ảnh ghép: biết chính xác mọi vật SKU cũ n�
 **Chấm điểm thế nào:**
 
 - **cAcc** (chỉ số chính): tỉ lệ ảnh mà model đếm **đúng hết** mọi món, giống hoá đơn phải đúng từng dòng. Kèm theo là **AP50** (khoanh box đúng chỗ, đúng loại), cAcc theo mức easy/medium/hard, và các cặp SKU hay nhầm.
-- **M1 / M2:** ảnh val thật có cả SKU model chưa được học (thuộc task sau). M1 tính cả chúng, nên phạt model vì không đếm được thứ chưa ai dạy. M2 bỏ chúng ra trước khi đếm; ngoài đời, món cửa hàng chưa bán thì không nằm trên quầy. Cổng task 1 dùng M2. Ở task 5 model đã học đủ 200 SKU nên M1 = M2.
+- **M1 / M2:** ảnh val thật có cả SKU model chưa được học (thuộc task sau). M1 bỏ vật chưa học khỏi nhãn nhưng vẫn tính box model đoán lên chúng (dưới tên một SKU đã học), nên phạt model vì đếm thừa thứ chưa ai dạy. M2 bỏ luôn các box đó (IoU ≥ 0,5 với vật chưa học) trước khi đếm; ngoài đời, món cửa hàng chưa bán thì không nằm trên quầy. Cổng task 1 dùng M2. Ở task 5 model đã học đủ 200 SKU nên M1 = M2.
 - **Ngưỡng đếm:** mỗi box model đưa ra có một điểm tự tin từ 0 đến 1, và chỉ box có điểm trên ngưỡng mới được đếm. Ngưỡng thấp thì đếm thừa, cao thì đếm sót. Ngưỡng luôn chọn trên val, rồi giữ nguyên khi chấm test.
 - **Sau mỗi task:** dự đoán trên val, chọn ngưỡng, ghi cAcc, AP50, mức quên SKU cũ và chất lượng nhãn giả (box mà model task trước tự gán cho SKU cũ trong ảnh mới; đối chiếu được với nhãn đầy đủ của ảnh ghép).
 - **Chấm cuối:** model sau task 5 chấm trên 24.000 ảnh test2019; đây là con số chính, cùng tập test với IncreACO. Bảng phụ so FULL-SYN với B1/B2 trên 6.003 ảnh test cũ, vì B1/B2 đã train trên phần còn lại của test2019 và val2019.
@@ -145,6 +145,7 @@ Các cổng chỉ dùng ngưỡng số đã chốt, nên notebook chạy liền 
 | F0.4 | `--select_best_epoch` (`main.py`, `checkpointing.record_epoch`) | `task_final.pth` và `hf_model` lấy từ epoch có AP50 val cao nhất; giữ epoch sớm nhất khi bằng điểm; vẫn đúng sau khi chạy tiếp từ checkpoint; đường val ghi trong `hf_model/epoch_selection.json` |
 | F0.5 | `counting.select_group_thresholds`, `eval_count --group-thresholds` | Trên B2, chạy một ngưỡng ra đúng policy cũ ở cả 5 stage. Ngưỡng theo nhóm nâng val cAcc stage 2–5 từ 0,552/0,304/0,230/0,205 lên 0,598/0,403/0,274/0,228 (chọn và chấm trên cùng val nên lạc quan) |
 | F0.6 | `ppg_audit` đếm số nhãn bị I3/F14 loại; `full_syn.score_val`, `task_<t>/task_log.json`, `SUMMARY.md` | Audit chạy trước khi train task t, vì nhãn giả của task t do model task t−1 sinh ra. Nhờ vậy cổng precision < 0,5 ở task 2 dừng trước khi tốn giờ GPU |
+| F0.7 | Notebook `04_full_syn_smoke` trên 4090 vast.ai (26/10) | FSA batch 4 × tích luỹ 2: 0,776 s/bước, đỉnh 15,8 GiB. PDP batch 8: 0,406 s/bước, đỉnh 6,9 GiB. Dừng rồi chạy tiếp ra cùng trạng thái. Giờ đo thật của vòng 1 ở mục 7 |
 | F0.8 | `full_syn.subset_run` | Chấm B2 qua đường lọc này ra đúng số test cũ ở cả 5 stage (stage 5 cAcc 0,2174) |
 | Workflow | `autocheckout/full_syn.py`: `prepare`, `stage_smoke/fsa/task1/tasks/final_test` | Dry run trên CPU đi qua mọi stage, chạy lại thì không train lại; đổi settings trong campaign cũ thì bị từ chối. Hai notebook chạy hết qua `tools.execute_training_notebook --dry-run` |
 
@@ -181,19 +182,21 @@ G4  Chấm test một lần: test2019 24.000 ảnh + bảng so B1/B2 trên 6.003
 - Hết 3 vòng: 🟡 thì vẫn chạy task 2–5 và ghi "kỳ vọng ngang B2"; 🔴 thì dừng hướng ảnh ghép thuần.
 - Ứng viên nút theo các giới hạn đã biết của release: giỏ ảnh ghép thưa hơn thật (mật độ cụm 0,77/0,79/0,87 so với 0,82/0,90/0,98), vật ghép phẳng, ảnh thật có vật lạ không nhãn.
 
-## 7. Ước lượng GPU (4090, chờ F0.7 đo lại)
+## 7. GPU (4090): ước lượng và đo thật vòng 1
 
 B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi epoch), cả 5 task 42,3 giờ.
 
-| Phần | Ước lượng | Cơ sở |
-|---|---|---|
-| FSA, trần 8 epoch | khoảng 6–9 giờ | 174.000 lượt ảnh; fine-tune toàn bộ ước chậm hơn PDP khoá 1,5–2 lần. **Chưa đo** |
-| PDP task 1 | khoảng 10–11 giờ | Như B2; val_task_1 mới 5.562 ảnh (B2 nhỏ hơn) nên val mỗi epoch thêm khoảng 3 phút |
-| Một vòng cổng (G1 + G2) | khoảng 16–20 giờ, khoảng 7–9 USD | |
-| Task 2–5 | khoảng 33–36 giờ | Như B2, cộng log nhãn giả |
-| Dự đoán test 24.000 ảnh × 5 task | khoảng 1,5 giờ | |
-| **Trọn gói nếu qua cổng ngay vòng 1** | **khoảng 52–58 giờ, khoảng 22–27 USD** | 0,4–0,46 USD/giờ |
-| Mỗi vòng chỉnh thêm | khoảng 16–20 giờ GPU + khoảng 2 giờ CPU sinh lại ảnh | |
+| Phần | Ước lượng | Đo vòng 1 (26–27/10) | Cơ sở ước lượng |
+|---|---|---|---|
+| FSA, trần 8 epoch | khoảng 6–9 giờ | 5,04 giờ train | 174.000 lượt ảnh; fine-tune toàn bộ ước chậm hơn PDP khoá 1,5–2 lần |
+| PDP task 1 | khoảng 10–11 giờ | 5,96 giờ | Như B2; val_task_1 mới 5.562 ảnh (B2 nhỏ hơn) nên val mỗi epoch thêm khoảng 3 phút |
+| Một vòng cổng (G1 + G2) | khoảng 16–20 giờ, khoảng 7–9 USD | khoảng 11 giờ | |
+| Task 2–5 | khoảng 33–36 giờ | 21,67 giờ train (5,36 / 5,23 / 5,18 / 5,90) | Như B2, cộng log nhãn giả |
+| Dự đoán test 24.000 ảnh × 5 task | khoảng 1,5 giờ | khoảng 1,5 giờ | |
+| **Trọn gói nếu qua cổng ngay vòng 1** | **khoảng 52–58 giờ, khoảng 22–27 USD** | **khoảng 34,5 giờ wall (12:43 26/10 → 23:10 27/10), khoảng 14–16 USD** | 0,4–0,46 USD/giờ |
+| Mỗi vòng chỉnh thêm | khoảng 16–20 giờ GPU + khoảng 2 giờ CPU sinh lại ảnh | theo đo: khoảng 11 giờ GPU | |
+
+Ước lượng lấy giờ của B2 làm cơ sở. Vòng 1 nhanh hơn B2 khoảng 35–40% trên cùng loại GPU: PDP 5 task mất 27,6 giờ, B2 mất 42,3 giờ. Chưa tìm nguyên nhân. Số bước khớp với F0.7: PDP task 1 có 43.504 bước × 0,406 s ≈ 4,9 giờ, cộng val mỗi epoch.
 
 ## 8. Bẫy riêng của gói này
 
@@ -206,6 +209,7 @@ B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi
 | Chọn epoch FSA hay ngưỡng trên test | Chỉ dùng val (D4, D21) |
 | So FULL-SYN với B2 trên val2019 hoặc toàn test2019 | B1/B2 đã train trên val2019 và 16.494 ảnh test2019; chỉ so trên 6.003 ảnh (F0.8) |
 | Mốc B2 đo trên val cũ (1.464 ảnh test2019), FULL-SYN đo trên val2019 | Ghi rõ trong báo cáo; Δ có sai số vài điểm |
+| Notebook có output quá nặng để commit (vòng 1: 69 MB, gần hết là dòng tiến độ tqdm) | Trước khi commit, bỏ các dòng thanh tiến độ khỏi stream output (còn 1,2 MB); log đầy đủ vẫn ở `data/training/<campaign>/` |
 
 ## 9. Đã chốt (22/10, 25/10)
 
@@ -219,3 +223,65 @@ B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi
 ## 10. Bàn giao
 
 Người làm phần model đọc theo thứ tự: tài liệu này → [quyết định D1–D21](synthetic-data-v2-decisions-2026-10-21.md) → [handoff mục 5–7](../references/meeting-2026-10-20/HANDOFF_ANH_GHEP_VA_TRAIN.md#5-gói-việc-2-train-full-syn) → [báo cáo ảnh ghép v2](../data_preprocessing/reports/synth-v2-2026-10-21.md). Làm F0.1–F0.6 trước, trình kết quả F0.2 và F0.7 rồi mới chạy G1.
+
+## 11. Kết quả vòng 1 (27/10)
+
+Campaign `full-syn-r1`, notebook [05_full_syn_r1](../../notebooks/training/05_full_syn_r1.ipynb), một seed (0). Số liệu lấy từ `data/training/full-syn-r1/SUMMARY.md` và `stages/*.json`. Thư mục này không vào git (7,6 GB); phải kéo về trước khi trả máy (runbook mục 7).
+
+### 11.1 Val và các cổng
+
+Ngưỡng chọn trên chính tập val nên số val hơi lạc quan.
+
+| Stage | cAcc-M2 | cAcc-M1 (theo nhóm) | Ngưỡng theo nhóm | AP50 | Nhãn giả P / R | I3 / F14 loại | Giờ train | Cổng |
+|---|---|---|---|---|---|---|---|---|
+| FSA | 77,65% | 23,83% | 0,77 | 92,41% | — | — | 5,04 | D18 đạt (≥ 52,8%) |
+| Task 1 | 79,38% | 27,18% | 0,83 | 93,38% | — | — | 5,96 | D17 🟢 (≥ 72,8%) |
+| Task 2 | 73,64% | 24,43% | 0,68/0,65 | 94,44% | 99,72% / 99,61% | 5.413 / 68 | 5,36 | Precision ≥ 0,5 |
+| Task 3 | 65,04% | 22,86% | 0,53/0,50/0,60 | 94,85% | 98,98% / 99,32% | 5.423 / 75 | 5,23 | |
+| Task 4 | 56,33% | 26,05% | 0,37/0,33/0,39/0,46 | 94,59% | 98,66% / 99,32% | 5.128 / 78 | 5,18 | |
+| Task 5 | 43,68% | 43,68% | 0,10/0,15/0,18/0,18/0,20 | 94,95% | 98,54% / 99,48% | 5.405 / 90 | 5,90 | |
+
+- **FSA:** AP50 val theo epoch 0,902 / 0,914 / 0,920 / 0,919 / 0,923 / 0,916 / 0,919 / 0,924; chọn epoch 7. Loss train giảm từ 0,156 xuống 0,100 nhưng AP50 val gần như phẳng từ epoch 3. Như vậy giới hạn nằm ở khoảng cách ảnh ghép–ảnh thật chứ không ở số epoch; 3–4 epoch có thể đủ (Q1), tiết kiệm khoảng 2,5 giờ mỗi vòng.
+- **Task 1:** Δ = 79,38 − 85,79 = −6,4 điểm so với B. Hai bên đo trên hai tập val khác nhau (mục 8). Cặp hay nhầm nhất của FSA: 41→59 (19 lần), 84→85 (9), 80→81 (7), 73→72 (5).
+- **Nhãn giả:** precision ≥ 98,5% và recall ≥ 99,3% ở mọi task. I3 loại khoảng 5.100–5.400 nhãn giả mỗi task, F14 loại 68–90.
+- **Quên:** mức quên SKU cũ trên val xấp xỉ 0 hoặc âm ở mọi stage.
+
+### 11.2 Test (chấm một lần)
+
+| Stage | test2019 AP50 | test2019 cAcc (một ngưỡng / theo nhóm) | 6.003 ảnh cũ AP50 | 6.003 ảnh cũ cAcc (một ngưỡng / theo nhóm) | B2 AP50 | B2 cAcc |
+|---|---|---|---|---|---|---|
+| 1 | 93,29% | 28,00% / 28,00% | 93,25% | 28,65% / 28,65% | 98,35% | 73,16% |
+| 2 | 94,26% | 24,21% / 24,23% | 94,34% | 23,90% / 24,25% | 97,54% | 53,32% |
+| 3 | 94,63% | 21,49% / 22,07% | 94,63% | 21,42% / 22,12% | 94,66% | 29,97% |
+| 4 | 94,38% | 25,40% / 25,68% | 94,34% | 25,27% / 25,62% | 89,72% | 22,29% |
+| 5 | **94,79%** | **43,53% / 44,00%** | **94,94%** | **43,15% / 43,68%** | 84,40% | 21,74% |
+
+So B2 trên 6.003 ảnh cũ sau task 5 (FULL-SYN một ngưỡng 0,15 / theo nhóm; B2 một ngưỡng 0,35):
+
+| Chỉ số | FULL-SYN | B2 |
+|---|---|---|
+| cAcc | 43,15% / 43,68% | 21,74% |
+| cAcc easy / medium / hard (một ngưỡng) | 62,4 / 40,5 / 26,7 | 35,46 / 21,28 / 8,59 |
+| ACD (thấp là tốt) | 1,674 / 1,653 | 3,919 |
+| mCCD (thấp là tốt) | 0,143 / 0,141 | 0,317 |
+| mCIoU | 0,876 / 0,877 | 0,747 |
+| Quên trung bình (AP50) | −0,49 | 8,67 |
+
+Trên toàn test2019, quên trung bình là −0,33.
+
+**Vì sao cAcc ở stage 1–4 thấp hơn B2 mà task 5 lại cao hơn.** Khi đếm, vật của SKU chưa học bị bỏ khỏi nhãn, nhưng box model đoán lên các vật đó (dưới tên một SKU đã học) vẫn được tính. Đây là M1, chỉ số của bảng test. Ảnh ghép không có SKU tương lai, nên model FULL-SYN chưa từng học bỏ qua vật lạ và đếm thừa trên các vật này. Khoảng cách M1/M2 cho thấy điều đó: ở task 1 val, M1 là 27,18% còn M2 là 79,38%. B2 học trên ảnh thật, nơi SKU tương lai có mặt nhưng không có nhãn, nên ít đếm thừa hơn. Ở task 5 mọi SKU đã học, M1 = M2, và đây là stage duy nhất so trực tiếp được với B2.
+
+### 11.3 Giới hạn
+
+- Một seed.
+- Ngưỡng task 5 rất thấp (0,10–0,20), và ngưỡng của mọi nhóm giảm dần qua các task. Điểm tự tin của model sau nhiều task thấp hơn hẳn, chưa xem phân bố điểm.
+- Lý do FULL-SYN hơn B2 là **giả thuyết, chưa kiểm chứng riêng**: ảnh ghép không có SKU tương lai, nhãn giả sạch hơn (I3/F14, precision ≥ 98,5%), và có FSA. Vòng 1 không tách được đóng góp của từng yếu tố.
+- Theo D6, đây chỉ là so sánh ở mức hệ thống (FULL-SYN so với B2). FULL-REAL chưa chạy.
+- Kỳ vọng trong [tài liệu quyết định](synthetic-data-v2-decisions-2026-10-21.md) là hơn B2 khoảng 5 điểm nếu task 1 đạt khoảng 53–59. Kết quả vượt xa kỳ vọng đó: tỉ lệ giữ cAcc từ task 1 đến task 5 trên M2 val là 43,68 / 79,38 ≈ 0,55, so với giả định 0,45–0,5.
+
+### 11.4 Hướng tiếp theo (chưa chốt)
+
+- Thêm seed để biết chênh lệch 21 điểm so với B2 có ổn định không.
+- Ablation để tách đóng góp, ví dụ chạy FULL-SYN với I3/F14 tắt như B2.
+- Giảm trần epoch FSA xuống 3–4 epoch (Q1), dựa vào đường AP50 val phẳng.
+- Cặp nhầm 41→59 và 84→85 là ứng viên cho nút "cắt bổ sung cutout" nếu chạy vòng chỉnh.
