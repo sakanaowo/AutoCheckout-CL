@@ -203,7 +203,7 @@ Data/artifacts không vào Git. Giữ code/config/notebook template trong Git, v
 
 [Plan FULL-SYN](full-syn-train-plan-2026-10-22.md), mục 4.1. Hai notebook mới: [04_full_syn_smoke](../../notebooks/training/04_full_syn_smoke.ipynb) (một lần trên mỗi máy) và [05_full_syn_r1](../../notebooks/training/05_full_syn_r1.ipynb) (vòng 1; vòng chỉnh sau là file mới `05_full_syn_r<N>.ipynb` với `campaign_id` và `round` mới). Notebook gọi `autocheckout/full_syn.py`; train vẫn đi qua `scripts/run_exp.sh` và `pdp/main.py`. Notebook 01–03 giữ nguyên làm lịch sử B1/B2.
 
-Thuê máy: RTX 4090, đĩa khoảng 100 GB (dữ liệu 26 GB, môi trường, artifact; thêm 25 GB nếu tải file tar về rồi mới giải nén). Vòng 1 (26–27/10) chạy trên máy đĩa 65 GB và đủ, vì file tar đã xóa sau khi giải nén. Cuối vòng còn trống 25 GB; campaign chiếm 7,6 GB, trong đó `smoke/` 3,0 GB. Trên máy:
+Thuê máy: RTX 4090, đĩa khoảng 70 GB (dữ liệu 26 GB, môi trường, artifact). Nếu tải file tar về rồi mới giải nén thì lúc cao điểm cần thêm 25 GB; tải và giải nén cùng lúc như bước 3 thì không cần. Vòng 1 (26–27/10) chạy trên máy đĩa 65 GB và đủ, vì file tar đã xóa sau khi giải nén. Cuối vòng còn trống 25 GB; campaign chiếm 7,6 GB, trong đó `smoke/` 3,0 GB. Trên máy:
 
 ```bash
 # 1. Code: nhánh đã push

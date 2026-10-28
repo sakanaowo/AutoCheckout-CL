@@ -192,7 +192,7 @@ B2 trên 4090: task 1 = 9,7 giờ (21.752 ảnh × 16 epoch, kể cả val mỗi
 | PDP task 1 | khoảng 10–11 giờ | 5,96 giờ | Như B2; val_task_1 mới 5.562 ảnh (B2 nhỏ hơn) nên val mỗi epoch thêm khoảng 3 phút |
 | Một vòng cổng (G1 + G2) | khoảng 16–20 giờ, khoảng 7–9 USD | khoảng 11 giờ | |
 | Task 2–5 | khoảng 33–36 giờ | 21,67 giờ train (5,36 / 5,23 / 5,18 / 5,90) | Như B2, cộng log nhãn giả |
-| Dự đoán test 24.000 ảnh × 5 task | khoảng 1,5 giờ | khoảng 1,5 giờ | |
+| Dự đoán test 24.000 ảnh × 5 task | khoảng 1,5 giờ | 1,24 giờ (21:39–22:54 27/10, kể cả chấm test và bảng 6.003 ảnh) | |
 | **Trọn gói nếu qua cổng ngay vòng 1** | **khoảng 52–58 giờ, khoảng 22–27 USD** | **khoảng 34,5 giờ wall (12:43 26/10 → 23:10 27/10), khoảng 14–16 USD** | 0,4–0,46 USD/giờ |
 | Mỗi vòng chỉnh thêm | khoảng 16–20 giờ GPU + khoảng 2 giờ CPU sinh lại ảnh | theo đo: khoảng 11 giờ GPU | |
 
@@ -226,7 +226,7 @@ Người làm phần model đọc theo thứ tự: tài liệu này → [quyết
 
 ## 11. Kết quả vòng 1 (27/10)
 
-Campaign `full-syn-r1`, notebook [05_full_syn_r1](../../notebooks/training/05_full_syn_r1.ipynb), một seed (0). Số liệu lấy từ `data/training/full-syn-r1/SUMMARY.md` và `stages/*.json`. Thư mục này không vào git (7,6 GB); phải kéo về trước khi trả máy (runbook mục 7).
+Campaign `full-syn-r1`, notebook [05_full_syn_r1](../../notebooks/training/05_full_syn_r1.ipynb), một seed (0). Số liệu lấy từ `data/training/full-syn-r1/SUMMARY.md` và `stages/*.json`. Thư mục này không vào git: 7,6 GB trên máy vast. Bản giải nén từ `data/training/training.zip` ở máy local là 11 GB, vì zip lưu symlink thành bản sao (`inputs/tasks/` 0,7 GB, `compare_b12/*/task_final.pth` 2,7 GB). Phải kéo về trước khi trả máy (runbook mục 7). **Đối chiếu 28/10:** mọi số ở mục 11 được kiểm lại với `stages/*.json`, `compare_b12/EXP-FULL-SYN/metrics_count_test_*.json`, `run_info.json` và các file metrics của B2; khớp, trừ ba chỗ làm tròn hoặc ước lượng đã sửa (AP50 FSA epoch 2, mCIoU của B2, giờ dự đoán test).
 
 ### 11.1 Val và các cổng
 
@@ -241,7 +241,7 @@ Ngưỡng chọn trên chính tập val nên số val hơi lạc quan.
 | Task 4 | 56,33% | 26,05% | 0,37/0,33/0,39/0,46 | 94,59% | 98,66% / 99,32% | 5.128 / 78 | 5,18 | |
 | Task 5 | 43,68% | 43,68% | 0,10/0,15/0,18/0,18/0,20 | 94,95% | 98,54% / 99,48% | 5.405 / 90 | 5,90 | |
 
-- **FSA:** AP50 val theo epoch 0,902 / 0,914 / 0,920 / 0,919 / 0,923 / 0,916 / 0,919 / 0,924; chọn epoch 7. Loss train giảm từ 0,156 xuống 0,100 nhưng AP50 val gần như phẳng từ epoch 3. Như vậy giới hạn nằm ở khoảng cách ảnh ghép–ảnh thật chứ không ở số epoch; 3–4 epoch có thể đủ (Q1), tiết kiệm khoảng 2,5 giờ mỗi vòng.
+- **FSA:** AP50 val theo epoch 0,902 / 0,914 / 0,919 / 0,919 / 0,923 / 0,916 / 0,919 / 0,924; chọn epoch 7. Loss train giảm từ 0,156 xuống 0,100 nhưng AP50 val gần như phẳng từ epoch 3. Như vậy giới hạn nằm ở khoảng cách ảnh ghép–ảnh thật chứ không ở số epoch; 3–4 epoch có thể đủ (Q1), tiết kiệm khoảng 2,5 giờ mỗi vòng.
 - **Task 1:** Δ = 79,38 − 85,79 = −6,4 điểm so với B. Hai bên đo trên hai tập val khác nhau (mục 8). Cặp hay nhầm nhất của FSA: 41→59 (19 lần), 84→85 (9), 80→81 (7), 73→72 (5).
 - **Nhãn giả:** precision ≥ 98,5% và recall ≥ 99,3% ở mọi task. I3 loại khoảng 5.100–5.400 nhãn giả mỗi task, F14 loại 68–90.
 - **Quên:** mức quên SKU cũ trên val xấp xỉ 0 hoặc âm ở mọi stage.
@@ -265,7 +265,7 @@ So B1/B2 trên 6.003 ảnh cũ sau task 5 (FULL-SYN một ngưỡng 0,15 / theo 
 | cAcc easy / medium / hard (một ngưỡng) | 62,4 / 40,5 / 26,7 | 6,42 / 1,32 / 0,00 | 35,46 / 21,28 / 8,59 |
 | ACD (thấp là tốt) | 1,674 / 1,653 | 8,831 | 3,919 |
 | mCCD (thấp là tốt) | 0,143 / 0,141 | 0,743 | 0,317 |
-| mCIoU | 0,876 / 0,877 | 0,453 | 0,747 |
+| mCIoU | 0,876 / 0,877 | 0,453 | 0,746 |
 | Quên trung bình (AP50) | −0,49 | 6,63 | 8,67 |
 
 Trên toàn test2019, quên trung bình là −0,33.
