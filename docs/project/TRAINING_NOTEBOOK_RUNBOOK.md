@@ -265,6 +265,8 @@ Dry run local trên CPU, không cần GPU hay dữ liệu thật: `python -m too
 
 ### 7.1 Chạy thử M5 trên task 2 (29/10/2026)
 
+Trạng thái và việc tiếp theo: [handoff 30/10](HANDOFF_M5_PILOT_2026-10-30.md).
+
 [Phân tích round 1](full-syn-r1-analysis-2026-10-29.md), mục 7 và 8. Notebook [06_full_syn_m5_pilot](../../notebooks/training/06_full_syn_m5_pilot.ipynb) lấy FSA và PDP task 1 của round 1 (`seed_campaign`), chỉ train task 2 với `configs/exp/native/EXP-FULL-SYN-M5.sh`, rồi so với task 2 của round 1 (`full_syn.pilot_verdict`). Code từ chối chạy quá task 2 và chấm test.
 
 Cần hai gói trên máy: gói dữ liệu của round 1 (`full_syn_rpc_synth_v2_v1_20261025.tar`, như bước 3 ở trên) và gói seed của round 1 (`full_syn_r1_seed_20261029.tar`, khoảng 1 GB: `plan.json`, `stages/`, `hf_model` của FSA, `task_1/` của PDP, policy đếm). Cả hai giải nén ở gốc repo.
