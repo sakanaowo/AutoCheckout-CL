@@ -170,3 +170,55 @@ def test_dry_round_runs_every_stage_and_resumes_without_training_again(tmp_path)
     assert "done, skipped" in logs[-1].read_text()
     with pytest.raises(ValueError, match="new campaign_id"):
         full_syn.prepare({**settings, "audit_images": 8})  # a changed setting needs a new campaign (round)
+
+
+@pytest.mark.slow
+def test_m5_pilot_reuses_fsa_and_task1_of_its_seed_and_stops_after_task_2(tmp_path):
+    """M5 (analysis 2026-10-29, section 7): FSA and task 1 come from the seed campaign untouched, task 2 trains the
+    encoder with feature distillation; past task 2 and the final test are refused."""
+    from autocheckout import full_syn
+    base = dict(round=1, artifact_root=str(tmp_path), dry_run=True, batch_size=1, effective_batch=2,
+                resolution=640, fsa_epochs=8, epochs=16, audit_images=4)
+    seed = full_syn.prepare({**base, 'campaign_id': 'seed'})
+    full_syn.stage_fsa(seed)
+    full_syn.stage_task1(seed)
+    seed_task1 = tmp_path / 'dry_run/seed/runs/EXP-FULL-SYN/task_1/task_final.pth'
+    before = sha(seed_task1)
+
+    with pytest.raises(ValueError, match='pdp_experiment'):
+        full_syn.prepare({**base, 'campaign_id': 'bad', 'pdp_experiment': 'EXP-OTHER'})
+    settings = {**base, 'campaign_id': 'm5', 'pdp_experiment': full_syn.M5,
+                'seed_campaign': str(tmp_path / 'dry_run/seed')}
+    plan = full_syn.prepare(settings)
+    with pytest.raises(RuntimeError, match='stage_seed'):
+        full_syn.stage_fsa(plan)
+    seeded = full_syn.stage_seed(plan)
+    assert seeded['task1']['cAcc_m2'] == load_json(tmp_path / 'dry_run/seed/stages/task1.json')['cAcc_m2']
+    run = tmp_path / 'dry_run/m5/runs' / full_syn.M5
+    assert (run / 'task_1').resolve() == seed_task1.parent.resolve()
+    assert set(load_json(run / 'calibration_count_m2.json')['stages']) == {'1'}
+
+    with pytest.raises(RuntimeError, match='up to task 2'):
+        full_syn.stage_tasks(plan)
+    report = full_syn.stage_tasks(plan, last=2)
+    assert set(report['tasks']) == {2} and report['stage'] == 2
+    log = (run / 'task_2/train.log').read_text()
+    assert 'encoder' in log.split('Trainable parameters')[1].split('\n\n')[0]  # tuned at lr_old
+    steps = [json.loads(line) for line in (run / 'task_2/step_metrics.jsonl').read_text().splitlines()]
+    assert all('FKD' in step['losses'] for step in steps)
+    assert sha(seed_task1) == before
+    with pytest.raises(RuntimeError, match='after task 5'):
+        full_syn.stage_final_test(plan)
+
+
+def load_json(path):
+    return json.loads(path.read_text())
+
+
+@pytest.mark.parametrize("cacc,old_ap,decision", [
+    (0.7664, 0.9496, "go"), (0.7663, 0.9496, "stop"), (0.80, 0.9396, "go"), (0.80, 0.9395, "retry"),
+])
+def test_pilot_verdict_needs_a_clear_gain_without_forgetting(cacc, old_ap, decision):
+    from autocheckout.full_syn import pilot_verdict
+    seed = {'cAcc_m2': 0.7364, 'AP50': {'mAP_P': 0.9496}}
+    assert pilot_verdict({'cAcc_m2': cacc, 'AP50': {'mAP_P': old_ap}}, seed)[0] == decision

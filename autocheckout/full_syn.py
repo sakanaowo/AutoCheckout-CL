@@ -102,6 +102,13 @@ PSEUDO_PRECISION_MIN = 0.5                # plan 4.1 (user, 25/10): teacher pseu
 MAX_ROUNDS = 3                            # D19
 UNLEARNED_IOU = 0.5                       # D16: cAcc-M2
 FSA, PDP = 'EXP-FULL-SYN-FSA', 'EXP-FULL-SYN'
+# M5 (full-syn-r1-analysis-2026-10-29.md, section 7): last ConvNeXt stage and encoder trained from task 2 on. Its
+# task-1 prototypes stay those of the frozen task-1 features, so past task 2 PPG would compare the teacher's tuned
+# features with stale prototypes: only task 2 runs until they are rebuilt.
+M5, M5_LAST_TASK = 'EXP-FULL-SYN-M5', 2
+SEED_POLICIES = ('calibration_count.json', 'calibration_count_m2.json', 'calibration_count_groups.json')
+# M5 pilot against task 2 of its seed (round 1: val cAcc-M2 73.64% on 5,702 images, standard error 0.6 point)
+PILOT_GAIN, PILOT_OLD_DROP = 0.03, 0.01
 DRY_MODEL_ARGS = ['--backbone', '', '--backbone_pretrained_file', '', '--n_classes', '7', '--accelerator', 'cpu',
                   '--num_prompts', '4', '--prompt_len', '2', '--proto_correct_only', '0', '--shuffle', '0']
 
@@ -161,6 +168,14 @@ def prepare(settings: dict) -> dict:
     for batch in (physical, fsa_physical):
         if batch < 1 or effective < batch or effective % batch:
             raise ValueError('effective batch must be a positive multiple of physical batch (one GPU)')
+    experiment = settings.get('pdp_experiment', PDP)
+    if experiment not in (PDP, M5):
+        raise ValueError(f'pdp_experiment must be {PDP} or {M5}')
+    seed = resolve(settings['seed_campaign']) if settings.get('seed_campaign') else None
+    if seed is not None and not (seed / 'stages/task1.json').is_file():
+        raise FileNotFoundError(f'seed campaign without a task-1 stage: {seed}')
+    if seed is not None and load_json(seed / 'plan.json')['dry_run'] != dry:
+        raise ValueError('a dry run and a real run cannot seed each other')
     if dry:
         release, eval_root, images, model = _toy_releases(root / 'fixture')
         synth_root = raw = images
@@ -199,10 +214,12 @@ def prepare(settings: dict) -> dict:
                 pretrained_md5={} if dry else {'detector': md5_file(Path(detector) / 'model.safetensors'),
                                                'backbone': md5_file(backbone)},
                 train_images=[len(load_json(task_dir / f'train_task_{t}.json')['images'])
-                              for t in range(1, N_TASKS + 1)])
+                              for t in range(1, N_TASKS + 1)],
+                pdp_experiment=experiment, seed_root=str(seed) if seed else '',
+                seed=_seed_identity(seed, experiment) if seed else None)
     path = root / 'plan.json'
     locations = {'root', 'runs', 'release_root', 'eval_root', 'synth_root', 'raw_root', 'task_dir', 'task_config',
-                 'model_config', 'detector_dir', 'backbone_weights'}
+                 'model_config', 'detector_dir', 'backbone_weights', 'seed_root'}
     if path.is_file():
         previous = load_json(path)
         if {k: v for k, v in previous.items() if k not in locations} != {k: v for k, v in plan.items()
@@ -210,6 +227,15 @@ def prepare(settings: dict) -> dict:
             raise ValueError('settings or inputs changed in an existing campaign; start a new campaign_id')
     save_json(path, plan, indent=2)
     return plan
+
+
+def _seed_identity(seed: Path, experiment: str) -> dict:
+    """What a seeded campaign reuses: the seed's campaign and round, and the md5 of its task-1 model."""
+    plan = load_json(seed / 'plan.json')
+    if plan.get('pdp_experiment', PDP) != PDP:
+        raise ValueError('the seed campaign must be a plain FULL-SYN run')
+    return dict(campaign_id=plan['campaign_id'], round=plan['round'], dry_run=plan['dry_run'],
+                task1_md5=md5_file(seed / 'runs' / PDP / 'task_1/task_final.pth'))
 
 
 @contextmanager
@@ -438,8 +464,45 @@ def _require(plan: dict, stage: str) -> dict:
 
 
 # --- stages --------------------------------------------------------------------------------------------------------
+def _not_seeded(plan: dict, stage: str) -> None:
+    if plan['seed_root']:
+        raise RuntimeError(f'{stage} comes from the seed campaign here: run stage_seed')
+
+
+def stage_seed(plan: dict) -> dict:
+    """FSA and PDP task 1 of the seed campaign, reused by a campaign that only changes tasks >= 2 (M5): their stage
+    reports are copied, the FSA run and task_1 are linked, and the stage-1 counting policies are copied (later
+    stages choose their own)."""
+    from autocheckout.io import save_json
+
+    seed, root = Path(plan['seed_root']), Path(plan['root'])
+    if md5_file(seed / 'runs' / PDP / 'task_1/task_final.pth') != plan['seed']['task1_md5']:
+        raise ValueError(f'task 1 of {seed} changed since this campaign was prepared')
+    run = Path(plan['runs']) / plan['pdp_experiment']
+    run.mkdir(parents=True, exist_ok=True)
+    links = ((Path(plan['runs']) / FSA, seed / 'runs' / FSA), (run / 'task_1', seed / 'runs' / PDP / 'task_1'))
+    for link, source in links:
+        if not link.is_symlink():
+            link.symlink_to(source.resolve())
+        elif link.resolve() != source.resolve():
+            raise ValueError(f'{link} points to {link.resolve()}, expected {source}')
+    for name in SEED_POLICIES:
+        if not (run / name).is_file():
+            policy = load_json(seed / 'runs' / PDP / name)
+            save_json(run / name, {**policy, 'stages': {'1': policy['stages']['1']}}, indent=2)
+    reports = {}
+    for stage in ('fsa', 'task1'):
+        path = root / 'stages' / f'{stage}.json'
+        if not path.is_file():
+            save_json(path, {**load_json(seed / 'stages' / f'{stage}.json'), 'seeded_from': plan['seed']}, indent=2)
+        reports[stage] = load_json(path)
+    write_summary(plan)
+    return reports
+
+
 def stage_fsa(plan: dict) -> dict:
     """G1: FSA on synthetic task 1 (at most fsa_epochs, best val AP50 epoch), then the D18 early check."""
+    _not_seeded(plan, 'fsa')
     with _attempt(plan, 'fsa') as (record, attempt):
         _train(plan, record, attempt, FSA, start=1, n=1, epochs=plan['fsa_epochs'], splits='val')
     run = Path(plan['runs']) / FSA
@@ -469,9 +532,12 @@ def task1_decision(value: float, round_id: int) -> tuple[str, str, str]:
 def stage_task1(plan: dict) -> dict:
     """G2: PDP task 1 from FSA, then the D17 gate on val cAcc-M2."""
     _require(plan, 'fsa')
+    _not_seeded(plan, 'task1')
+    experiment = plan['pdp_experiment']
     with _attempt(plan, 'task1') as (record, attempt):
-        _train(plan, record, attempt, PDP, start=1, n=1, epochs=plan['epochs'], splits='val', fsa_hf=_fsa_hf(plan))
-    report = score_val(plan, Path(plan['runs']) / PDP, 1)
+        _train(plan, record, attempt, experiment, start=1, n=1, epochs=plan['epochs'], splits='val',
+               fsa_hf=_fsa_hf(plan))
+    report = score_val(plan, Path(plan['runs']) / experiment, 1)
     colour, decision, reason = task1_decision(report['cAcc_m2'], plan['round'])
     gate = _gate(plan, 'D17 task 1', decision, reason, colour=colour, value=report['cAcc_m2'],
                  green=TASK1_GREEN, red=TASK1_RED, round=plan['round'])
@@ -482,11 +548,12 @@ def _audit(plan: dict, record: dict, attempt: Path, task: int) -> dict:
     """V4/F0.6: the teacher of task ``task`` (model after task - 1) and PPG on audit_images synthetic images of the
     task, against train_task_<t>_gt_full.json (read from the release, never from the training folder)."""
 
-    run = Path(plan['runs']) / PDP
+    experiment = plan['pdp_experiment']
+    run = Path(plan['runs']) / experiment
     result = run / f'task_{task}/ppg_audit.json'
     if not result.is_file():
-        config = _config(plan, PDP, Path(plan['runs']), _fsa_hf(plan))
-        environment = _environment(plan, PDP, Path(plan['runs']), FSA_HF=_fsa_hf(plan), CONFIG=config)
+        config = _config(plan, experiment, Path(plan['runs']), _fsa_hf(plan))
+        environment = _environment(plan, experiment, Path(plan['runs']), FSA_HF=_fsa_hf(plan), CONFIG=config)
         script = 'source "$CONFIG"; cd "$REPO/pdp"; exec "$PYTHON" ppg_audit.py "${ARGS[@]}" "$@"'
         command = ['bash', '-ec', script, 'ppg_audit', '--output_dir', str(run), '--audit_task', str(task),
                    '--audit_images', str(plan['audit_images']),
@@ -496,15 +563,19 @@ def _audit(plan: dict, record: dict, attempt: Path, task: int) -> dict:
     return load_json(result)
 
 
-def stage_tasks(plan: dict) -> dict:
-    """G3: tasks 2-5. Before training task t, the pseudo-labels its teacher gives are audited (at task 2 they must
-    reach PSEUDO_PRECISION_MIN); after it, the stage is scored on val and logged in task_<t>/task_log.json."""
+def stage_tasks(plan: dict, last: int = N_TASKS) -> dict:
+    """G3: tasks 2..last (5). Before training task t, the pseudo-labels its teacher gives are audited (at task 2 they
+    must reach PSEUDO_PRECISION_MIN); after it, the stage is scored on val and logged in task_<t>/task_log.json."""
     from autocheckout.io import save_json
 
     _require(plan, 'task1')
-    run = Path(plan['runs']) / PDP
+    experiment = plan['pdp_experiment']
+    if experiment == M5 and last > M5_LAST_TASK:
+        raise RuntimeError(f'{M5} runs up to task {M5_LAST_TASK}: rebuild the task-1 prototypes with the tuned '
+                           'features before going further')
+    run = Path(plan['runs']) / experiment
     reports = {}
-    for task in range(2, N_TASKS + 1):
+    for task in range(2, last + 1):
         with _attempt(plan, f'task{task}') as (record, attempt):
             audit = _audit(plan, record, attempt, task)
             precision = audit['all'].get('precision')
@@ -516,7 +587,7 @@ def stage_tasks(plan: dict) -> dict:
                              value=precision, threshold=PSEUDO_PRECISION_MIN)
                 if gate['decision'] == 'stop':
                     _finish(plan, 'tasks', {'stage': 2, 'pseudo_labels': audit}, gate)
-            _train(plan, record, attempt, PDP, start=task, n=task, epochs=plan['epochs'], splits='val',
+            _train(plan, record, attempt, experiment, start=task, n=task, epochs=plan['epochs'], splits='val',
                    fsa_hf=_fsa_hf(plan))
         report = score_val(plan, run, task)
         report['pseudo_labels'] = {key: audit.get(key) for key in ('images', 'earlier_objects', 'recall', 'all',
@@ -526,7 +597,21 @@ def stage_tasks(plan: dict) -> dict:
         reports[task] = report
         print(f"task {task}: val cAcc M1 {report['cAcc_m1_groups']:.4f} (groups) / {report['cAcc_m1_single']:.4f} "
               f"(one threshold), pseudo-label precision {precision}, recall {audit.get('recall')}")
-    return _finish(plan, 'tasks', {'stage': N_TASKS, 'tasks': reports}, None)
+    return _finish(plan, 'tasks', {'stage': last, 'tasks': reports}, None)
+
+
+def pilot_verdict(pilot: dict, seed: dict) -> tuple[str, str]:
+    """M5 pilot: its task-2 val report against the seed's. cAcc-M2 must rise by PILOT_GAIN (five standard errors) and
+    the AP50 of the task-1 classes (mAP_P) fall by at most PILOT_OLD_DROP. Returns (decision, reason)."""
+    gain = round(pilot['cAcc_m2'] - seed['cAcc_m2'], 6)  # 0.7664 - 0.7364 is 0.02999... in floats
+    drop = round(seed['AP50']['mAP_P'] - pilot['AP50']['mAP_P'], 6)
+    scores = (f"cAcc-M2 {seed['cAcc_m2']:.4f} -> {pilot['cAcc_m2']:.4f} ({gain:+.4f}), AP50 task-1 classes "
+              f"{seed['AP50']['mAP_P']:.4f} -> {pilot['AP50']['mAP_P']:.4f} ({-drop:+.4f})")
+    if gain < PILOT_GAIN:
+        return 'stop', f'{scores}: no gain, the frozen-feature hypothesis fails; next is 800 px (direction B)'
+    if drop > PILOT_OLD_DROP:
+        return 'retry', f'{scores}: gain but task-1 classes forgotten; retry once with a larger feature_kd'
+    return 'go', f'{scores}: rebuild the task-1 prototypes, then train tasks 3-5'
 
 
 def stage_final_test(plan: dict) -> dict:
@@ -540,15 +625,17 @@ def stage_final_test(plan: dict) -> dict:
     if done.is_file():
         print(f'test already scored on {load_json(done)["finished_at"]}; not recomputed')
         return load_json(done)
-    _require(plan, 'tasks')
-    run = Path(plan['runs']) / PDP
+    if _require(plan, 'tasks')['stage'] != N_TASKS:
+        raise RuntimeError(f'test is scored after task {N_TASKS} only')
+    experiment = plan['pdp_experiment']
+    run = Path(plan['runs']) / experiment
     with _attempt(plan, 'final_test') as (record, attempt):
-        _train(plan, record, attempt, PDP, start=1, n=N_TASKS, epochs=plan['epochs'], splits='test',
+        _train(plan, record, attempt, experiment, start=1, n=N_TASKS, epochs=plan['epochs'], splits='test',
                fsa_hf=_fsa_hf(plan))
     cfg = TaskConfig.load(plan['task_config'])
     test = Path(plan['task_dir']) / 'test_full.json'
     compare_ann = Path(plan['eval_root']) / 'compare_b12/test_full.json'
-    compare = subset_run(run, compare_ann, Path(plan['root']) / 'compare_b12' / PDP)
+    compare = subset_run(run, compare_ann, Path(plan['root']) / 'compare_b12' / experiment)
     report = {'stage': 'final_test'}
     for name, run_dir, ann in (('test2019', run, test), ('compare_b12', compare, compare_ann)):
         detection = eval_cl.evaluate_run(run_dir, 'test', ann, cfg)

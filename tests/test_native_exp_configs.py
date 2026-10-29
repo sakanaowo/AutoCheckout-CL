@@ -130,3 +130,10 @@ def test_full_syn_configs_follow_the_plan_table():
 def test_full_syn_configs_refuse_missing_inputs():
     assert resolved_args("EXP-FULL-SYN-FSA", SYNTH_ROOT="")[0].returncode != 0
     assert "FSA_HF" in resolved_args("EXP-FULL-SYN")[0].stderr
+
+
+def test_full_syn_m5_config_only_adds_feature_tuning():
+    _, pdp = resolved_args("EXP-FULL-SYN", FSA_HF="/fixture/fsa/task_1/hf_model")
+    _, m5 = resolved_args("EXP-FULL-SYN-M5", FSA_HF="/fixture/fsa/task_1/hf_model")
+    assert {k for k in vars(pdp) if getattr(m5, k) != getattr(pdp, k)} == {"tune_after_task1", "feature_kd"}
+    assert m5.tune_after_task1 == "stages_3,encoder" and m5.feature_kd == 1
