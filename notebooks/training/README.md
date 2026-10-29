@@ -16,6 +16,7 @@ Chỉ bắt đầu sau khi các notebook trong [modeling](../modeling/README.md)
 | [03_five_task_baseline.ipynb](03_five_task_baseline.ipynb) | Baseline mới đủ 5 task; snapshot metrics/policy ngay sau mỗi task |
 | [04_full_syn_smoke.ipynb](04_full_syn_smoke.ipynb) | FULL-SYN F0.7: kiểm gói dữ liệu, smoke FSA/PDP, resume, giây/bước và VRAM trên máy GPU mới |
 | [05_full_syn_r1.ipynb](05_full_syn_r1.ipynb) | FULL-SYN vòng 1: G1 FSA → G2 PDP task 1 → G3 task 2–5 → G4 test một lần, cổng tự dừng; vòng sau là file `_r<N>` mới |
+| [06_full_syn_m5_pilot.ipynb](06_full_syn_m5_pilot.ipynb) | Chạy thử M5: FSA và task 1 lấy từ vòng 1, chỉ train task 2 với tầng cuối backbone và encoder học tiếp, so với task 2 của vòng 1 (runbook mục 7.1) |
 
 [Runbook chi tiết](../../docs/project/TRAINING_NOTEBOOK_RUNBOOK.md) (FULL-SYN trên vast.ai: mục 7) hướng dẫn settings, copy/upload data/weights, tmux, đọc logs, resume và download artifacts. [Báo cáo dry run](../../docs/project/TRAINING_NOTEBOOK_DRY_RUN.md) giữ evidence local.
 

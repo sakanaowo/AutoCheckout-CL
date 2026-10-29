@@ -262,3 +262,21 @@ rsync -a --partial --info=progress2 -e 'ssh -p PORT' \
 Trước khi commit, bỏ các dòng thanh tiến độ tqdm khỏi stream output của notebook. Ở vòng 1, chúng chiếm gần hết 69 MB của file; bỏ đi còn 1,2 MB. Bản notebook đầy đủ vẫn nằm trong `notebook_executions/` của campaign.
 
 Dry run local trên CPU, không cần GPU hay dữ liệu thật: `python -m tools.execute_training_notebook --notebook notebooks/training/05_full_syn_r1.ipynb --settings data/training/settings_full_syn_r1.json --dry-run` (fixture 6 nhãn, cổng chỉ báo, không dừng). Bản dry run 26/10 của hai notebook chạy hết, exit 0.
+
+### 7.1 Chạy thử M5 trên task 2 (29/10/2026)
+
+[Phân tích round 1](full-syn-r1-analysis-2026-10-29.md), mục 7 và 8. Notebook [06_full_syn_m5_pilot](../../notebooks/training/06_full_syn_m5_pilot.ipynb) lấy FSA và PDP task 1 của round 1 (`seed_campaign`), chỉ train task 2 với `configs/exp/native/EXP-FULL-SYN-M5.sh`, rồi so với task 2 của round 1 (`full_syn.pilot_verdict`). Code từ chối chạy quá task 2 và chấm test.
+
+Cần hai gói trên máy: gói dữ liệu của round 1 (`full_syn_rpc_synth_v2_v1_20261025.tar`, như bước 3 ở trên) và gói seed của round 1 (`full_syn_r1_seed_20261029.tar`, khoảng 1 GB: `plan.json`, `stages/`, `hf_model` của FSA, `task_1/` của PDP, policy đếm). Cả hai giải nén ở gốc repo.
+
+```bash
+cd /workspace/AutoCheckout-CL && git pull
+rclone cat drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar | tar -x -C /workspace/AutoCheckout-CL
+rclone cat drive:AutoCheckout/2026-10-29/full_syn_r1_seed_20261029.tar | tar -x -C /workspace/AutoCheckout-CL
+sha256sum -c --quiet data/packages/full_syn_r1_seed_20261029/SHA256SUMS
+cp configs/training/full_syn_m5_pilot.json data/training/settings_full_syn_m5_pilot.json   # sửa "dry_run": false
+python -m tools.execute_training_notebook --notebook notebooks/training/06_full_syn_m5_pilot.ipynb \
+  --settings data/training/settings_full_syn_m5_pilot.json --live-notebook notebooks/training/06_full_syn_m5_pilot.ipynb
+```
+
+Xong thì kéo `data/training/full-syn-m5-pilot/` về (rsync như trên; `runs/EXP-FULL-SYN-FSA` và `runs/EXP-FULL-SYN-M5/task_1` là symlink sang `full-syn-r1`). Dry run local: chạy notebook 05 dry run trước để có `data/training/dry_run/full-syn-r1`, rồi chạy notebook 06 với settings có `"seed_campaign": "data/training/dry_run/full-syn-r1"` và `--dry-run`.

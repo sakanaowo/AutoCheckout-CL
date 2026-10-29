@@ -11,12 +11,13 @@ Tài liệu này kiểm lại các giả thuyết trong [handoff họp 28/10 c�
 1. **Cách chấm điểm đúng.** Số đo trên val gần như trùng số đo trên test, nên chọn cấu hình dựa trên val là tin được.
 2. **Chỉnh cách đếm không giúp thêm.** Đổi ngưỡng hay đổi cách lọc box trùng chỉ thay đổi kết quả khoảng ±0,3 điểm.
 3. **Lỗi lớn nhất là nhận nhầm sản phẩm** (đúng vị trí nhưng sai SKU). Nếu hết lỗi này, tỉ lệ đếm đúng cả giỏ lên từ 43% đến khoảng 67%.
-4. **Nguyên nhân chính của nhầm:** với khoảng 40% số SKU, bộ ảnh mẫu của RPC chỉ chụp một mặt sản phẩm. Model chưa bao giờ thấy mặt kia, nên khi sản phẩm nằm ngửa mặt đó trên quầy thì nhận nhầm. Nhóm SKU này nhầm nhiều gấp 2,3 lần nhóm có đủ hai mặt.
-5. **Các giả thuyết khác của handoff không đứng vững:** SKU cũ và mới "tranh nhau", điểm tin cậy tụt làm model sai, và E4 đã đạt 42,4% trên cùng tập test.
+4. **Nhầm xảy ra giữa các SKU anh em** (cùng dòng sản phẩm, khác vị), và chỉ xuất hiện khi SKU anh em được học ở đợt sau. Đặc trưng mà model dùng để phân biệt không tách được các cặp này: khi nhầm, SKU đúng thường xếp thứ hai, sát ngay sau SKU sai.
+5. **Không sửa được sau khi train.** Đã thử 6 cách: chỉnh ngưỡng, chỉnh bước lọc box trùng, cân điểm theo nhóm task, trả phần dùng chung về task 1, xếp lại bằng prototype của PDP, và dự đoán ở ảnh to hơn. Không cách nào tăng cAcc. Muốn tăng phải train lại.
+6. **Các giả thuyết khác của handoff không đứng vững:** SKU cũ và mới "tranh nhau", điểm tin cậy tụt làm model sai, và E4 đã đạt 42,4% trên cùng tập test.
 
-**Việc nên làm tiếp:**
-1. Train cùng phương pháp nhưng trên ảnh quầy thật (FULL-REAL), vì đây là cách duy nhất để model thấy đủ các mặt sản phẩm.
-2. Ghép thêm hai chỉnh sửa rẻ: giảm learning rate ở cuối mỗi task, và bớt số epoch thừa.
+Bản trước của tài liệu này cho rằng nguyên nhân chính là "bộ ảnh mẫu chỉ có một mặt sản phẩm". Kiểm thêm thì điều này **sai**; xem mục 3.3.
+
+**Việc nên làm tiếp:** phải train lại. Các hướng và cách chọn ở mục 7. Đã chọn chạy thử hướng A (M5) trên riêng task 2 trước; code, cách chấm và mức lệch so với paper ở mục 8.
 
 ## Một số khái niệm dùng trong tài liệu
 
@@ -102,28 +103,28 @@ Các cặp hay nhầm nhất là **cùng dòng sản phẩm, khác vị**: 98_mi
 
 **Kết luận:** giả thuyết "tranh nhau" gần như sai. Model nhầm vì sản phẩm trông giống nhau.
 
-### 3.3 Vì sao nhầm: bộ ảnh mẫu chỉ có một mặt sản phẩm
+### 3.3 Có phải do bộ ảnh mẫu chỉ có một mặt sản phẩm không
 
-Ảnh ghép được tạo bằng cách cắt sản phẩm từ ảnh mẫu của RPC (mỗi ảnh một sản phẩm đặt trên bàn xoay) rồi dán lên nền khay. Xem [ảnh đối chiếu](../../runs/analysis_r1/confusions.png):
-- Ảnh mẫu của 98_milk và 97_milk đều chỉ chụp **mặt sau** hộp (ống hút, bảng dinh dưỡng). Ở mặt này hai SKU gần như giống hệt nhau.
-- Trên quầy thật, hộp thường nằm ngửa **mặt trước** (logo, tên sản phẩm). Model chưa từng thấy mặt này, nên đoán thành 97_milk, đôi khi thành cả kẹo gum.
+**Giả thuyết ban đầu.** Ảnh ghép được cắt từ ảnh mẫu của RPC (mỗi ảnh một sản phẩm trên bàn xoay). Với 79 trong 201 SKU, RPC không chụp mặt sau. Xem [ảnh đối chiếu](../../runs/analysis_r1/confusions.png): ảnh mẫu của 98_milk và 97_milk chỉ có mặt sau, còn trên quầy thật hộp hay ngửa mặt trước. Sau task 5, nhóm SKU một mặt nhầm 7,4%, nhóm hai mặt chỉ 3,2%.
 
-RPC chụp thêm mặt còn lại cho 122 trong 201 SKU; 79 SKU chỉ có một mặt. So hai nhóm sau task 5:
+**Kiểm đối chứng.** Nếu nguyên nhân là thiếu ảnh mặt còn lại, thì:
+- ngay sau khi học xong (task 1), nhóm một mặt đã phải nhầm nhiều hơn;
+- B2, train trên ảnh quầy thật nên thấy đủ mọi mặt, thì không được có khoảng chênh này.
 
-| SKU | Số vật trên val | Nhầm SKU | Sót |
-|---|---|---|---|
-| Có ảnh cả hai mặt (122 SKU) | 43.497 | 3,2% | 2,1% |
-| Chỉ một mặt (79 SKU) | 27.611 | **7,4%** | 2,9% |
+| | Nhầm SKU: có hai mặt | Nhầm SKU: một mặt |
+|---|---|---|
+| FULL-SYN, ngay sau task 1 (SKU task 1) | 0,8% | 0,8% |
+| B2, ngay sau task 1 (SKU task 1) | 0,9% | 0,4% |
+| FULL-SYN sau task 5 | 3,3% | 7,1% |
+| B2 sau task 5 | 12,2% | 16,7% |
 
-13 trong 20 SKU tệ nhất thuộc nhóm một mặt, dù nhóm này chỉ chiếm 39% số SKU.
+(Đo trên 6.003 ảnh test cũ để so được với B2, ngưỡng chọn trên val của từng model.)
 
-**Ý nghĩa:**
-- Làm ảnh ghép thật hơn (bóng, màu, CycleGAN) không sửa được lỗi này.
-- Cắt thêm ảnh mẫu từ RPC cũng không sửa được, vì RPC không hề có ảnh của mặt còn thiếu.
+**Kết luận:** giả thuyết sai.
+- Ngay sau khi học, nhóm một mặt nhầm không nhiều hơn.
+- Khoảng chênh chỉ xuất hiện về sau, và B2 (đã thấy đủ mọi mặt) cũng có khoảng chênh cỡ đó (khoảng 4 điểm).
 
-Có hai cách để model thấy mặt đó:
-1. **Train trên ảnh quầy thật**, như B2 đã làm, nhưng thêm các bản sửa của vòng 1 (FSA, I3, F14). Gọi là FULL-REAL. Cách này giữ đúng phương pháp của paper và không cần làm thêm dữ liệu. Lưu ý: ảnh quầy của RPC chỉ có trong val2019 và test2019, nên FULL-REAL phải dùng cách chia dữ liệu của B2 (22.494 ảnh train) và so trên 6.003 ảnh test cũ.
-2. Nhóm tự chụp mặt còn thiếu của 79 SKU rồi đưa vào ảnh ghép.
+Như vậy nhóm SKU một mặt vốn có nhiều "anh em" giống mình hơn. Lỗi xảy ra khi các SKU anh em đó được học ở đợt sau, không phải vì thiếu ảnh. Hệ quả: cắt thêm cutout hay tải thêm camera không phải là hướng sửa chính.
 
 ### 3.4 Điểm tin cậy tụt dần có làm model sai không
 
@@ -154,6 +155,45 @@ Có hai lý do cộng lại:
 
 **Mốc cho production:** với 12 vật mỗi ảnh, muốn đếm đúng 80% số giỏ thì mỗi vật chỉ được sai khoảng 1,8%. Hiện tại là 9%, tức phải giảm lỗi khoảng 5 lần.
 
+### 3.6 Vì sao model nhầm các SKU anh em
+
+**Kiểm 1, model có "thấy" SKU đúng không.** Với mỗi box bị gán sai SKU sau task 5, xem SKU đúng đứng thứ mấy trong các lựa chọn của model cho box đó:
+
+| SKU đúng đứng | Tỉ lệ box nhầm |
+|---|---|
+| Thứ hai | 59% |
+| Thứ ba trở xuống | 33% |
+| Không có trong các lựa chọn | 8% |
+
+Khi SKU đúng đứng thứ hai, điểm của nó thường bằng khoảng 72% điểm của SKU bị chọn. Model gần đúng, nhưng không tách được hai SKU.
+
+**Kiểm 2, đặc trưng có tách được không.** PDP lưu sẵn một "prototype" cho mỗi SKU: đặc trưng trung bình của SKU đó. Prototype của các cặp hay nhầm gần như trùng nhau. Độ giống (cosine) của 98/97_milk là 0,94, của 74/73_drink là 0,88, trong khi hai SKU bất kỳ thường chỉ khoảng 0,55. Nói cách khác, ở tầng đặc trưng, model "nhìn" hai SKU này gần như là một.
+
+**Thử sửa sau khi train (đều không được):**
+
+| Cách thử | cAcc trên nửa val giữ lại |
+|---|---|
+| Cân điểm theo nhóm task (C1) | giảm 0,3–0,9 điểm |
+| Xếp lại hai SKU đứng đầu theo độ giống với prototype | giảm 0,5–0,8 điểm hoặc giữ nguyên |
+| Dự đoán ở ảnh 800px thay vì 640px (model train ở 640px) | giảm từ 42% xuống 22% |
+
+Ảnh 800px làm model kém đi rõ rệt vì model không quen cỡ ảnh này. Dù vậy, số lần nhầm 98_milk thành 97_milk giảm từ 86 xuống 67 trên 142 hộp. Đây là dấu hiệu yếu rằng ảnh to hơn giúp phân biệt chữ in, nếu model được train ở cỡ đó.
+
+**Kết luận:** lỗi nằm ở đặc trưng của model. Trong PDP, backbone, encoder và decoder bị khoá sau FSA, mà FSA chỉ được train trên 100 SKU của task 1. Các SKU anh em học ở đợt sau vì vậy phải phân biệt bằng đặc trưng chưa từng được chỉnh cho chúng. Đây vẫn là giả thuyết; muốn kiểm phải train lại (mục 7).
+
+### 3.7 Model có tự biết giỏ nào mình không chắc không
+
+Ngoài đời, có thể để model tự làm những giỏ nó chắc, còn giỏ khó thì chuyển cho nhân viên. Kiểm sau task 5: xếp giỏ theo mức chắc chắn (box có điểm sát ngưỡng, hoặc hai SKU có điểm gần nhau trên cùng một box), rồi xem các giỏ chắc nhất đúng bao nhiêu.
+
+| Model tự làm | Chuyển nhân viên | Số giỏ model làm đúng |
+|---|---|---|
+| 100% số giỏ | 0% | 44% |
+| 50% giỏ chắc nhất | 50% | 65% |
+| 20% giỏ chắc nhất | 80% | 78% |
+| 10% giỏ chắc nhất | 90% | 78% |
+
+**Kết luận:** model sai mà vẫn tự tin. Vì vậy hiện chưa dùng được cách chuyển giỏ khó cho nhân viên.
+
 ## 4. Cấu hình train
 
 - **Learning rate không giảm lần nào** trong cả vòng 1, ở cả FSA lẫn PDP. Code gốc của paper cũng vậy. Deformable DETR thường giảm learning rate 10 lần ở gần cuối, và việc này hay giúp tăng điểm (R1).
@@ -167,19 +207,92 @@ Handoff viết E4 (tháng 9, ảnh thật) đạt 42,4% "trên cùng 6.003 ảnh
 
 | Đề xuất | Sau khi kiểm | Ưu tiên |
 |---|---|---|
-| FULL-REAL: cùng phương pháp, train trên ảnh quầy thật | Cách duy nhất cho model thấy mặt sản phẩm còn thiếu | **Cao nhất** |
+| FULL-REAL: cùng phương pháp, train trên ảnh quầy thật | Lý do "thiếu mặt sản phẩm" đã sai (mục 3.3). Vẫn cần để trả lời câu hỏi ảnh ghép hay ảnh thật tốt hơn | Trung bình |
 | R1 giảm learning rate, R4 bớt epoch | Đã xác nhận learning rate không giảm, task 1 thừa epoch. Chỉ cần đổi cờ, ghép được vào FULL-REAL | **Cao** |
-| R3 ảnh 800px | Các cặp hay nhầm khác nhau ở chữ in, nên ảnh rõ hơn có lý do để giúp. Chưa kiểm được ở local | Trung bình |
+| R3 ảnh 800px | Dự đoán ở 800px với model 640px giảm nhầm 98/97_milk (mục 3.6). Cần train ở 800px mới biết | **Cao** |
 | R2 bật augment | Chưa kiểm được ở local | Trung bình |
 | I5 khoá phần dùng chung | Điểm tụt không làm model sai thêm (mục 3.4) | Thấp |
-| C1 cân điểm SKU cũ/mới | Không có hiện tượng "tranh nhau" (mục 3.2) | Thấp |
-| S1 cắt thêm ảnh mẫu | RPC không có mặt còn thiếu; chỉ có ích nếu nhóm tự chụp | Thấp |
+| C1 cân điểm, xếp lại bằng prototype | Đã thử, không giúp (mục 3.6) | Bỏ |
+| S1 cắt thêm ảnh mẫu | Lỗi không do thiếu mặt sản phẩm (mục 3.3) | Thấp |
+| M5 cho backbone/encoder học thêm ở task sau | Đặc trưng không tách được SKU anh em học ở đợt sau (mục 3.6) | **Cao** |
 | T1, D3 chỉnh ngưỡng, lọc box trùng | Không giúp (mục 2) | Bỏ |
 | Làm ảnh ghép thật hơn (S2, S3, CycleGAN) | Theo hướng của nhóm, và không sửa được lỗi chính | Bỏ |
 
+## 7. Các hướng train lại
+
+Cả ba hướng đều giữ phương pháp của paper (PDP, học tăng dần bằng nhãn giả), và đều nên ghép thêm hai chỉnh sửa rẻ: giảm learning rate ở cuối mỗi task (R1) và bớt epoch thừa (R4).
+
+| Hướng | Làm gì | Nhắm vào | Chi phí GPU (4090) | Rủi ro |
+|---|---|---|---|---|
+| **A. Đặc trưng học tiếp (M5)** | Ở task 2–5, mở khoá tầng cuối backbone và encoder với learning rate nhỏ; model thầy giữ kiến thức cũ | Đặc trưng chưa từng được chỉnh cho SKU học sau (mục 3.6) | Dùng lại FSA và task 1; chạy lại task 2–5, khoảng 22 giờ ở tốc độ vòng 1 (cộng phần chậm hơn, mục 8.4) | Lệch paper (paper khoá các phần này); có thể quên nhiều hơn |
+| **B. Ảnh 800px (R3)** | Train lại cả vòng ở 800px | Chữ in trên bao bì bị mờ ở 640px | Cả vòng, khoảng 50 giờ (chậm hơn khoảng 1,5 lần) | Không đổi phương pháp; tốn nhất |
+| **C. FULL-REAL** | Cùng cấu hình vòng 1, train trên ảnh quầy thật (split B2) | Trả lời câu hỏi ảnh ghép hay ảnh thật tốt hơn | Khoảng 30–40 giờ | Không trực tiếp sửa lỗi SKU anh em |
+
+Đề xuất: làm **A** trước. Rẻ nhất, nhắm đúng nguyên nhân tìm được, và nếu A không giúp thì giả thuyết "đặc trưng bị khoá" sai, lúc đó chuyển sang B.
+
+## 8. Chạy thử M5 trên task 2
+
+Ngày 29/10 nhóm chọn thử hướng A trước, nhưng chỉ chạy **task 2** để biết giả thuyết "đặc trưng bị khoá" đúng hay sai trước khi tốn cả vòng.
+
+### 8.1 Lệch so với paper bao nhiêu
+
+Đếm trên checkpoint của vòng 1. Model có 130,5M tham số.
+
+| Phần | Tham số | Paper (như vòng 1) | M5 |
+|---|---|---|---|
+| Backbone, 3 tầng đầu | 59,7M | Khoá | Khoá |
+| Backbone, tầng cuối (`stages_3`) | 27,5M | Khoá | Train, `lr_old` = 1e-5 |
+| Encoder | 4,5M | Khoá | Train, `lr_old` = 1e-5 |
+| Decoder | 6,1M | Khoá | Khoá |
+| Prompt (mỗi task một bộ riêng) | 29,0M | Train | Train |
+| Phần dùng chung khác (`input_proj`, `bbox_embed`…) | 3,1M | Train, `lr_old` | Train, `lr_old` |
+
+- Phần dùng chung bị sửa khi học task mới tăng từ **2,4% lên khoảng 27%** model; phần bị khoá giảm từ 75% xuống khoảng 51%. Prompt không tính vào đây, vì mỗi task có bộ riêng nên không ghi đè lên task cũ.
+- M5 thêm một cơ chế mà paper không có: loss giữ output của encoder gần với model thầy (model sau task trước) trên cùng ảnh (`--feature_kd`). Model thầy của paper chỉ dùng để tạo nhãn giả.
+- Ở task 2, prototype của SKU task 1 vẫn khớp với model thầy, vì model thầy chính là model task 1. Từ task 3, model thầy đã có đặc trưng bị sửa, nên prototype của SKU task 1 phải được làm lại. Phần này **chưa làm**; code chặn chạy M5 quá task 2.
+
+### 8.2 Production có chấp nhận được không
+
+Production không chấm theo mức giống paper. M5 giữ nguyên kiến trúc, số tham số và tốc độ suy luận. Cái giá là mỗi lần thêm SKU phải phát hành lại cả model (khoảng 520 MB) thay vì chỉ prompt và head, và train chậm hơn (mục 8.4). Rủi ro thật là **quên SKU cũ**, nên cách chấm dưới đây có điều kiện riêng cho nó. Trong báo cáo, vòng 1 giữ làm bản tái hiện đúng paper, M5 là biến thể "PDP + fine-tune một phần".
+
+### 8.3 Cách chấm lần chạy thử
+
+So trên val với task 2 của vòng 1 (cAcc-M2 73,64% trên 5.702 ảnh, sai số chuẩn khoảng 0,6 điểm; AP50 của SKU task 1 là 94,96%). Quy tắc nằm trong `full_syn.pilot_verdict`:
+
+| Kết quả | Quyết định |
+|---|---|
+| cAcc-M2 tăng ≥ 3 điểm (khoảng 5 lần sai số chuẩn) **và** AP50 SKU task 1 giảm ≤ 1 điểm | `go`: làm lại prototype của SKU task 1, rồi chạy task 3–5 |
+| cAcc-M2 tăng < 3 điểm | `stop`: giả thuyết sai, chuyển sang hướng B (800px, giữ khoá như paper) |
+| cAcc-M2 tăng nhưng AP50 SKU task 1 giảm > 1 điểm | `retry`: thử lại một lần với `feature_kd` lớn hơn |
+
+Chỉ đổi một biến so với vòng 1: learning rate, số epoch, batch, ảnh 640px giữ nguyên. R1 (giảm learning rate) và R4 (bớt epoch) để sau, không gộp vào lần thử này.
+
+### 8.4 Đo trên máy local
+
+Chạy task 2 trên RTX 3060, batch 2 (batch hiệu dụng 8 như vòng 1), 30 bước tối ưu, từ task 1 của vòng 1. Attention dùng bản PyTorch thay cho kernel biên dịch, nên số tuyệt đối chậm hơn trên 4090; chỉ tỉ lệ M5/gốc là đáng tin.
+
+| | Gốc (`EXP-FULL-SYN`) | M5 | M5 so với gốc |
+|---|---|---|---|
+| Tham số được train | 32,18M | 64,18M | +32,0M (đúng tầng cuối backbone + encoder) |
+| Giây mỗi bước tối ưu (8 ảnh) | 4,90 | 5,12 | +4,5% |
+| VRAM đỉnh, batch 2 | 6,10 GiB | 7,05 GiB | +0,95 GiB |
+
+Suy ra cho 4090: task 2 của vòng 1 mất 5,36 giờ, nên task 2 với M5 khoảng **5,6 giờ** (cả 4 task khoảng 22 giờ, như mục 7). VRAM ở batch 8: vòng 1 dùng 7,5 GiB; M5 thêm khoảng 4 × 0,95 GiB, tức khoảng 11–12 GiB, vẫn dưới 24 GiB. Số này là ước lượng; notebook ghi VRAM thật vào `step_metrics.jsonl`.
+
+- Loss giữ đặc trưng (`FKD`) ở mức khoảng 0,008 ngay từ bước đầu: đó là nhiễu do dropout của encoder khi train, không phải do đặc trưng đã trôi. Với trọng số 1, loss này nhỏ so với loss phát hiện, nên giữ đặc trưng còn lỏng. Trọng số 1 là chọn tạm, chưa có căn cứ; nếu quên nhiều thì nhánh `retry` tăng nó lên.
+- Ở batch 8, M5 hết bộ nhớ trên 3060 (12 GB). Vòng 1 trên 4090 dùng 7,5 GiB ở batch 8 cho task 2.
+
+### 8.5 Đã làm
+
+- `pdp/main.py`, `pdp/engine.py`: cờ `--tune_after_task1` (mở khoá theo tên, từ task 2, ở `lr_old`) và `--feature_kd` (MSE giữa output encoder của model và của model thầy). Test: `tests/test_pdp_m5_tune_features.py`.
+- `configs/exp/native/EXP-FULL-SYN-M5.sh`: `EXP-FULL-SYN` cộng `--tune_after_task1 stages_3,encoder --feature_kd 1`.
+- `autocheckout/full_syn.py`: setting `pdp_experiment` và `seed_campaign`; `stage_seed` dùng lại FSA và task 1 của vòng 1 (link, kiểm md5); `stage_tasks(plan, last=2)`; `pilot_verdict`. Test trong `tests/test_full_syn.py`; dry run notebook 06 chạy hết.
+- Notebook [06_full_syn_m5_pilot](../../notebooks/training/06_full_syn_m5_pilot.ipynb), settings mẫu `configs/training/full_syn_m5_pilot.json`, cách chạy ở [runbook mục 7.1](TRAINING_NOTEBOOK_RUNBOOK.md#71-chạy-thử-m5-trên-task-2-29102026).
+- Gói seed `data/packages/full_syn_r1_seed_20261029.tar` (1,06 GB, 62 file, md5 `2ae021116a7c0124018051766ba23ca4`).
+
 ## Phụ lục: chi tiết kỹ thuật
 
-- Dữ liệu: campaign `data/training/full-syn-r1/` (giải nén từ `training.zip`). Script ở `runs/analysis_r1/` (không vào git): `d1_errors.py`, `d1b_cross_task.py`, `d1c_per_object.py`, `d1d_ceilings.py`, `d1e_one_side.py` (mục 3), `d2_scores.py` (3.4), `t1_split_half.py` (2), `hybrid_predict.sh` và `hybrid_eval.py` (3.4), `sheet.py` (ảnh đối chiếu).
+- Dữ liệu: campaign `data/training/full-syn-r1/` (giải nén từ `training.zip`). Script ở `runs/analysis_r1/` (không vào git): `d1_errors.py`, `d1b_cross_task.py`, `d1c_per_object.py`, `d1d_ceilings.py`, `d1e_one_side.py` (mục 3), `d2_scores.py` (3.4), `t1_split_half.py` (2), `hybrid_predict.sh` và `hybrid_eval.py` (3.4), `sheet.py` (ảnh đối chiếu), `coverage.py` (3.7), `h1_b2_control.py` (3.3), `h2_rank.py`, `h3_group_bias.py`, `h4_features.py` + `h4_rerank.py`, `res_predict.sh` + `h5_res_eval.py` (3.6). Dự đoán ở 960px hết bộ nhớ trên 3060 nên không có kết quả.
 - Một vật tính là "khoanh đúng" khi box trùng với vật ít nhất 50% (IoU ≥ 0,5). Ngưỡng và cách lọc trùng lấy từ policy vòng 1, trừ mục 2 và mục 3.4 có chọn lại.
 - Mục 3.4: chạy lại model gốc trên 3060 cho đúng dự đoán của 4090. Mức thay đổi trọng số từ task 1 đến task 5: bộ chọn prompt (`query_tf`) 130%, prompt dùng chung 33–160%, `input_proj` 14%, `bbox_embed` 5%; backbone, encoder, decoder và phần phân loại của SKU cũ không đổi. `query_tf` thay đổi nhiều vì nó khớp cờ `--new_params prompts` nên được train ở learning rate cao ở mọi task. Cờ `--freeze_shared_after_task1` có khoá `query_tf` nhưng không khoá prompt dùng chung.
 - Mục 3.3: "có ảnh hai mặt" nghĩa là SKU có bộ ảnh `-back` trong `instances_train2019.json`. Train2019 có 53.739 ảnh, mỗi ảnh một vật.
