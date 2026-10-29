@@ -203,6 +203,8 @@ def training_contract(args):
         "shuffle",
         "freeze",
         "freeze_shared_after_task1",
+        "tune_after_task1",
+        "feature_kd",
         "lr",
         "lr_old",
         "lr_drop",

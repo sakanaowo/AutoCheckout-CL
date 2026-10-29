@@ -478,6 +478,13 @@ class local_trainer(pl.LightningModule):
 			loss_dict['loss_ddl'] = ddl_loss
 			loss = loss + self.args.ddl_lambda * ddl_loss
 
+		if self.training and old_model_outputs is not None and self.args.feature_kd > 0:
+			# M5: keep the encoder output of the tuned features close to the teacher's (prompts act in the decoder
+			# only, so both encoders see the same input)
+			kd_loss = F.mse_loss(outputs.encoder_last_hidden_state, old_model_outputs.encoder_last_hidden_state)
+			loss_dict['loss_feature_kd'] = kd_loss
+			loss = loss + self.args.feature_kd * kd_loss
+
 		if self.args.use_prompts and self.args.local_query:  # the query loss exists only with prompts
 			loss_dict['query_loss'] = query_loss
 
@@ -501,7 +508,7 @@ class local_trainer(pl.LightningModule):
 	def training_step(self, batch, batch_idx): # automatic training schedule
 		loss, loss_dict = self.common_step(batch, batch_idx)
 		# logs metrics for each training_step
-		short_map = {'loss_ce':'ce','loss_giou':'giou','cardinality_error':'car','training_loss':'tr','loss_bbox':'bbox', 'query_loss':'QL', 'loss_ddl':'DDL'}
+		short_map = {'loss_ce':'ce','loss_giou':'giou','cardinality_error':'car','training_loss':'tr','loss_bbox':'bbox', 'query_loss':'QL', 'loss_ddl':'DDL', 'loss_feature_kd':'FKD'}
 		self.log("tr", loss, prog_bar=True)
 		for k,v in loss_dict.items():
 			self.log(short_map[k], v.item(), prog_bar=True)
@@ -670,11 +677,14 @@ class local_trainer(pl.LightningModule):
 				# I5: parameters shared by all tasks and trained at lr_old could drift away from what
 				# earlier tasks rely on; freeze them from task 2 on.
 				freeze += SHARED_AFTER_TASK1
+			# M5: the features stay trainable after task 1, at lr_old (they are not new_params)
+			tune = self.args.tune_after_task1.split(',') if self.task_id > 1 and self.args.tune_after_task1 else []
 			for id, (name, params) in enumerate(self.model.named_parameters()):
 				params.requires_grad = True
 				flag = False
-				for n in name.split('.'):
-					if n in freeze:
+				parts = name.split('.')
+				for n in parts:
+					if n in freeze and not set(parts) & set(tune):
 						params.requires_grad = False
 						flag = True
 				if not flag:

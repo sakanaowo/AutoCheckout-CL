@@ -264,6 +264,12 @@ def get_args_parser():
     parser.add_argument('--freeze_shared_after_task1', default=0, type=int,
                         help='I5: from task 2 on, also freeze input_proj, query_tf, query_position_embeddings, '
                              'reference_points, level_embed and bbox_embed')
+    parser.add_argument('--tune_after_task1', default='', type=str,
+                        help='M5: from task 2 on, train the parameters under these name parts although --freeze '
+                             'covers them (e.g. stages_3,encoder: last ConvNeXt stage and encoder), at lr_old')
+    parser.add_argument('--feature_kd', default=0.0, type=float,
+                        help='M5: weight of the MSE between the encoder output of the model and of the teacher '
+                             '(previous task) on the same images, from task 2 on (0 = off)')
     parser.add_argument('--optim_groups', default='auto', choices=['auto', 'prompt', 'detr'],
                         help="B1: 'detr' = full fine-tuning learning rates; 'auto' = original rule")
     parser.add_argument('--joint', default=0, type=int,
