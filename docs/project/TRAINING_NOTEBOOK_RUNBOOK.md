@@ -212,8 +212,8 @@ cd /workspace/AutoCheckout-CL
 
 # 2. Môi trường (docs/environment/README.md)
 conda env create -f configs/environment/pdp.yml && conda activate pdp
-python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
-python -m pip install -r requirements.txt && python -m pip install -e .
+python -m pip install -r configs/environment/requirements-lock-cu121.txt   # bản chụp env đã chạy, từ 30/10
+python -m pip install --no-deps -e . && python -m pip check
 
 # 3. Dữ liệu: copy ~/.config/rclone/rclone.conf của máy local sang, rồi tải và giải nén cùng lúc (không cần 25 GB cho file tar)
 rclone cat drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar | tar -x -C /workspace/AutoCheckout-CL

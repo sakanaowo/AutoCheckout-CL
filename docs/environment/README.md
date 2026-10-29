@@ -48,13 +48,31 @@ python -m pip --version
 
 ```bash
 conda env create -f configs/environment/pdp.yml
-# Lựa chọn nếu không dùng kênh defaults (không chạy cả hai lệnh tạo):
-# conda create -n pdp --override-channels -c conda-forge python=3.10 pip
+# Tương đương, không dùng file yml (không chạy cả hai lệnh tạo):
+# conda create -n pdp --override-channels -c conda-forge python=3.10.22 pip
 # conda env config vars set -n pdp PYTHONNOUSERSITE=1 USE_TF=0
 conda activate pdp
 ```
 
-[pdp.yml](../../configs/environment/pdp.yml) chỉ khai báo Python 3.10/pip và biến môi trường;
+**Cài đúng môi trường đã chạy (khuyên dùng trên máy GPU, Linux x86_64).** [requirements-lock-cu121.txt](../../configs/environment/requirements-lock-cu121.txt) là bản chụp `pip freeze --all` của env `pdp` ngày 30/10/2026 (sau round 1 FULL-SYN): 119 gói, ghim cả gói phụ thuộc gián tiếp, Torch 2.2.2+cu121 lấy từ index cu121 ghi sẵn trong file. Sau `conda activate pdp`, thay cho các bước Torch và requirements bên dưới:
+
+```bash
+python -m pip install -r configs/environment/requirements-lock-cu121.txt
+python -m pip install --no-deps -e .
+python -m pip check
+```
+
+Khi sửa `requirements.txt`, cài lại theo các bước bên dưới, chạy test, rồi chụp lại file lock:
+
+```bash
+{ sed -n '/^#/p;/^--/p' configs/environment/requirements-lock-cu121.txt
+  python -m pip freeze --all --exclude-editable | grep -viE '^(pip|autocheckout)==|^pip @' | sort -f; } > lock.tmp
+mv lock.tmp configs/environment/requirements-lock-cu121.txt   # sửa ngày trong dòng đầu
+```
+
+Máy CPU không cần file lock: dùng các bước bên dưới với index CPU.
+
+[pdp.yml](../../configs/environment/pdp.yml) chỉ khai báo Python 3.10.22/pip (conda-forge) và biến môi trường;
 runtime vẫn dùng một nguồn [requirements.txt](../../requirements.txt). Sau activation, cài Torch từ đúng
 CPU/cu121 index bên dưới rồi requirements. Môi trường `pdp` đã có thì dùng activation và phần sửa Ninja,
 không cần tạo lại hoặc chạy solver cập nhật toàn bộ Conda.
