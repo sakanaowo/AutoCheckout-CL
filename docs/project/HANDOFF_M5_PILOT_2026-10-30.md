@@ -18,7 +18,7 @@ Người làm: さかな (với Claude). Tài liệu này để người tiếp 
 | Test | Toàn bộ suite qua trên CPU; venv dựng từ file lock cũng qua. Dry run notebook 05 rồi 06 chạy hết, exit 0 |
 | Gói dữ liệu trên Drive | `drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar` (26,8 GB, md5 `13066bcff65cc42047c969e127c08114`); `drive:AutoCheckout/2026-10-29/full_syn_r1_seed_20261029.tar` (1,06 GB, md5 `2ae021116a7c0124018051766ba23ca4`) |
 | Máy 4090 mới | Repo ở `~/AutoCheckout-CL`, shell zsh. **Đã tải xong 2 gói.** Lúc tải lần đầu repo đang ở nhánh `main` và có một lần giải nén lỗi vào `data/` (do `--progress` trên `rclone cat`), nên phải kiểm lại theo mục 3 |
-| Train | Chưa chạy |
+| Train | **Đã chạy xong 30/10, kết quả `STOP`**: val cAcc-M2 73,64% → 74,85% (+1,21), AP50 SKU task 1 94,96% → 94,73%. Chi tiết ở [mục 8.6 của tài liệu phân tích](full-syn-r1-analysis-2026-10-29.md#86-kết-quả-3010-stop). Kết quả backup ở `drive:AutoCheckout/2026-10-30/full_syn_m5_pilot_20261030.zip` (md5 `96c914b1b583ab5ea406be148c3e3699`) |
 
 ## 3. Việc tiếp theo trên 4090
 
@@ -112,6 +112,14 @@ rsync -a -e 'ssh -p PORT' root@HOST:~/AutoCheckout-CL/notebooks/training/06_full
 # hai symlink sang round 1 mang đường dẫn tuyệt đối của vast; nối lại về bản local
 ln -sfn "$PWD/data/training/full-syn-r1/runs/EXP-FULL-SYN-FSA" data/training/full-syn-m5-pilot/runs/EXP-FULL-SYN-FSA
 ln -sfn "$PWD/data/training/full-syn-r1/runs/EXP-FULL-SYN/task_1" data/training/full-syn-m5-pilot/runs/EXP-FULL-SYN-M5/task_1
+```
+
+Bản 30/10 không rsync mà tải gói zip từ Drive: `rclone copy drive:AutoCheckout/2026-10-30/full_syn_m5_pilot_20261030.zip data/packages/`, rồi `unzip data/packages/full_syn_m5_pilot_20261030.zip` ở gốc repo, rồi nối lại hai symlink trên. 12 symlink trong `inputs/tasks/` cũng trỏ vào `/root/AutoCheckout-CL/data/processed/...`; nếu repo ở máy local nằm chỗ khác thì nối lại:
+
+```bash
+for l in data/training/full-syn-m5-pilot/inputs/tasks/*.json; do
+  t=$(readlink "$l"); ln -sfn "$PWD/data/processed/${t#*/data/processed/}" "$l"
+done
 ```
 
 Trước khi commit notebook 06, bỏ các dòng thanh tiến độ tqdm khỏi output như đã làm ở round 1 (runbook mục 7), rồi ghi kết quả vào mục 8 của tài liệu phân tích.

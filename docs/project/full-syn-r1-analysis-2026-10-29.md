@@ -17,7 +17,7 @@ Tài liệu này kiểm lại các giả thuyết trong [handoff họp 28/10 c�
 
 Bản trước của tài liệu này cho rằng nguyên nhân chính là "bộ ảnh mẫu chỉ có một mặt sản phẩm". Kiểm thêm thì điều này **sai**; xem mục 3.3.
 
-**Việc nên làm tiếp:** phải train lại. Các hướng và cách chọn ở mục 7. Đã chọn chạy thử hướng A (M5) trên riêng task 2 trước; code, cách chấm và mức lệch so với paper ở mục 8.
+**Việc nên làm tiếp:** phải train lại. Các hướng và cách chọn ở mục 7. Đã chọn chạy thử hướng A (M5) trên riêng task 2 trước; code, cách chấm và mức lệch so với paper ở mục 8. **Kết quả 30/10: `stop`** (cAcc-M2 +1,21 điểm, ngưỡng là +3; không quên thêm SKU task 1), nên chuyển sang hướng B (mục 8.6).
 
 ## Một số khái niệm dùng trong tài liệu
 
@@ -289,6 +289,56 @@ Suy ra cho 4090: task 2 của vòng 1 mất 5,36 giờ, nên task 2 với M5 kho
 - `autocheckout/full_syn.py`: setting `pdp_experiment` và `seed_campaign`; `stage_seed` dùng lại FSA và task 1 của vòng 1 (link, kiểm md5); `stage_tasks(plan, last=2)`; `pilot_verdict`. Test trong `tests/test_full_syn.py`; dry run notebook 06 chạy hết.
 - Notebook [06_full_syn_m5_pilot](../../notebooks/training/06_full_syn_m5_pilot.ipynb), settings mẫu `configs/training/full_syn_m5_pilot.json`, cách chạy ở [runbook mục 7.1](TRAINING_NOTEBOOK_RUNBOOK.md#71-chạy-thử-m5-trên-task-2-29102026).
 - Gói seed `data/packages/full_syn_r1_seed_20261029.tar` (1,06 GB, 62 file, md5 `2ae021116a7c0124018051766ba23ca4`).
+
+### 8.6 Kết quả (30/10): `stop`
+
+Chạy trên RTX 4090 (vast.ai), đúng cấu hình ở 8.3, campaign `full-syn-m5-pilot`. Notebook [06](../../notebooks/training/06_full_syn_m5_pilot.ipynb) in:
+
+> STOP - cAcc-M2 0.7364 -> 0.7485 (+0.0121), AP50 task-1 classes 0.9496 -> 0.9473 (-0.0023): no gain, the frozen-feature hypothesis fails; next is 800 px (direction B)
+
+| Trên val, sau task 2 | Vòng 1 | M5 | Chênh |
+|---|---|---|---|
+| cAcc-M2 (5.702 ảnh) | 73,64% | **74,85%** | **+1,21** (ngưỡng `go`: +3) |
+| cAcc-M1, ngưỡng theo nhóm | 24,43% | 26,93% | +2,50 |
+| cAcc-M1 theo độ khó: dễ / vừa / khó | 42,01 / 21,34 / 9,96% | 46,40 / 22,90 / 11,51% | +4,39 / +1,56 / +1,55 |
+| AP50 SKU task 1 (`mAP_P`) | 94,96% | 94,73% | −0,23 |
+| AP50 SKU task 2 (`mAP_C`) | 94,81% | 95,78% | +0,97 |
+| AP50 tất cả (`mAP_A`) | 94,44% | 94,50% | +0,06 |
+| Quên SKU task 1 (`forgetting`) | −1,58 | −1,35 | |
+| Nhãn giả: precision / recall | 99,72 / 99,61% | 99,72 / 99,61% | như nhau (cùng model thầy) |
+
+Các cặp nhầm nhiều nhất (nhãn số, như bảng của vòng 1):
+
+| Đúng → đoán | M5 | Vòng 1 |
+|---|---|---|
+| 41 → 59 | 19 | 32 |
+| 84 → 85 | 10 | 9 |
+| 101 → 11 | 5 | 4 |
+| 98 → 111 | 5 | 2 |
+| 116 → 66 | 3 | 3 |
+| 73 → 72 | 3 | 5 |
+| 117 → 66, 69 → 70, 31 → 87 | 2 mỗi cặp | ngoài top 20 |
+| 64 → 63 | 2 | 2 |
+
+Đọc kết quả:
+
+- **Giả thuyết "đặc trưng bị khoá" không giải thích được phần lớn lỗi.** Mở khoá 32M tham số (tầng cuối backbone và encoder) chỉ thêm 1,21 điểm cAcc-M2, khoảng 2 lần sai số chuẩn của val, xa ngưỡng 3 điểm. Chỉ có một lần chạy mỗi bên, nên chưa biết dao động giữa các lần train là bao nhiêu.
+- **Không quên thêm:** AP50 SKU task 1 chỉ giảm 0,23 điểm, `forgetting` còn nhỏ hơn vòng 1. Loss `FKD` nằm trong khoảng 0,0083–0,0091 suốt 16 epoch, không tăng dần. Vậy phần lệch paper ở 8.1 không gây hại ở task 2, nhưng cũng không đem lại đủ.
+- **Cặp nặng nhất giảm, các cặp khác gần như không đổi:** 41 → 59 từ 32 xuống 19, các cặp còn lại đứng yên hoặc tăng nhẹ. Đặc trưng học tiếp tách được một phần cặp tệ nhất, không sửa được lỗi SKU anh em nói chung.
+- Theo quy tắc 8.3, chuyển sang **hướng B** (800px, giữ khoá như paper). Phần làm lại prototype cho M5 từ task 3 (8.1) không cần làm nữa.
+
+Chi phí đo thật trên 4090:
+
+| | Ước ở 8.4 | Đo |
+|---|---|---|
+| Tham số được train | 64,18M | 64,18M |
+| VRAM đỉnh, batch 8 (`peak_allocated_gib`) | 11–12 GiB | 10,4 GiB (reserved 12,7 GiB) |
+| Giây mỗi bước tối ưu (trung vị) | | 0,765 |
+| Giờ train task 2 (`train_hours`) | 5,6 | 6,27 (vòng 1: 5,36) |
+
+Mỗi epoch có khoảng 2 phút 45 giây chấm val (`eval_epochs=1`), cộng lại khoảng 42 phút cho 16 epoch. Vòng 1 chạy trên một máy 4090 khác, nên chưa tách được bao nhiêu trong 0,9 giờ chênh là do M5, bao nhiêu là do máy.
+
+Kết quả backup ở `drive:AutoCheckout/2026-10-30/full_syn_m5_pilot_20261030.zip` (479 MiB, 96 mục, md5 `96c914b1b583ab5ea406be148c3e3699`): cả campaign trừ `cache/`, gồm `task_2/task_final.pth`, `step_metrics.jsonl`, `train.log`, `stages/`, notebook đầy đủ và console log trong `notebook_executions/`, cùng file settings. Giải nén ở gốc repo. 14 symlink (sang `full-syn-r1` và `data/processed`) mang đường dẫn tuyệt đối của vast; nối lại như [handoff mục 5](HANDOFF_M5_PILOT_2026-10-30.md#5-khi-chạy-xong).
 
 ## Phụ lục: chi tiết kỹ thuật
 
