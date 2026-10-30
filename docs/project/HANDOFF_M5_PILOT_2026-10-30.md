@@ -14,7 +14,7 @@ Người làm: さかな (với Claude). Tài liệu này để người tiếp 
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Code (nhánh `feat/synthetic-data-v2`) | Đã commit trên máy local: `2c0ecf6` (cờ pdp), `61b919b` (workflow + notebook 06), `6d2cc96` (tài liệu), `0494202` (file lock môi trường), cùng commit chứa file này. **Phải push trước khi `git pull` trên vast** |
+| Code (nhánh `feat/full-syn-m5`, tách từ `feat/synthetic-data-v2` tại `6d2cc96`) | `2c0ecf6` (cờ pdp), `61b919b` (workflow + notebook 06), `6d2cc96` (tài liệu), `0494202` (file lock môi trường) đã có trên GitHub; commit chứa file này phải push trước khi `git pull` trên vast |
 | Test | Toàn bộ suite qua trên CPU; venv dựng từ file lock cũng qua. Dry run notebook 05 rồi 06 chạy hết, exit 0 |
 | Gói dữ liệu trên Drive | `drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar` (26,8 GB, md5 `13066bcff65cc42047c969e127c08114`); `drive:AutoCheckout/2026-10-29/full_syn_r1_seed_20261029.tar` (1,06 GB, md5 `2ae021116a7c0124018051766ba23ca4`) |
 | Máy 4090 mới | Repo ở `~/AutoCheckout-CL`, shell zsh. **Đã tải xong 2 gói.** Lúc tải lần đầu repo đang ở nhánh `main` và có một lần giải nén lỗi vào `data/` (do `--progress` trên `rclone cat`), nên phải kiểm lại theo mục 3 |
@@ -28,7 +28,7 @@ Mọi lệnh chạy từ `~/AutoCheckout-CL`.
 
 ```bash
 cd ~/AutoCheckout-CL
-git fetch && git checkout feat/synthetic-data-v2 && git pull
+git fetch && git checkout feat/full-syn-m5 && git pull
 git log --oneline -6          # phải thấy 0494202 và commit handoff này
 ```
 

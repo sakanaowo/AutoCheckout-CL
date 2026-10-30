@@ -272,7 +272,7 @@ Trạng thái và việc tiếp theo: [handoff 30/10](HANDOFF_M5_PILOT_2026-10-3
 Cần hai gói trên máy: gói dữ liệu của round 1 (`full_syn_rpc_synth_v2_v1_20261025.tar`, như bước 3 ở trên) và gói seed của round 1 (`full_syn_r1_seed_20261029.tar`, khoảng 1 GB: `plan.json`, `stages/`, `hf_model` của FSA, `task_1/` của PDP, policy đếm). Cả hai giải nén ở gốc repo.
 
 ```bash
-cd /workspace/AutoCheckout-CL && git pull
+cd /workspace/AutoCheckout-CL && git fetch && git checkout feat/full-syn-m5 && git pull
 rclone cat drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar | tar -x -C /workspace/AutoCheckout-CL
 rclone cat drive:AutoCheckout/2026-10-29/full_syn_r1_seed_20261029.tar | tar -x -C /workspace/AutoCheckout-CL
 sha256sum -c --quiet data/packages/full_syn_r1_seed_20261029/SHA256SUMS
