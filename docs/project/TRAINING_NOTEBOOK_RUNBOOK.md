@@ -282,3 +282,29 @@ python -m tools.execute_training_notebook --notebook notebooks/training/06_full_
 ```
 
 Xong thì kéo `data/training/full-syn-m5-pilot/` về (rsync như trên; `runs/EXP-FULL-SYN-FSA` và `runs/EXP-FULL-SYN-M5/task_1` là symlink sang `full-syn-r1`). Dry run local: chạy notebook 05 dry run trước để có `data/training/dry_run/full-syn-r1`, rồi chạy notebook 06 với settings có `"seed_campaign": "data/training/dry_run/full-syn-r1"` và `--dry-run`.
+
+### 7.2 Học lại 50 SKU ở task 6–7 (31/10/2026)
+
+Trạng thái và việc tiếp theo: [handoff 31/10](HANDOFF_RELEARN_2026-10-31.md). [Plan](task6-relearn-plan-2026-10-30.md), [phân tích mục 9](full-syn-r1-analysis-2026-10-29.md#9-dữ-liệu-ảnh-ghép-và-học-lại-50-sku-303110). Notebook [07_full_syn_relearn](../../notebooks/training/07_full_syn_relearn.ipynb) mở rộng model task 5 của round 1 (`seed_campaign`) lên 275 ô class, train task 6 rồi task 7 với `configs/exp/native/EXP-FULL-SYN-RL.sh` trên release `rpc_synth_relearn_v1`, có cổng sau mỗi task (`relearn.relearn_verdict`), rồi chấm test một lần khi người dùng đổi `CONFIRM_TEST = True`.
+
+Cần hai gói trên máy, cả hai giải nén ở gốc repo:
+- gói học lại `relearn_rpc_synth_relearn_v1_20261031.tar` (6,8 GB, 24.679 file, md5 `d4330b997cd31e52da4df36b4f4e3e14`; `scripts/pack_relearn_data.sh`): `images`, `tasks`, `manifest.json`, `task_config.json`, `verify_report.json` của release, cùng phần seed của round 1 mà học lại đọc (`plan.json`, `stages/`, `task_5/{task_final.pth, pred_val.npz, run_info.json}` và `hf_model` của FSA);
+- **nếu là máy vast mới**, thêm gói dữ liệu của round 1 `full_syn_rpc_synth_v2_v1_20261025.tar` (eval set, ảnh val/test, pretrained), như bước 3 ở mục 7. Gói học lại không đóng gói lại phần này.
+
+```bash
+cd /workspace/AutoCheckout-CL && git fetch && git checkout feat/task6-relearn && git pull
+rclone cat drive:AutoCheckout/2026-10-25/full_syn_rpc_synth_v2_v1_20261025.tar | tar -x -C /workspace/AutoCheckout-CL   # chỉ máy mới
+rclone cat DEST/relearn_rpc_synth_relearn_v1_20261031.tar | tar -x -C /workspace/AutoCheckout-CL
+sha256sum -c --quiet data/packages/relearn_rpc_synth_relearn_v1_20261031/SHA256SUMS && echo RELEARN_OK
+cp configs/training/full_syn_relearn.json data/training/settings_full_syn_relearn.json   # sửa "dry_run": false
+python -m tools.execute_training_notebook --notebook notebooks/training/07_full_syn_relearn.ipynb \
+  --settings data/training/settings_full_syn_relearn.json --live-notebook notebooks/training/07_full_syn_relearn.ipynb
+```
+
+`DEST` là thư mục Drive mà gói đã upload lên (ví dụ `drive:AutoCheckout/2026-10-31`). Chạy trong tmux như mục 7. Khoảng 2 × 5,3 giờ train, cộng audit nhãn giả và chấm val hai cách đổi bí danh sau mỗi task.
+
+- Cell task 6 báo `GateStop`: cổng sau task 6 đã dừng, không train task 7, không chấm test.
+- Cell task 7 báo `GateStop`: không chấm test. Bảng recall/precision của 50 SKU vẫn in ra, để biết SKU nào chưa học lại được.
+- Cell test báo `test is scored once`: task 7 đã `go`. Đọc cổng, sửa `CONFIRM_TEST = True` trong notebook rồi chạy lại đúng lệnh trên; các bước đã xong được bỏ qua.
+
+Xong thì kéo `data/training/full-syn-relearn/` và notebook 07 về như mục 7.1. `runs/EXP-FULL-SYN-FSA` của campaign và các file trong `inputs/tasks/` là symlink tuyệt đối sang `full-syn-r1` và `data/processed`, nên phải nối lại ở máy local (lệnh ở handoff mục 5). Dry run local: chạy notebook 05 dry run trước để có `data/training/dry_run/full-syn-r1`, rồi chạy notebook 07 với settings có `"seed_campaign": "data/training/dry_run/full-syn-r1"` và `--dry-run`. Bản dry run 31/10 chạy hết, exit 0, cổng báo `enforced: false`.

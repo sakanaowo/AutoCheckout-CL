@@ -17,7 +17,7 @@ Tài liệu này kiểm lại các giả thuyết trong [handoff họp 28/10 c�
 
 Bản trước của tài liệu này cho rằng nguyên nhân chính là "bộ ảnh mẫu chỉ có một mặt sản phẩm". Kiểm thêm thì điều này **sai**; xem mục 3.3.
 
-**Việc nên làm tiếp:** phải train lại. Các hướng và cách chọn ở mục 7. Đã chọn chạy thử hướng A (M5) trên riêng task 2 trước; code, cách chấm và mức lệch so với paper ở mục 8. **Kết quả 30/10: `stop`** (cAcc-M2 +1,21 điểm, ngưỡng là +3; không quên thêm SKU task 1), nên chuyển sang hướng B (mục 8.6).
+**Việc nên làm tiếp:** phải train lại. Các hướng và cách chọn ở mục 7. Đã chọn chạy thử hướng A (M5) trên riêng task 2 trước; code, cách chấm và mức lệch so với paper ở mục 8. **Kết quả 30/10: `stop`** (cAcc-M2 +1,21 điểm, ngưỡng là +3; không quên thêm SKU task 1). Hướng B sau đó bị bỏ: kiểm dữ liệu ảnh ghép cho thấy các lỗi sửa được rẻ hơn, nên nhóm học lại 50 SKU kém ở task 6–7 (mục 9).
 
 ## Một số khái niệm dùng trong tài liệu
 
@@ -339,6 +339,154 @@ Chi phí đo thật trên 4090:
 Mỗi epoch có khoảng 2 phút 45 giây chấm val (`eval_epochs=1`), cộng lại khoảng 42 phút cho 16 epoch. Vòng 1 chạy trên một máy 4090 khác, nên chưa tách được bao nhiêu trong 0,9 giờ chênh là do M5, bao nhiêu là do máy.
 
 Kết quả backup ở `drive:AutoCheckout/2026-10-30/full_syn_m5_pilot_20261030.zip` (479 MiB, 96 mục, md5 `96c914b1b583ab5ea406be148c3e3699`): cả campaign trừ `cache/`, gồm `task_2/task_final.pth`, `step_metrics.jsonl`, `train.log`, `stages/`, notebook đầy đủ và console log trong `notebook_executions/`, cùng file settings. Giải nén ở gốc repo. 14 symlink (sang `full-syn-r1` và `data/processed`) mang đường dẫn tuyệt đối của vast; nối lại như [handoff mục 5](HANDOFF_M5_PILOT_2026-10-30.md#5-khi-chạy-xong).
+
+## 9. Dữ liệu ảnh ghép và học lại 50 SKU (30–31/10)
+
+Sau kết quả `stop` của M5, nhóm nghi nút thắt nằm ở dữ liệu ảnh ghép chứ không ở độ phân giải. Ngày 30/10 kiểm lại trên máy local bằng artifact của vòng 1, không train. Kết quả dẫn tới [plan học lại 50 SKU ở task 6–7](task6-relearn-plan-2026-10-30.md), chốt cùng ngày. Script ở `runs/analysis_r1/` (không vào git): `d6_*.py`, `d7_faces.py`.
+
+### 9.1 Model học hết những gì ảnh ghép dạy được
+
+| Cùng model | Tỉ lệ gọi sai SKU |
+|---|---|
+| Ảnh ghép model chưa thấy (audit nhãn giả task 5, 6.110 vật) | 0,18% |
+| Val thật, ngay khi vừa học SKU đó | 1,93% |
+| Val thật, sau task 5 | 4,8% |
+
+- Ở FSA, loss phân loại trên ảnh ghép giảm 31 lần qua 8 epoch (0,23 → 0,0075), còn AP50 trên val chững ở khoảng 92% từ epoch 3. Ở PDP task 1, loss trên ảnh ghép gần 0 ngay từ đầu.
+- Một phần con số 0,18% là học thuộc: ảnh audit dùng lại đúng các ảnh mẫu đã dùng khi train. Trung vị mỗi SKU chỉ có 20 ảnh mẫu, mỗi ảnh mẫu dùng khoảng 150 lần, và augmentation tắt (`--augment 0`).
+- 39% số vật bị gọi sai sau task 5 đã sai ngay khi vừa học, trước khi học tăng dần kịp gây ảnh hưởng. Riêng mức sai lúc vừa học (1,93%) đã vượt ngân sách khoảng 1,8% mỗi vật cần cho 80% cAcc.
+- Dữ liệu không giải thích hết: B2 train trên ảnh thật, cùng PDP, sau task 5 vẫn nhầm 12–17%.
+
+### 9.2 Lỗi góc chụp
+
+Đây là lỗi của bước duyệt nhóm hình dạng ngày 21/10: Claude đề xuất, người dùng duyệt theo đề xuất.
+
+- **119_canned_food** (cá hộp oval) và **121_canned_food** (nước cốt dừa): ảnh ghép gần như chỉ có nắp hộp (ảnh chụp từ trên), còn trên quầy hộp hay nằm nghiêng, lộ nhãn. 119 gọi sai 62% và bỏ sót 32% ngay khi vừa học. cam0 của 121 chỉ có 2 góc.
+- **134_gum** và **135_gum** (hũ kẹo): một nửa ảnh ghép là nắp, mà nắp các vị gần như giống hệt nhau.
+- Bốn SKU này có mặt trong 9,4% ảnh val và chiếm 5,9% số lỗi sau task 5.
+- Chai và lon thiếu góc xoay quanh thân: nhóm chai/lon sai 6,9% sau task 5, nhóm gói/hộp dẹt 3,4%. Ví dụ ảnh mẫu của 82_drink không có mặt in hình chai trắng, mặt hay gặp trên quầy.
+
+Kích thước vật trong ảnh ghép thì khớp ảnh thật (trung vị tỉ lệ ảnh ghép/val 1,01), và số vật có nhãn giữa các SKU cân bằng.
+
+### 9.3 SKU anh em
+
+- 97_milk và 98_milk giống nhau ở mặt có ống hút, nắp và mặt bảng dinh dưỡng; chỉ mặt trước khác. Sau task 5, 91% hộp 98_milk bị gọi thành 97_milk (317/472); riêng cặp này chiếm 10,1% số lỗi. Cả hai có 28–29 góc cam0, nên lỗi không do thiếu mặt.
+- Ở các đợt sau, SKU cũ xuất hiện ít hơn SKU mới 4–7 lần: 466–765 vật mỗi SKU cũ, 2.900–3.300 vật mỗi SKU mới (98_milk có 469 vật ở task 5, 97_milk có 3.279).
+- Hai kiểu nhóm hàng: gum, chocolate, stationery, candy sai nhiều ngay khi vừa học (gói dẹt cùng hãng, chỉ khác màu hoặc chữ nhỏ); milk, instant_drink, alcohol, drink lúc vừa học thì ổn, tụt mạnh khi SKU anh em đến ở đợt sau.
+
+### 9.4 32 SKU dưới 85%
+
+Mỗi SKU đo hai chiều trên val, model sau task 5, policy đếm M2 của stage 5 (ngưỡng điểm theo nhóm task 0,10 / 0,15 / 0,18 / 0,18 / 0,20), vật và box ghép theo IoU ≥ 0,5:
+- **recall** = số vật của SKU được đếm đúng tên / số vật của SKU;
+- **precision** = số box đếm đúng / số box được đếm là SKU đó.
+
+| Mốc | Recall dưới | Precision dưới | Ít nhất một trong hai dưới |
+|---|---|---|---|
+| 85% | 17 | 19 | **32 SKU** |
+| 90% | 44 | 41 | 71 SKU |
+| 98,2% (mức cần cho 80% cAcc) | 153 | 134 | 179 SKU |
+
+| Label | SKU | Task | Recall | Precision | Học lại ở task |
+|---|---|---|---|---|---|
+| 162 | 98_milk | 4 | 5,3% | 65,8% | 6 |
+| 164 | 119_canned_food | 4 | 5,8% | 45,0% | 6 |
+| 141 | 141_gum | 3 | 80,6% | 42,6% | 6 |
+| 186 | 97_milk | 5 | 86,3% | 55,9% | 6 |
+| 70 | 138_gum | 1 | 97,5% | 61,5% | 6 |
+| 153 | 35_instant_drink | 4 | 63,1% | 91,1% | 7 |
+| 133 | 74_drink | 3 | 63,7% | 99,1% | 7 |
+| 59 | 117_canned_food | 1 | 90,0% | 65,2% | 7 |
+| 68 | 136_gum | 1 | 95,4% | 69,0% | 7 |
+| 18 | 36_instant_drink | 1 | 70,8% | 99,1% | 7 |
+| 188 | 112_canned_food | 5 | 91,5% | 71,3% | 6 |
+| 41 | 83_drink | 1 | 72,8% | 93,3% | 7 |
+| 109 | 73_drink | 2 | 96,4% | 74,9% | 7 |
+| 163 | 109_canned_food | 4 | 90,9% | 76,0% | 7 |
+| 111 | 93_alcohol | 2 | 78,4% | 97,5% | 6 |
+| 60 | 121_canned_food | 1 | 78,4% | 95,4% | 6 |
+| 172 | 175_tissue | 4 | 78,5% | 99,6% | 7 |
+| 191 | 151_candy | 5 | 78,8% | 98,5% | 6 |
+| 98 | 198_stationery | 1 | 79,0% | 94,2% | 6 |
+| 129 | 34_instant_drink | 3 | 91,8% | 79,2% | 7 |
+| 17 | 33_instant_drink | 1 | 98,8% | 80,7% | 7 |
+| 101 | 17_dried_fruit | 2 | 80,9% | 99,5% | 7 |
+| 145 | 170_personal_hygiene | 3 | 81,4% | 99,2% | 7 |
+| 185 | 92_alcohol | 5 | 95,8% | 81,5% | 6 |
+| 199 | 200_stationery | 5 | 89,3% | 82,1% | 6 |
+| 118 | 140_gum | 2 | 88,2% | 83,3% | 6 |
+| 39 | 80_alcohol | 1 | 95,6% | 83,8% | 6 |
+| 19 | 38_instant_drink | 1 | 99,5% | 83,9% | 6 |
+| 195 | 167_personal_hygiene | 5 | 83,9% | 89,8% | 7 |
+| 102 | 24_dried_food | 2 | 84,1% | 98,1% | 6 |
+| 67 | 134_gum | 1 | 84,7% | 84,4% | 7 |
+| 46 | 91_alcohol | 1 | 98,0% | 84,8% | 7 |
+
+- Phần lớn danh sách là từng cặp SKU anh em, mỗi bên lệch một chiều: một bên recall thấp, bên kia precision thấp (98/97_milk, 74/73_drink, 36, 34, 33 và 35_instant_drink, 93/92_alcohol).
+- 141_gum có kiểu lỗi khác: 337 box thừa không nằm trên vật nào mà mang nhãn 141_gum.
+- Mốc 85% dùng để lọc SKU cần sửa. Để đạt 80% cAcc, mỗi SKU cần khoảng 98%, mà 179/200 SKU đang dưới mức đó: học lại 50 SKU không đủ cho production.
+
+Bảng đủ 200 SKU: `runs/analysis_r1/d6_acc_per_sku.csv`. Hàm `autocheckout.relearn.per_sku_accuracy` tính lại đúng bảng này (khớp cả 200 dòng) và notebook 07 dùng nó sau task 7.
+
+### 9.5 Phủ mặt (d7)
+
+RPC chụp mỗi SKU ở 1 hoặc 2 kiểu đặt (trước, sau), mỗi kiểu 4 camera × 40 góc xoay (9° một bước): cam0 ngang, cam2 từ trên, cam1 và cam3 xiên. 122 SKU có hai kiểu đặt. Vòng 1 dùng:
+- đủ hai kiểu đặt cho cả 122 SKU;
+- hàng dẹt (123 SKU) chỉ cam2; hàng đứng (64) và hỗn hợp (13) chủ yếu cam0, nhưng 7 SKU hở vòng xoay ≥ 90° (nặng nhất 121_canned_food, 2 góc);
+- không dùng cam1 và cam3, vì renderer chưa có hệ số sáng (`object_gain`) cho hai camera này.
+
+`d7_faces.py` so 8.000 vật trên val (40 vật mỗi SKU) với mọi ảnh RPC của SKU đó bằng đặc trưng ImageNet (backbone ConvNeXt V2 chưa train trên RPC). Một vật tính là "chưa phủ" khi ảnh RPC giống nó nhất thuộc mặt hoặc góc mà ảnh ghép không dùng, và giống hơn ảnh đã dùng tốt nhất ít nhất 0,02.
+
+- Trung bình 21% vật trên val chưa phủ; 69 SKU từ 25% trở lên.
+- Vật càng ít giống cutout đã dùng thì SKU càng hay sai (Spearman −0,38). Tỉ lệ chưa phủ chỉ liên quan yếu tới lỗi (+0,19). Thiếu mặt giải thích một phần lỗi, không phải tất cả.
+- Thiếu hẳn mặt (xem bằng mắt trên `runs/analysis_r1/d7_faces_sheet.png`): 119_canned_food (100% vật chưa phủ, chỉ có ảnh nắp), 121_canned_food (95%), 123_chocolate và 130_chocolate (88% và 80%: ảnh từ trên của RPC là mặt mã vạch, mặt có logo chỉ có ở ảnh ngang), 117_canned_food, 178/185_tissue và vài SKU khác.
+- 50 SKU học lại phủ kém hơn 150 SKU còn lại: chưa phủ 26,5% so với 19,6%, độ giống trung vị với cutout đã dùng 0,70 so với 0,78.
+
+Sau khi làm lại dữ liệu (release `rpc_synth_relearn_v1`, 31/10), cùng phép đo trên 50 SKU: chưa phủ 26,5% → 16,0%, số SKU từ 25% trở lên 23 → 10, độ giống 0,702 → 0,719 (33 SKU tốt hơn, 10 như cũ, 7 kém hơn 1–5 vật trên 40). 119 và 121_canned_food xuống 10% và 12,5%. Riêng 123 và 130_chocolate vẫn 82,5% và 72,5%: khi duyệt bảng camera ngày 31/10, trang so sánh cho thấy val chỉ lộ mặt trên có nhãn và cam0 chỉ là cạnh mỏng, nên hai SKU giữ nhóm dẹt. Hai quan sát này chưa khớp nhau; kết quả task 6–7 trên hai SKU sẽ cho biết. Chi tiết: notebook [06_synthetic_relearn](../../notebooks/data_preprocessing/06_synthetic_relearn.ipynb), mục 6.
+
+### 9.6 Chọn 50 SKU và chia task
+
+[`configs/relearn/selection.json`](../../configs/relearn/selection.json):
+- **32 SKU kém** (9.4): min(recall, precision) < 85%;
+- **16 SKU anh em** của chúng: cùng nhóm hàng với ≥ 10 lần nhầm cộng hai chiều, hoặc khác nhóm với ≥ 30 lần (23_dried_food, 102_milk, 108, 110, 113, 114, 116_canned_food, 137 và 135_gum, 171_personal_hygiene, 180_tissue, 79 và 90_alcohol, 18_dried_fruit, 27_dried_food, 82_drink);
+- **2 SKU thiếu mặt có logo** (9.5): 123_chocolate, 130_chocolate.
+
+Các SKU nối với nhau bằng quan hệ "hay nhầm" thành nhóm (20 nhóm, lớn nhất 8 SKU); mỗi nhóm nằm trọn trong một task, để model học tách các SKU anh em trong cùng một task. Xếp nhóm theo cỡ giảm dần (bằng nhau thì theo label nhỏ nhất), đưa từng nhóm vào task đang ít SKU hơn (bằng nhau thì task 6).
+
+| Task | 25 SKU |
+|---|---|
+| 6 | 38_instant_drink, 80, 79, 93, 92_alcohol, 102, 98, 97_milk, 114, 116, 121, 119, 112_canned_food, 123_chocolate, 137, 138, 140, 141, 135_gum, 198, 200_stationery, 24, 27_dried_food, 18_dried_fruit, 151_candy |
+| 7 | 23_dried_food, 33, 36, 34, 35_instant_drink, 83, 73, 74, 82_drink, 91, 90_alcohol, 108, 110, 117, 113, 109_canned_food, 134, 136_gum, 171, 170, 167_personal_hygiene, 17_dried_fruit, 180, 175_tissue, 130_chocolate |
+
+### 9.7 Quyết định và giới hạn
+
+Spec Q1–Q11 ở đầu [plan](task6-relearn-plan-2026-10-30.md#quyết-định-spec), chốt với người dùng ngày 30/10. Tóm tắt:
+
+| # | Quyết định |
+|---|---|
+| Q1–Q2 | 50 SKU như 9.6, hai task × 25 |
+| Q3 | Task 1–5 giữ nguyên; task 6 và 7 là 25 bí danh mỗi task (label 200–249: label mới, cùng RPC id, `alias_of` = label gốc); task 8 dự phòng 24 slot; `n_classes` 275 |
+| Q4 | Mở rộng checkpoint task 5 của vòng 1 lên 275 ô, chép nguyên hàng đã học; output của 200 SKU cũ không đổi |
+| Q5 | Ảnh ghép đủ mọi kiểu đặt × camera của SKU, cam0 hở tối đa 18°; dùng góc thấy nhãn; số vật mỗi SKU lệch ≤ 5%, kiểu đặt luân phiên, mọi góc dùng đều (yêu cầu của Minh, 30/10); không dùng cam1/cam3 |
+| Q6 | Cắt toàn bộ ảnh cam0 và cam2 trong train2019 của 50 SKU |
+| Q7 | 12.330 ảnh mỗi task; bố cục, scale, photometric, tỉ lệ vật mới 40–60% như v1 |
+| Q8 | Train như vòng 1 (640 px, batch 8, 16 epoch, F14, I3), chỉ khác `--n_classes 275` và dữ liệu |
+| Q9 | Chấm như stage 5 của vòng 1; đổi bí danh theo `merge` hoặc `alias_only`, chọn cách có cAcc-M2 val cao hơn |
+| Q10 | Sau task 6: đi tiếp khi cAcc-M2 ≥ 0,4533 (+1,65 điểm) và AP50 của 150 SKU không học lại giảm ≤ 1 điểm. Sau task 7: `go` khi cAcc-M2 ≥ 0,4668 (+3 điểm), cùng điều kiện AP50 |
+| Q11 | Test chấm một lần, sau `go` và khi người dùng xác nhận |
+
+Quyết định khi làm dữ liệu (31/10, người dùng chốt): bảng camera (119 → hỗn hợp, 121 → hàng đứng, 123/130 giữ dẹt, 134/135 giữ hỗn hợp); 7 SKU qua cổng phủ mặt dưới dạng ngoại lệ có lý do (38, 97, 98, 102 là hộp mà luật cutout loại góc lộ hai mặt; 90 và 198 hở 27° vì mask rách; 112 vì RPC thiếu ảnh cam0 bước 1–2); ảnh 6010143 xếp lại với vật nhỏ đi 8%. Chi tiết ở notebook 06 của data preprocessing.
+
+Giới hạn:
+- Chọn SKU và chọn cách đổi bí danh đều dựa trên val, nên số trên val hơi lạc quan; con số không thiên lệch là test.
+- Học lại SKU đã học là biến thể cho production, không phải học tăng dần thuần như paper; vòng 1 vẫn là bản đúng paper.
+- Mặt nào RPC không chụp (đáy hộp, góc xiên cam1/cam3) thì không sinh được.
+- Ngưỡng điểm vẫn chia theo task gốc của SKU, nên dự đoán từ slot bí danh dùng chung ngưỡng với nhóm gốc.
+- Audit nhãn giả ở task 7 coi bí danh và label gốc của cùng SKU là hai nhãn khác nhau, nên precision báo ra thấp hơn thực tế; audit chỉ ghi lại, không làm cổng.
+- Như 9.4: dù học lại thành công, 50 SKU chưa đủ để mỗi SKU đạt mức 98% cần cho production.
+
+### 9.8 Đã bỏ hướng B
+
+Ngày 30/10 người dùng bỏ hướng B (train lại ở 800px) mà mục 8.6 đề xuất. Cơ sở: 9.1 cho thấy model đã gần hoàn hảo trên ảnh ghép, nên ảnh lớn hơn chủ yếu giúp khớp ảnh ghép tốt hơn, không nhắm vào khoảng cách giữa ảnh ghép và ảnh thật; các lỗi dữ liệu ở 9.2–9.5 sửa được rẻ hơn (khoảng 2 × 5,3 giờ GPU so với khoảng 50 giờ). Stop ở cổng nào của học lại thì nhóm bàn hướng khác, không quay lại 800px theo mặc định.
 
 ## Phụ lục: chi tiết kỹ thuật
 
