@@ -280,19 +280,31 @@ def cmd_plan(args) -> None:
 
 
 def cmd_coverage(args) -> None:
-    """Q5 gate: faces and angles the cutouts of the SKUs of --tasks cover; fails when an SKU misses one."""
+    """Q5 gate: faces and angles the cutouts of the SKUs of --tasks cover; fails when an SKU misses one.
+
+    ``coverage_exceptions`` in the config ({rpc id: reason}, accepted by the user) lets an SKU that misses
+    a view pass; an exception for an SKU that covers everything is refused, so the list never goes stale.
+    """
     config = load_config(args.config)
     task_config = TaskConfig.load(config["task_config"])
     rpc_ids = [c.rpc_category_id for task in args.tasks for c in task_config.task(task).classes]
     coverage = view_coverage(load_json(config["catalog"])["cutouts"], load_json(config["skus"])["skus"],
                              load_json(args.train_ann), rpc_ids)
+    exceptions = {int(rpc): reason for rpc, reason in config.get("coverage_exceptions", {}).items()
+                  if int(rpc) in coverage}
     path = Path(config["catalog"]).parent / "coverage.json"
     save_json(path, {"created_at": now(), "config": config["_path"], "config_sha256": config["_sha256"],
-                     "tasks": args.tasks, "skus": {str(rpc): v for rpc, v in coverage.items()}}, indent=1)
+                     "tasks": args.tasks, "skus": {str(rpc): v for rpc, v in coverage.items()},
+                     "exceptions": {str(rpc): reason for rpc, reason in sorted(exceptions.items())}}, indent=1)
     bad = [rpc for rpc, v in coverage.items() if not v["ok"]]
-    print(f"{len(coverage) - len(bad)}/{len(coverage)} SKUs cover every placement, camera and angle -> {path}")
-    if bad:
-        raise SystemExit(f"SKUs missing a placement, camera or angle: {bad}")
+    print(f"{len(coverage) - len(bad)}/{len(coverage)} SKUs cover every placement, camera and angle, "
+          f"{len(exceptions)} excepted -> {path}")
+    stale = sorted(rpc for rpc in exceptions if coverage[rpc]["ok"])
+    if stale:
+        raise SystemExit(f"coverage_exceptions for SKUs that cover every view: {stale}")
+    missing = [rpc for rpc in bad if rpc not in exceptions]
+    if missing:
+        raise SystemExit(f"SKUs missing a placement, camera or angle: {missing}")
 
 
 def read_plans(out: Path, tasks=None):

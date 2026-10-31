@@ -192,10 +192,8 @@ def test_view_coverage_flags_a_missing_placement_and_a_wide_cam0_gap():
     assert list(cov) == [2] and cov[2]["views"] == {"back/c2": 0, "front/c2": 1} and not cov[2]["ok"]
 
 
-def test_coverage_cli_writes_the_report_and_fails_when_a_sku_misses_a_view(tmp_path):
+def write_coverage_inputs(tmp_path, **config_extra):
     import json
-
-    from tools.synth_v2 import main
 
     train, cutouts, skus = coverage_inputs()
     files = {"train": train, "catalog/cutouts.json": {"cutouts": cutouts}, "skus": {"skus": skus},
@@ -205,10 +203,30 @@ def test_coverage_cli_writes_the_report_and_fails_when_a_sku_misses_a_view(tmp_p
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / name).write_text(json.dumps(data))
     config = {"task_config": str(tmp_path / "task_config"), "catalog": str(tmp_path / "catalog/cutouts.json"),
-              "skus": str(tmp_path / "skus")}
+              "skus": str(tmp_path / "skus"), **config_extra}
     (tmp_path / "config.json").write_text(json.dumps(config))
+    return ["coverage", "--config", str(tmp_path / "config.json"), "--tasks", "1", "--train-ann", str(tmp_path / "train")]
+
+
+def test_coverage_cli_writes_the_report_and_fails_when_a_sku_misses_a_view(tmp_path):
+    import json
+
+    from tools.synth_v2 import main
+
     with pytest.raises(SystemExit, match=r"\[1\]"):
-        main(["coverage", "--config", str(tmp_path / "config.json"), "--tasks", "1",
-              "--train-ann", str(tmp_path / "train")])
+        main(write_coverage_inputs(tmp_path))
     report = json.loads((tmp_path / "catalog/coverage.json").read_text())
     assert report["tasks"] == [1] and {k: v["ok"] for k, v in report["skus"].items()} == {"1": False, "2": True}
+    assert report["exceptions"] == {}
+
+
+def test_coverage_cli_passes_a_sku_the_config_excepts_and_refuses_an_exception_for_a_sku_that_covers_all(tmp_path):
+    import json
+
+    from tools.synth_v2 import main
+
+    main(write_coverage_inputs(tmp_path, coverage_exceptions={"1": "box corners rejected (M0)"}))
+    report = json.loads((tmp_path / "catalog/coverage.json").read_text())
+    assert report["skus"]["1"]["ok"] is False and report["exceptions"] == {"1": "box corners rejected (M0)"}
+    with pytest.raises(SystemExit, match=r"cover every view: \[2\]"):
+        main(write_coverage_inputs(tmp_path, coverage_exceptions={"1": "box corners", "2": "stale"}))
