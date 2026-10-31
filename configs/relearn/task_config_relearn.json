@@ -1,0 +1,1758 @@
+{
+ "name": "100-4x25_seed0_relearn2x25",
+ "seed": 0,
+ "num_slots": 274,
+ "num_classes": 275,
+ "tasks": [
+  {
+   "task_id": 1,
+   "offset": 0,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 0,
+     "name": "3_puffed_food",
+     "rpc_category_id": 3,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 1,
+     "name": "5_puffed_food",
+     "rpc_category_id": 5,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 2,
+     "name": "6_puffed_food",
+     "rpc_category_id": 6,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 3,
+     "name": "8_puffed_food",
+     "rpc_category_id": 8,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 4,
+     "name": "9_puffed_food",
+     "rpc_category_id": 9,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 5,
+     "name": "12_puffed_food",
+     "rpc_category_id": 12,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 6,
+     "name": "13_dried_fruit",
+     "rpc_category_id": 13,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 7,
+     "name": "14_dried_fruit",
+     "rpc_category_id": 14,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 8,
+     "name": "15_dried_fruit",
+     "rpc_category_id": 15,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 9,
+     "name": "16_dried_fruit",
+     "rpc_category_id": 16,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 10,
+     "name": "20_dried_fruit",
+     "rpc_category_id": 20,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 11,
+     "name": "23_dried_food",
+     "rpc_category_id": 23,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 12,
+     "name": "25_dried_food",
+     "rpc_category_id": 25,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 13,
+     "name": "26_dried_food",
+     "rpc_category_id": 26,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 14,
+     "name": "28_dried_food",
+     "rpc_category_id": 28,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 15,
+     "name": "30_dried_food",
+     "rpc_category_id": 30,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 16,
+     "name": "31_instant_drink",
+     "rpc_category_id": 31,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 17,
+     "name": "33_instant_drink",
+     "rpc_category_id": 33,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 18,
+     "name": "36_instant_drink",
+     "rpc_category_id": 36,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 19,
+     "name": "38_instant_drink",
+     "rpc_category_id": 38,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 20,
+     "name": "40_instant_drink",
+     "rpc_category_id": 40,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 21,
+     "name": "42_instant_noodles",
+     "rpc_category_id": 42,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 22,
+     "name": "44_instant_noodles",
+     "rpc_category_id": 44,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 23,
+     "name": "45_instant_noodles",
+     "rpc_category_id": 45,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 24,
+     "name": "48_instant_noodles",
+     "rpc_category_id": 48,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 25,
+     "name": "50_instant_noodles",
+     "rpc_category_id": 50,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 26,
+     "name": "52_instant_noodles",
+     "rpc_category_id": 52,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 27,
+     "name": "54_dessert",
+     "rpc_category_id": 54,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 28,
+     "name": "56_dessert",
+     "rpc_category_id": 56,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 29,
+     "name": "58_dessert",
+     "rpc_category_id": 58,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 30,
+     "name": "60_dessert",
+     "rpc_category_id": 60,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 31,
+     "name": "62_dessert",
+     "rpc_category_id": 62,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 32,
+     "name": "66_dessert",
+     "rpc_category_id": 66,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 33,
+     "name": "67_dessert",
+     "rpc_category_id": 67,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 34,
+     "name": "69_dessert",
+     "rpc_category_id": 69,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 35,
+     "name": "70_dessert",
+     "rpc_category_id": 70,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 36,
+     "name": "71_drink",
+     "rpc_category_id": 71,
+     "supercategory": "drink"
+    },
+    {
+     "label": 37,
+     "name": "72_drink",
+     "rpc_category_id": 72,
+     "supercategory": "drink"
+    },
+    {
+     "label": 38,
+     "name": "78_drink",
+     "rpc_category_id": 78,
+     "supercategory": "drink"
+    },
+    {
+     "label": 39,
+     "name": "80_alcohol",
+     "rpc_category_id": 80,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 40,
+     "name": "81_drink",
+     "rpc_category_id": 81,
+     "supercategory": "drink"
+    },
+    {
+     "label": 41,
+     "name": "83_drink",
+     "rpc_category_id": 83,
+     "supercategory": "drink"
+    },
+    {
+     "label": 42,
+     "name": "84_drink",
+     "rpc_category_id": 84,
+     "supercategory": "drink"
+    },
+    {
+     "label": 43,
+     "name": "86_drink",
+     "rpc_category_id": 86,
+     "supercategory": "drink"
+    },
+    {
+     "label": 44,
+     "name": "88_alcohol",
+     "rpc_category_id": 88,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 45,
+     "name": "89_alcohol",
+     "rpc_category_id": 89,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 46,
+     "name": "91_alcohol",
+     "rpc_category_id": 91,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 47,
+     "name": "94_alcohol",
+     "rpc_category_id": 94,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 48,
+     "name": "95_alcohol",
+     "rpc_category_id": 95,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 49,
+     "name": "102_milk",
+     "rpc_category_id": 102,
+     "supercategory": "milk"
+    },
+    {
+     "label": 50,
+     "name": "103_milk",
+     "rpc_category_id": 103,
+     "supercategory": "milk"
+    },
+    {
+     "label": 51,
+     "name": "104_milk",
+     "rpc_category_id": 104,
+     "supercategory": "milk"
+    },
+    {
+     "label": 52,
+     "name": "106_milk",
+     "rpc_category_id": 106,
+     "supercategory": "milk"
+    },
+    {
+     "label": 53,
+     "name": "107_milk",
+     "rpc_category_id": 107,
+     "supercategory": "milk"
+    },
+    {
+     "label": 54,
+     "name": "108_canned_food",
+     "rpc_category_id": 108,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 55,
+     "name": "110_canned_food",
+     "rpc_category_id": 110,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 56,
+     "name": "111_canned_food",
+     "rpc_category_id": 111,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 57,
+     "name": "114_canned_food",
+     "rpc_category_id": 114,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 58,
+     "name": "116_canned_food",
+     "rpc_category_id": 116,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 59,
+     "name": "117_canned_food",
+     "rpc_category_id": 117,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 60,
+     "name": "121_canned_food",
+     "rpc_category_id": 121,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 61,
+     "name": "123_chocolate",
+     "rpc_category_id": 123,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 62,
+     "name": "124_chocolate",
+     "rpc_category_id": 124,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 63,
+     "name": "125_chocolate",
+     "rpc_category_id": 125,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 64,
+     "name": "127_chocolate",
+     "rpc_category_id": 127,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 65,
+     "name": "128_chocolate",
+     "rpc_category_id": 128,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 66,
+     "name": "131_chocolate",
+     "rpc_category_id": 131,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 67,
+     "name": "134_gum",
+     "rpc_category_id": 134,
+     "supercategory": "gum"
+    },
+    {
+     "label": 68,
+     "name": "136_gum",
+     "rpc_category_id": 136,
+     "supercategory": "gum"
+    },
+    {
+     "label": 69,
+     "name": "137_gum",
+     "rpc_category_id": 137,
+     "supercategory": "gum"
+    },
+    {
+     "label": 70,
+     "name": "138_gum",
+     "rpc_category_id": 138,
+     "supercategory": "gum"
+    },
+    {
+     "label": 71,
+     "name": "142_candy",
+     "rpc_category_id": 142,
+     "supercategory": "candy"
+    },
+    {
+     "label": 72,
+     "name": "146_candy",
+     "rpc_category_id": 146,
+     "supercategory": "candy"
+    },
+    {
+     "label": 73,
+     "name": "147_candy",
+     "rpc_category_id": 147,
+     "supercategory": "candy"
+    },
+    {
+     "label": 74,
+     "name": "148_candy",
+     "rpc_category_id": 148,
+     "supercategory": "candy"
+    },
+    {
+     "label": 75,
+     "name": "150_candy",
+     "rpc_category_id": 150,
+     "supercategory": "candy"
+    },
+    {
+     "label": 76,
+     "name": "152_seasoner",
+     "rpc_category_id": 152,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 77,
+     "name": "156_seasoner",
+     "rpc_category_id": 156,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 78,
+     "name": "158_seasoner",
+     "rpc_category_id": 158,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 79,
+     "name": "160_seasoner",
+     "rpc_category_id": 160,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 80,
+     "name": "161_seasoner",
+     "rpc_category_id": 161,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 81,
+     "name": "162_seasoner",
+     "rpc_category_id": 162,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 82,
+     "name": "165_personal_hygiene",
+     "rpc_category_id": 165,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 83,
+     "name": "169_personal_hygiene",
+     "rpc_category_id": 169,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 84,
+     "name": "171_personal_hygiene",
+     "rpc_category_id": 171,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 85,
+     "name": "172_personal_hygiene",
+     "rpc_category_id": 172,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 86,
+     "name": "173_personal_hygiene",
+     "rpc_category_id": 173,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 87,
+     "name": "176_tissue",
+     "rpc_category_id": 176,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 88,
+     "name": "177_tissue",
+     "rpc_category_id": 177,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 89,
+     "name": "178_tissue",
+     "rpc_category_id": 178,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 90,
+     "name": "181_tissue",
+     "rpc_category_id": 181,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 91,
+     "name": "182_tissue",
+     "rpc_category_id": 182,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 92,
+     "name": "184_tissue",
+     "rpc_category_id": 184,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 93,
+     "name": "186_tissue",
+     "rpc_category_id": 186,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 94,
+     "name": "189_tissue",
+     "rpc_category_id": 189,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 95,
+     "name": "191_tissue",
+     "rpc_category_id": 191,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 96,
+     "name": "192_tissue",
+     "rpc_category_id": 192,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 97,
+     "name": "197_stationery",
+     "rpc_category_id": 197,
+     "supercategory": "stationery"
+    },
+    {
+     "label": 98,
+     "name": "198_stationery",
+     "rpc_category_id": 198,
+     "supercategory": "stationery"
+    },
+    {
+     "label": 99,
+     "name": "199_stationery",
+     "rpc_category_id": 199,
+     "supercategory": "stationery"
+    }
+   ]
+  },
+  {
+   "task_id": 2,
+   "offset": 100,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 100,
+     "name": "1_puffed_food",
+     "rpc_category_id": 1,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 101,
+     "name": "17_dried_fruit",
+     "rpc_category_id": 17,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 102,
+     "name": "24_dried_food",
+     "rpc_category_id": 24,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 103,
+     "name": "32_instant_drink",
+     "rpc_category_id": 32,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 104,
+     "name": "37_instant_drink",
+     "rpc_category_id": 37,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 105,
+     "name": "46_instant_noodles",
+     "rpc_category_id": 46,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 106,
+     "name": "51_instant_noodles",
+     "rpc_category_id": 51,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 107,
+     "name": "57_dessert",
+     "rpc_category_id": 57,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 108,
+     "name": "63_dessert",
+     "rpc_category_id": 63,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 109,
+     "name": "73_drink",
+     "rpc_category_id": 73,
+     "supercategory": "drink"
+    },
+    {
+     "label": 110,
+     "name": "75_drink",
+     "rpc_category_id": 75,
+     "supercategory": "drink"
+    },
+    {
+     "label": 111,
+     "name": "93_alcohol",
+     "rpc_category_id": 93,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 112,
+     "name": "99_milk",
+     "rpc_category_id": 99,
+     "supercategory": "milk"
+    },
+    {
+     "label": 113,
+     "name": "105_milk",
+     "rpc_category_id": 105,
+     "supercategory": "milk"
+    },
+    {
+     "label": 114,
+     "name": "115_canned_food",
+     "rpc_category_id": 115,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 115,
+     "name": "118_canned_food",
+     "rpc_category_id": 118,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 116,
+     "name": "132_chocolate",
+     "rpc_category_id": 132,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 117,
+     "name": "133_chocolate",
+     "rpc_category_id": 133,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 118,
+     "name": "140_gum",
+     "rpc_category_id": 140,
+     "supercategory": "gum"
+    },
+    {
+     "label": 119,
+     "name": "143_candy",
+     "rpc_category_id": 143,
+     "supercategory": "candy"
+    },
+    {
+     "label": 120,
+     "name": "157_seasoner",
+     "rpc_category_id": 157,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 121,
+     "name": "168_personal_hygiene",
+     "rpc_category_id": 168,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 122,
+     "name": "180_tissue",
+     "rpc_category_id": 180,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 123,
+     "name": "193_tissue",
+     "rpc_category_id": 193,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 124,
+     "name": "195_stationery",
+     "rpc_category_id": 195,
+     "supercategory": "stationery"
+    }
+   ]
+  },
+  {
+   "task_id": 3,
+   "offset": 125,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 125,
+     "name": "2_puffed_food",
+     "rpc_category_id": 2,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 126,
+     "name": "7_puffed_food",
+     "rpc_category_id": 7,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 127,
+     "name": "19_dried_fruit",
+     "rpc_category_id": 19,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 128,
+     "name": "22_dried_food",
+     "rpc_category_id": 22,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 129,
+     "name": "34_instant_drink",
+     "rpc_category_id": 34,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 130,
+     "name": "43_instant_noodles",
+     "rpc_category_id": 43,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 131,
+     "name": "55_dessert",
+     "rpc_category_id": 55,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 132,
+     "name": "68_dessert",
+     "rpc_category_id": 68,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 133,
+     "name": "74_drink",
+     "rpc_category_id": 74,
+     "supercategory": "drink"
+    },
+    {
+     "label": 134,
+     "name": "79_alcohol",
+     "rpc_category_id": 79,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 135,
+     "name": "87_drink",
+     "rpc_category_id": 87,
+     "supercategory": "drink"
+    },
+    {
+     "label": 136,
+     "name": "90_alcohol",
+     "rpc_category_id": 90,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 137,
+     "name": "100_milk",
+     "rpc_category_id": 100,
+     "supercategory": "milk"
+    },
+    {
+     "label": 138,
+     "name": "113_canned_food",
+     "rpc_category_id": 113,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 139,
+     "name": "120_canned_food",
+     "rpc_category_id": 120,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 140,
+     "name": "122_chocolate",
+     "rpc_category_id": 122,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 141,
+     "name": "141_gum",
+     "rpc_category_id": 141,
+     "supercategory": "gum"
+    },
+    {
+     "label": 142,
+     "name": "149_candy",
+     "rpc_category_id": 149,
+     "supercategory": "candy"
+    },
+    {
+     "label": 143,
+     "name": "159_seasoner",
+     "rpc_category_id": 159,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 144,
+     "name": "163_seasoner",
+     "rpc_category_id": 163,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 145,
+     "name": "170_personal_hygiene",
+     "rpc_category_id": 170,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 146,
+     "name": "174_tissue",
+     "rpc_category_id": 174,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 147,
+     "name": "183_tissue",
+     "rpc_category_id": 183,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 148,
+     "name": "190_tissue",
+     "rpc_category_id": 190,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 149,
+     "name": "194_stationery",
+     "rpc_category_id": 194,
+     "supercategory": "stationery"
+    }
+   ]
+  },
+  {
+   "task_id": 4,
+   "offset": 150,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 150,
+     "name": "10_puffed_food",
+     "rpc_category_id": 10,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 151,
+     "name": "18_dried_fruit",
+     "rpc_category_id": 18,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 152,
+     "name": "29_dried_food",
+     "rpc_category_id": 29,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 153,
+     "name": "35_instant_drink",
+     "rpc_category_id": 35,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 154,
+     "name": "41_instant_drink",
+     "rpc_category_id": 41,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 155,
+     "name": "47_instant_noodles",
+     "rpc_category_id": 47,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 156,
+     "name": "53_instant_noodles",
+     "rpc_category_id": 53,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 157,
+     "name": "59_dessert",
+     "rpc_category_id": 59,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 158,
+     "name": "65_dessert",
+     "rpc_category_id": 65,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 159,
+     "name": "76_drink",
+     "rpc_category_id": 76,
+     "supercategory": "drink"
+    },
+    {
+     "label": 160,
+     "name": "77_drink",
+     "rpc_category_id": 77,
+     "supercategory": "drink"
+    },
+    {
+     "label": 161,
+     "name": "96_alcohol",
+     "rpc_category_id": 96,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 162,
+     "name": "98_milk",
+     "rpc_category_id": 98,
+     "supercategory": "milk"
+    },
+    {
+     "label": 163,
+     "name": "109_canned_food",
+     "rpc_category_id": 109,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 164,
+     "name": "119_canned_food",
+     "rpc_category_id": 119,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 165,
+     "name": "126_chocolate",
+     "rpc_category_id": 126,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 166,
+     "name": "130_chocolate",
+     "rpc_category_id": 130,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 167,
+     "name": "139_gum",
+     "rpc_category_id": 139,
+     "supercategory": "gum"
+    },
+    {
+     "label": 168,
+     "name": "144_candy",
+     "rpc_category_id": 144,
+     "supercategory": "candy"
+    },
+    {
+     "label": 169,
+     "name": "145_candy",
+     "rpc_category_id": 145,
+     "supercategory": "candy"
+    },
+    {
+     "label": 170,
+     "name": "153_seasoner",
+     "rpc_category_id": 153,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 171,
+     "name": "164_personal_hygiene",
+     "rpc_category_id": 164,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 172,
+     "name": "175_tissue",
+     "rpc_category_id": 175,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 173,
+     "name": "188_tissue",
+     "rpc_category_id": 188,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 174,
+     "name": "196_stationery",
+     "rpc_category_id": 196,
+     "supercategory": "stationery"
+    }
+   ]
+  },
+  {
+   "task_id": 5,
+   "offset": 175,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 175,
+     "name": "4_puffed_food",
+     "rpc_category_id": 4,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 176,
+     "name": "11_puffed_food",
+     "rpc_category_id": 11,
+     "supercategory": "puffed_food"
+    },
+    {
+     "label": 177,
+     "name": "21_dried_fruit",
+     "rpc_category_id": 21,
+     "supercategory": "dried_fruit"
+    },
+    {
+     "label": 178,
+     "name": "27_dried_food",
+     "rpc_category_id": 27,
+     "supercategory": "dried_food"
+    },
+    {
+     "label": 179,
+     "name": "39_instant_drink",
+     "rpc_category_id": 39,
+     "supercategory": "instant_drink"
+    },
+    {
+     "label": 180,
+     "name": "49_instant_noodles",
+     "rpc_category_id": 49,
+     "supercategory": "instant_noodles"
+    },
+    {
+     "label": 181,
+     "name": "61_dessert",
+     "rpc_category_id": 61,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 182,
+     "name": "64_dessert",
+     "rpc_category_id": 64,
+     "supercategory": "dessert"
+    },
+    {
+     "label": 183,
+     "name": "82_drink",
+     "rpc_category_id": 82,
+     "supercategory": "drink"
+    },
+    {
+     "label": 184,
+     "name": "85_drink",
+     "rpc_category_id": 85,
+     "supercategory": "drink"
+    },
+    {
+     "label": 185,
+     "name": "92_alcohol",
+     "rpc_category_id": 92,
+     "supercategory": "alcohol"
+    },
+    {
+     "label": 186,
+     "name": "97_milk",
+     "rpc_category_id": 97,
+     "supercategory": "milk"
+    },
+    {
+     "label": 187,
+     "name": "101_milk",
+     "rpc_category_id": 101,
+     "supercategory": "milk"
+    },
+    {
+     "label": 188,
+     "name": "112_canned_food",
+     "rpc_category_id": 112,
+     "supercategory": "canned_food"
+    },
+    {
+     "label": 189,
+     "name": "129_chocolate",
+     "rpc_category_id": 129,
+     "supercategory": "chocolate"
+    },
+    {
+     "label": 190,
+     "name": "135_gum",
+     "rpc_category_id": 135,
+     "supercategory": "gum"
+    },
+    {
+     "label": 191,
+     "name": "151_candy",
+     "rpc_category_id": 151,
+     "supercategory": "candy"
+    },
+    {
+     "label": 192,
+     "name": "154_seasoner",
+     "rpc_category_id": 154,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 193,
+     "name": "155_seasoner",
+     "rpc_category_id": 155,
+     "supercategory": "seasoner"
+    },
+    {
+     "label": 194,
+     "name": "166_personal_hygiene",
+     "rpc_category_id": 166,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 195,
+     "name": "167_personal_hygiene",
+     "rpc_category_id": 167,
+     "supercategory": "personal_hygiene"
+    },
+    {
+     "label": 196,
+     "name": "179_tissue",
+     "rpc_category_id": 179,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 197,
+     "name": "185_tissue",
+     "rpc_category_id": 185,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 198,
+     "name": "187_tissue",
+     "rpc_category_id": 187,
+     "supercategory": "tissue"
+    },
+    {
+     "label": 199,
+     "name": "200_stationery",
+     "rpc_category_id": 200,
+     "supercategory": "stationery"
+    }
+   ]
+  },
+  {
+   "task_id": 6,
+   "offset": 200,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 200,
+     "name": "38_instant_drink@t6",
+     "rpc_category_id": 38,
+     "supercategory": "instant_drink",
+     "alias_of": 19
+    },
+    {
+     "label": 201,
+     "name": "80_alcohol@t6",
+     "rpc_category_id": 80,
+     "supercategory": "alcohol",
+     "alias_of": 39
+    },
+    {
+     "label": 202,
+     "name": "102_milk@t6",
+     "rpc_category_id": 102,
+     "supercategory": "milk",
+     "alias_of": 49
+    },
+    {
+     "label": 203,
+     "name": "114_canned_food@t6",
+     "rpc_category_id": 114,
+     "supercategory": "canned_food",
+     "alias_of": 57
+    },
+    {
+     "label": 204,
+     "name": "116_canned_food@t6",
+     "rpc_category_id": 116,
+     "supercategory": "canned_food",
+     "alias_of": 58
+    },
+    {
+     "label": 205,
+     "name": "121_canned_food@t6",
+     "rpc_category_id": 121,
+     "supercategory": "canned_food",
+     "alias_of": 60
+    },
+    {
+     "label": 206,
+     "name": "123_chocolate@t6",
+     "rpc_category_id": 123,
+     "supercategory": "chocolate",
+     "alias_of": 61
+    },
+    {
+     "label": 207,
+     "name": "137_gum@t6",
+     "rpc_category_id": 137,
+     "supercategory": "gum",
+     "alias_of": 69
+    },
+    {
+     "label": 208,
+     "name": "138_gum@t6",
+     "rpc_category_id": 138,
+     "supercategory": "gum",
+     "alias_of": 70
+    },
+    {
+     "label": 209,
+     "name": "198_stationery@t6",
+     "rpc_category_id": 198,
+     "supercategory": "stationery",
+     "alias_of": 98
+    },
+    {
+     "label": 210,
+     "name": "24_dried_food@t6",
+     "rpc_category_id": 24,
+     "supercategory": "dried_food",
+     "alias_of": 102
+    },
+    {
+     "label": 211,
+     "name": "93_alcohol@t6",
+     "rpc_category_id": 93,
+     "supercategory": "alcohol",
+     "alias_of": 111
+    },
+    {
+     "label": 212,
+     "name": "140_gum@t6",
+     "rpc_category_id": 140,
+     "supercategory": "gum",
+     "alias_of": 118
+    },
+    {
+     "label": 213,
+     "name": "79_alcohol@t6",
+     "rpc_category_id": 79,
+     "supercategory": "alcohol",
+     "alias_of": 134
+    },
+    {
+     "label": 214,
+     "name": "141_gum@t6",
+     "rpc_category_id": 141,
+     "supercategory": "gum",
+     "alias_of": 141
+    },
+    {
+     "label": 215,
+     "name": "18_dried_fruit@t6",
+     "rpc_category_id": 18,
+     "supercategory": "dried_fruit",
+     "alias_of": 151
+    },
+    {
+     "label": 216,
+     "name": "98_milk@t6",
+     "rpc_category_id": 98,
+     "supercategory": "milk",
+     "alias_of": 162
+    },
+    {
+     "label": 217,
+     "name": "119_canned_food@t6",
+     "rpc_category_id": 119,
+     "supercategory": "canned_food",
+     "alias_of": 164
+    },
+    {
+     "label": 218,
+     "name": "27_dried_food@t6",
+     "rpc_category_id": 27,
+     "supercategory": "dried_food",
+     "alias_of": 178
+    },
+    {
+     "label": 219,
+     "name": "92_alcohol@t6",
+     "rpc_category_id": 92,
+     "supercategory": "alcohol",
+     "alias_of": 185
+    },
+    {
+     "label": 220,
+     "name": "97_milk@t6",
+     "rpc_category_id": 97,
+     "supercategory": "milk",
+     "alias_of": 186
+    },
+    {
+     "label": 221,
+     "name": "112_canned_food@t6",
+     "rpc_category_id": 112,
+     "supercategory": "canned_food",
+     "alias_of": 188
+    },
+    {
+     "label": 222,
+     "name": "135_gum@t6",
+     "rpc_category_id": 135,
+     "supercategory": "gum",
+     "alias_of": 190
+    },
+    {
+     "label": 223,
+     "name": "151_candy@t6",
+     "rpc_category_id": 151,
+     "supercategory": "candy",
+     "alias_of": 191
+    },
+    {
+     "label": 224,
+     "name": "200_stationery@t6",
+     "rpc_category_id": 200,
+     "supercategory": "stationery",
+     "alias_of": 199
+    }
+   ]
+  },
+  {
+   "task_id": 7,
+   "offset": 225,
+   "reserved": false,
+   "classes": [
+    {
+     "label": 225,
+     "name": "23_dried_food@t7",
+     "rpc_category_id": 23,
+     "supercategory": "dried_food",
+     "alias_of": 11
+    },
+    {
+     "label": 226,
+     "name": "33_instant_drink@t7",
+     "rpc_category_id": 33,
+     "supercategory": "instant_drink",
+     "alias_of": 17
+    },
+    {
+     "label": 227,
+     "name": "36_instant_drink@t7",
+     "rpc_category_id": 36,
+     "supercategory": "instant_drink",
+     "alias_of": 18
+    },
+    {
+     "label": 228,
+     "name": "83_drink@t7",
+     "rpc_category_id": 83,
+     "supercategory": "drink",
+     "alias_of": 41
+    },
+    {
+     "label": 229,
+     "name": "91_alcohol@t7",
+     "rpc_category_id": 91,
+     "supercategory": "alcohol",
+     "alias_of": 46
+    },
+    {
+     "label": 230,
+     "name": "108_canned_food@t7",
+     "rpc_category_id": 108,
+     "supercategory": "canned_food",
+     "alias_of": 54
+    },
+    {
+     "label": 231,
+     "name": "110_canned_food@t7",
+     "rpc_category_id": 110,
+     "supercategory": "canned_food",
+     "alias_of": 55
+    },
+    {
+     "label": 232,
+     "name": "117_canned_food@t7",
+     "rpc_category_id": 117,
+     "supercategory": "canned_food",
+     "alias_of": 59
+    },
+    {
+     "label": 233,
+     "name": "134_gum@t7",
+     "rpc_category_id": 134,
+     "supercategory": "gum",
+     "alias_of": 67
+    },
+    {
+     "label": 234,
+     "name": "136_gum@t7",
+     "rpc_category_id": 136,
+     "supercategory": "gum",
+     "alias_of": 68
+    },
+    {
+     "label": 235,
+     "name": "171_personal_hygiene@t7",
+     "rpc_category_id": 171,
+     "supercategory": "personal_hygiene",
+     "alias_of": 84
+    },
+    {
+     "label": 236,
+     "name": "17_dried_fruit@t7",
+     "rpc_category_id": 17,
+     "supercategory": "dried_fruit",
+     "alias_of": 101
+    },
+    {
+     "label": 237,
+     "name": "73_drink@t7",
+     "rpc_category_id": 73,
+     "supercategory": "drink",
+     "alias_of": 109
+    },
+    {
+     "label": 238,
+     "name": "180_tissue@t7",
+     "rpc_category_id": 180,
+     "supercategory": "tissue",
+     "alias_of": 122
+    },
+    {
+     "label": 239,
+     "name": "34_instant_drink@t7",
+     "rpc_category_id": 34,
+     "supercategory": "instant_drink",
+     "alias_of": 129
+    },
+    {
+     "label": 240,
+     "name": "74_drink@t7",
+     "rpc_category_id": 74,
+     "supercategory": "drink",
+     "alias_of": 133
+    },
+    {
+     "label": 241,
+     "name": "90_alcohol@t7",
+     "rpc_category_id": 90,
+     "supercategory": "alcohol",
+     "alias_of": 136
+    },
+    {
+     "label": 242,
+     "name": "113_canned_food@t7",
+     "rpc_category_id": 113,
+     "supercategory": "canned_food",
+     "alias_of": 138
+    },
+    {
+     "label": 243,
+     "name": "170_personal_hygiene@t7",
+     "rpc_category_id": 170,
+     "supercategory": "personal_hygiene",
+     "alias_of": 145
+    },
+    {
+     "label": 244,
+     "name": "35_instant_drink@t7",
+     "rpc_category_id": 35,
+     "supercategory": "instant_drink",
+     "alias_of": 153
+    },
+    {
+     "label": 245,
+     "name": "109_canned_food@t7",
+     "rpc_category_id": 109,
+     "supercategory": "canned_food",
+     "alias_of": 163
+    },
+    {
+     "label": 246,
+     "name": "130_chocolate@t7",
+     "rpc_category_id": 130,
+     "supercategory": "chocolate",
+     "alias_of": 166
+    },
+    {
+     "label": 247,
+     "name": "175_tissue@t7",
+     "rpc_category_id": 175,
+     "supercategory": "tissue",
+     "alias_of": 172
+    },
+    {
+     "label": 248,
+     "name": "82_drink@t7",
+     "rpc_category_id": 82,
+     "supercategory": "drink",
+     "alias_of": 183
+    },
+    {
+     "label": 249,
+     "name": "167_personal_hygiene@t7",
+     "rpc_category_id": 167,
+     "supercategory": "personal_hygiene",
+     "alias_of": 195
+    }
+   ]
+  },
+  {
+   "task_id": 8,
+   "offset": 250,
+   "reserved": true,
+   "classes": [
+    {
+     "label": 250,
+     "name": "reserved_250",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 251,
+     "name": "reserved_251",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 252,
+     "name": "reserved_252",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 253,
+     "name": "reserved_253",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 254,
+     "name": "reserved_254",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 255,
+     "name": "reserved_255",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 256,
+     "name": "reserved_256",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 257,
+     "name": "reserved_257",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 258,
+     "name": "reserved_258",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 259,
+     "name": "reserved_259",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 260,
+     "name": "reserved_260",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 261,
+     "name": "reserved_261",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 262,
+     "name": "reserved_262",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 263,
+     "name": "reserved_263",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 264,
+     "name": "reserved_264",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 265,
+     "name": "reserved_265",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 266,
+     "name": "reserved_266",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 267,
+     "name": "reserved_267",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 268,
+     "name": "reserved_268",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 269,
+     "name": "reserved_269",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 270,
+     "name": "reserved_270",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 271,
+     "name": "reserved_271",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 272,
+     "name": "reserved_272",
+     "rpc_category_id": null,
+     "supercategory": null
+    },
+    {
+     "label": 273,
+     "name": "reserved_273",
+     "rpc_category_id": null,
+     "supercategory": null
+    }
+   ]
+  }
+ ]
+}
