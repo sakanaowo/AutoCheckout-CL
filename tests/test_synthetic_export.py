@@ -196,6 +196,22 @@ def test_verify_accepts_a_relearn_release(tmp_path, scene_inputs):
     assert list(report["counts"]) == [2] and report["counts"][2]["new_share"] == 0.5
 
 
+def test_verify_checks_the_placement_balance_when_asked(release):
+    from autocheckout.synthetic import verify_dataset
+    out, config = release  # six scenes: rpc 11 drawn from x:0 and x:2, rpc 10 from x:1
+    catalog = [{"cutout_id": "x:0", "rpc_category_id": 11, "camera": 2, "source": "11_camera2-1.jpg"},
+               {"cutout_id": "x:2", "rpc_category_id": 11, "camera": 2, "source": "11-back_camera2-1.jpg"},
+               {"cutout_id": "x:1", "rpc_category_id": 10, "camera": 2, "source": "10_camera2-1.jpg"}]
+    kwargs = {"min_visible": 0.7, "quota_tolerance": 0.6, "view_tolerance": 0.05}
+    report = verify_dataset(out, config, cutouts=catalog, **kwargs)
+    assert report["passed"] and report["gates"]["view_balance"], report["failures"]
+    catalog.append({"cutout_id": "x:3", "rpc_category_id": 10, "camera": 2, "source": "10-back_camera2-1.jpg"})
+    report = verify_dataset(out, config, cutouts=catalog, **kwargs)  # rpc 10: back placement never used
+    assert not report["passed"] and not report["gates"]["view_balance"]
+    assert report["failures"]["view_balance"] == [{"task": 1, "sku": 10, "camera": 2, "counts": {"back": 0, "front": 6}}]
+    assert "view_balance" not in verify_dataset(out, config, min_visible=0.7, quota_tolerance=0.6)["gates"]
+
+
 def test_verify_fails_when_a_planned_task_is_not_exported(release):
     from autocheckout.synthetic import verify_dataset
     out, config = release

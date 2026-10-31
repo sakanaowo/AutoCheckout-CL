@@ -15,6 +15,7 @@ from autocheckout.synthetic import (
     mask_solidity,
     merge_catalogs,
     used_cutouts,
+    view_coverage,
 )
 from synth_rpc import make_raw_rpc
 from tools.resize import merge_annotations
@@ -156,3 +157,58 @@ def test_inventory_cutouts_hashes_and_flags_problems(tmp_path):
     assert {(i["cutout_id"], i["issue"]) for i in issues} == {
         ("sam_v1:12", "empty_alpha"), ("sam_v1:13", "missing_file"), ("sam_v1:13", "source_not_in_train2019")}
     assert "sam_v1:13" not in by_id
+
+
+def coverage_inputs():
+    """RPC photographs SKUs 1 and 2 in both placements; SKU 1 is upright (camera 0), SKU 2 flat (camera 2).
+    SKU 1 has camera-0 cutouts at every front step but only at back steps 1-3."""
+    train = {"images": [], "annotations": []}
+    for rpc in (1, 2):
+        for suffix in ("", "-back"):
+            for cam in (0, 2):
+                for step in range(1, 41):
+                    image_id = len(train["images"]) + 1
+                    train["images"].append({"id": image_id, "file_name": f"{rpc}{suffix}_camera{cam}-{step}.jpg"})
+                    train["annotations"].append({"id": image_id, "image_id": image_id, "category_id": rpc})
+
+    def cut(rpc, suffix, cam, step):
+        return {"cutout_id": f"{rpc}{suffix}:{cam}:{step}", "rpc_category_id": rpc, "camera": cam,
+                "source": f"{rpc}{suffix}_camera{cam}-{step}.jpg"}
+
+    cutouts = [cut(1, "", 0, s) for s in range(1, 41)] + [cut(1, "-back", 0, s) for s in (1, 2, 3)]
+    cutouts += [cut(2, "", 2, 5), cut(2, "-back", 2, 9)]
+    skus = [{"rpc_category_id": 1, "camera_weights": {"0": 1.0, "2": 0.0}},
+            {"rpc_category_id": 2, "camera_weights": {"2": 1.0}}]
+    return train, cutouts, skus
+
+
+def test_view_coverage_flags_a_missing_placement_and_a_wide_cam0_gap():
+    train, cutouts, skus = coverage_inputs()
+    cov = view_coverage(cutouts, skus, train, [1, 2])
+    assert cov[1]["placements"] == ["back", "front"] and cov[1]["views"] == {"back/c0": 3, "front/c0": 40}
+    assert cov[1]["cam0_gap"] == {"back": 38, "front": 1} and not cov[1]["ok"]
+    assert cov[2]["ok"] and cov[2]["views"] == {"back/c2": 1, "front/c2": 1} and cov[2]["cam0_gap"] == {}
+    cov = view_coverage(cutouts[:-1], skus, train, [2])  # SKU 2 without its back cutout
+    assert list(cov) == [2] and cov[2]["views"] == {"back/c2": 0, "front/c2": 1} and not cov[2]["ok"]
+
+
+def test_coverage_cli_writes_the_report_and_fails_when_a_sku_misses_a_view(tmp_path):
+    import json
+
+    from tools.synth_v2 import main
+
+    train, cutouts, skus = coverage_inputs()
+    files = {"train": train, "catalog/cutouts.json": {"cutouts": cutouts}, "skus": {"skus": skus},
+             "task_config": {"name": "t", "seed": 0, "tasks": [{"task_id": 1, "offset": 0, "classes": [
+                 {"label": 0, "name": "a", "rpc_category_id": 1}, {"label": 1, "name": "b", "rpc_category_id": 2}]}]}}
+    for name, data in files.items():
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).write_text(json.dumps(data))
+    config = {"task_config": str(tmp_path / "task_config"), "catalog": str(tmp_path / "catalog/cutouts.json"),
+              "skus": str(tmp_path / "skus")}
+    (tmp_path / "config.json").write_text(json.dumps(config))
+    with pytest.raises(SystemExit, match=r"\[1\]"):
+        main(["coverage", "--config", str(tmp_path / "config.json"), "--tasks", "1",
+              "--train-ann", str(tmp_path / "train")])
+    report = json.loads((tmp_path / "catalog/coverage.json").read_text())
+    assert report["tasks"] == [1] and {k: v["ok"] for k, v in report["skus"].items()} == {"1": False, "2": True}

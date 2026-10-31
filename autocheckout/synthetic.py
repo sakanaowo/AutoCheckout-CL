@@ -11,10 +11,11 @@ import hashlib
 import json
 import math
 import os
+import re
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import numpy as np
 from PIL import Image
@@ -24,6 +25,8 @@ from autocheckout.sampling import largest_remainder
 
 DESIGN_SOURCE = "val2019"
 GRID = 256  # side of the grid boxes are rasterised on to measure overlap and tray colour
+STEPS = 40  # turntable steps of the RPC train photos, 9 degrees apart
+_SOURCE = re.compile(r"^[^_]+?(?:-(?P<placement>[^_]+))?_camera(?P<camera>\d)-(?P<step>\d+)\.(?:jpg|png)$")
 
 
 def background_source_names(backgrounds_dir: str | os.PathLike) -> list[str]:
@@ -172,6 +175,15 @@ def new_group_subsets(pattern: tuple[int, ...], new_ratio: list[float]) -> list[
     return subsets
 
 
+def source_view(source: str) -> tuple[str, int, int]:
+    """(placement 'front' | 'back', camera, turntable step 1-40) of an RPC train file name, e.g.
+    ``6909409012031-back_camera0-15.jpg`` (Q5 of docs/project/task6-relearn-plan-2026-10-30.md)."""
+    match = _SOURCE.match(Path(source).name)
+    if not match:
+        raise ValueError(f"not an RPC train file name: {source}")
+    return match["placement"] or "front", int(match["camera"]), int(match["step"])
+
+
 class _Cycle:
     """Endless reshuffled cycle over a list (balanced reuse of backgrounds and cutouts)."""
 
@@ -186,6 +198,21 @@ class _Cycle:
                     return self.queue.pop(k)
             self.queue = [self.items[i] for i in self.rng.permutation(len(self.items))] + self.queue
         return self.queue.pop()
+
+
+class _PlacementCycle:
+    """Cutouts of one SKU and camera: the placements in turn, by name, and a _Cycle within each (Q5)."""
+
+    def __init__(self, ids: list, placement: dict[str, str], rng: np.random.Generator):
+        groups = defaultdict(list)
+        for cutout_id in ids:
+            groups[placement[cutout_id]].append(cutout_id)
+        self.cycles, self.turn = [_Cycle(groups[name], rng) for name in sorted(groups)], 0
+
+    def next(self, avoid=()):
+        cycle = self.cycles[self.turn % len(self.cycles)]
+        self.turn += 1
+        return cycle.next(avoid)
 
 
 def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[str, Any]],
@@ -204,6 +231,9 @@ def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[
     ``sku_area`` (median val bbox area of each SKU, as a fraction of the image) and ``max_area`` (per
     level) reject baskets whose objects could not fit, e.g. a small-product pattern filled with large
     bags; the basket is redrawn, each SKU drawn among the (attempt + 1) least used ones.
+
+    With ``layout["view_balance"]`` the cutouts of each SKU and camera alternate between the placements
+    RPC photographed (front, back) and each cutout of a placement is used equally often (Q5).
     """
     rng = np.random.default_rng(stable_seed(seed, "plan", task_id))
     new_skus = [c.rpc_category_id for c in task_config.task(task_id).classes]
@@ -213,7 +243,11 @@ def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[
     by_sku_cam = defaultdict(list)
     for c in sorted(cutouts, key=lambda c: c["cutout_id"]):
         by_sku_cam[c["rpc_category_id"], c["camera"]].append(c["cutout_id"])
-    cycles = {key: _Cycle(ids, rng) for key, ids in by_sku_cam.items()}
+    if layout.get("view_balance"):
+        placement = {c["cutout_id"]: source_view(c["source"])[0] for c in cutouts}
+        cycles = {key: _PlacementCycle(ids, placement, rng) for key, ids in by_sku_cam.items()}
+    else:
+        cycles = {key: _Cycle(ids, rng) for key, ids in by_sku_cam.items()}
     bg_cycle = _Cycle(sorted(backgrounds), rng)
 
     levels = [lv for lv in LEVELS if patterns.get(lv)]
@@ -306,6 +340,39 @@ def used_cutouts(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]]) -> l
     """Cutouts whose camera has a weight for their SKU in the accepted SKU table (D11)."""
     cameras = {s["rpc_category_id"]: {int(c) for c, w in s["camera_weights"].items() if w > 0} for s in skus}
     return [c for c in cutouts if c["camera"] in cameras[c["rpc_category_id"]]]
+
+
+def view_coverage(cutouts: list[dict[str, Any]], skus: list[dict[str, Any]], train_coco: dict[str, Any],
+                  rpc_ids: Iterable[int], *, max_gap: int = 2) -> dict[int, dict[str, Any]]:
+    """Faces and angles the cutouts of each SKU cover (Q5 of docs/project/task6-relearn-plan-2026-10-30.md).
+
+    ``placements``: the placements RPC photographed the SKU in (train2019 file names); ``views``: cutouts per
+    placement and camera of positive weight; ``cam0_gap``: per placement, the widest turn between two
+    consecutive camera-0 cutouts, in steps of 9 degrees (only when camera 0 is used). ``ok`` when every
+    view has a cutout and every gap is at most ``max_gap``.
+    """
+    files = {img["id"]: img["file_name"] for img in train_coco["images"]}
+    rpc_placements = defaultdict(set)
+    for ann in train_coco["annotations"]:
+        rpc_placements[ann["category_id"]].add(source_view(files[ann["image_id"]])[0])
+    weights = {s["rpc_category_id"]: s["camera_weights"] for s in skus}
+    views = defaultdict(list)
+    for c in cutouts:
+        placement, camera, step = source_view(c["source"])
+        views[c["rpc_category_id"], placement, camera].append(step)
+    out = {}
+    for rpc in rpc_ids:
+        placements = sorted(rpc_placements[rpc])
+        cameras = sorted(int(c) for c, w in weights[rpc].items() if w > 0)
+        counts = {f"{p}/c{c}": len(views[rpc, p, c]) for p in placements for c in cameras}
+        gaps = {}
+        if 0 in cameras:
+            for p in placements:
+                steps = sorted(set(views[rpc, p, 0]))
+                gaps[p] = max((b - a) % STEPS or STEPS for a, b in zip(steps, steps[1:] + steps[:1])) if steps else STEPS
+        out[rpc] = {"placements": placements, "views": counts, "cam0_gap": gaps,
+                    "ok": all(counts.values()) and all(g <= max_gap for g in gaps.values())}
+    return out
 
 
 def inventory_cutouts(index: dict[str, Any], cutout_set: str, root: str | os.PathLike,
@@ -506,19 +573,29 @@ def area_budget(val_coco: dict[str, Any], quantile: float = 99) -> tuple[dict[in
 
 
 def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: float, quota_tolerance: float = 0.2,
-                   new_ratio: tuple[float, float] = (0.4, 0.6), rle_sample: int | None = None) -> dict[str, Any]:
+                   new_ratio: tuple[float, float] = (0.4, 0.6), rle_sample: int | None = None,
+                   cutouts: list[dict[str, Any]] | None = None, view_tolerance: float | None = None) -> dict[str, Any]:
     """Mechanical gates of a written release (T3.1). Never repairs anything; returns gate results.
 
     Checks: image files exist and match their recorded hash; generation_task and future-SKU rules; train
     files hold only current-task labels mapped once, audit files every object of the same images; bbox
     and area equal the decoded RLE; visible fraction >= ``min_visible``; per-task new-object share and
     per-SKU quota balance. ``rle_sample`` limits RLE decoding to every k-th image (full releases).
+    With ``cutouts`` (the catalog) and ``view_tolerance``, also the placement balance (Q5): for each labeled
+    SKU and camera, the objects of every placement with cutouts are within ``view_tolerance`` of their
+    mean, give or take one object (alternation cannot split an odd count evenly).
     """
     from pycocotools import mask as mask_utils
 
     out_root = Path(out_root)
     failures = defaultdict(list)
     counts = {}
+    check_views = cutouts is not None and view_tolerance is not None
+    if check_views:
+        view = {c["cutout_id"]: (c["camera"], source_view(c["source"])[0]) for c in cutouts}
+        placements = defaultdict(set)
+        for c in cutouts:
+            placements[c["rpc_category_id"], c["camera"]].add(view[c["cutout_id"]][1])
     for task in task_config.data_tasks:
         rpc_to_label = task_config.rpc_to_label_in(task.task_id)
         canon_path = out_root / "annotations" / f"task_{task.task_id}_rpc.json"
@@ -546,7 +623,7 @@ def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: flo
         if len(full["annotations"]) != len(canon["annotations"]):
             failures["audit_incomplete"].append(task.task_id)
         images = {img["id"]: img for img in canon["images"]}
-        new_objects, per_sku = 0, Counter()
+        new_objects, per_sku, per_view = 0, Counter(), Counter()
         for k, ann in enumerate(canon["annotations"]):
             label = rpc_to_label.get(ann["category_id"])
             if label is None or label >= seen:
@@ -559,6 +636,8 @@ def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: flo
             if label in current:
                 new_objects += 1
                 per_sku[ann["category_id"]] += 1
+                if check_views:
+                    per_view[(ann["category_id"], *view[ann["cutout_id"]])] += 1
             img = images[ann["image_id"]]
             if rle_sample is None or ann["image_id"] % rle_sample == 0:
                 mask = mask_utils.decode(ann["segmentation"]).astype(bool)
@@ -578,6 +657,11 @@ def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: flo
             missing = [c.rpc_category_id for c in task.classes if c.rpc_category_id not in per_sku]
             if off or missing:
                 failures["sku_quota"].append({"off": off, "missing": missing})
+        for sku, camera in sorted({key[:2] for key in per_view}):
+            views = {p: per_view[sku, camera, p] for p in sorted(placements[sku, camera])}
+            mean = sum(views.values()) / len(views)
+            if any(abs(n - mean) > view_tolerance * mean + 1 for n in views.values()):
+                failures["view_balance"].append({"task": task.task_id, "sku": sku, "camera": camera, "counts": views})
         counts[task.task_id] = {"images": len(ids), "objects": len(canon["annotations"]),
                                 "new_objects": new_objects, "new_share": round(share, 4)}
     planned = sorted(int(p.stem.split("_")[1]) for p in (out_root / "plans").glob("task_*.jsonl"))
@@ -592,6 +676,6 @@ def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: flo
     gates = {name: name not in failures for name in ("planned_tasks_exported",
         "unique_ids", "same_images", "generation_task", "image_missing", "train_old_or_future_label",
         "audit_incomplete", "future_sku", "labeled_flag", "visibility", "rle", "bbox_area_vs_mask",
-        "new_share", "sku_quota")}
+        "new_share", "sku_quota") + (("view_balance",) if check_views else ())}
     return {"passed": all(gates.values()), "gates": gates, "counts": counts,
             "failures": {k: v[:20] for k, v in failures.items()}}

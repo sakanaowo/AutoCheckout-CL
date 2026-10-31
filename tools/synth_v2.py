@@ -7,6 +7,7 @@ Run from the repo root:
     python -m tools.synth_v2 generate --config configs/data/synth_v2.json --out-dir <release> --workers 16
     python -m tools.synth_v2 export --config configs/data/synth_v2.json --out-dir <release>
     python -m tools.synth_v2 eval-set --config configs/data/synth_v2.json --out-dir data/processed/rpc_eval_official_v1
+    python -m tools.synth_v2 coverage --config configs/data/synth_relearn.json --tasks 6 7
     python -m tools.synth_v2 inventory --index data/archive/cutouts/sam/index.json --cutout-set sam_v1 \
         --root data/archive --out data/processed/rpc_synth_v2_v1/catalog/cutouts_sam_v1.json
 """
@@ -46,6 +47,7 @@ from autocheckout.synthetic import (
     merge_catalogs,
     used_cutouts,
     verify_dataset,
+    view_coverage,
 )
 from autocheckout.taskcfg import TaskConfig
 
@@ -277,6 +279,22 @@ def cmd_plan(args) -> None:
               "inputs": {k: sha256_file(config[k]) for k in ("catalog", "skus", "design_val", "task_config")}}, indent=1)
 
 
+def cmd_coverage(args) -> None:
+    """Q5 gate: faces and angles the cutouts of the SKUs of --tasks cover; fails when an SKU misses one."""
+    config = load_config(args.config)
+    task_config = TaskConfig.load(config["task_config"])
+    rpc_ids = [c.rpc_category_id for task in args.tasks for c in task_config.task(task).classes]
+    coverage = view_coverage(load_json(config["catalog"])["cutouts"], load_json(config["skus"])["skus"],
+                             load_json(args.train_ann), rpc_ids)
+    path = Path(config["catalog"]).parent / "coverage.json"
+    save_json(path, {"created_at": now(), "config": config["_path"], "config_sha256": config["_sha256"],
+                     "tasks": args.tasks, "skus": {str(rpc): v for rpc, v in coverage.items()}}, indent=1)
+    bad = [rpc for rpc, v in coverage.items() if not v["ok"]]
+    print(f"{len(coverage) - len(bad)}/{len(coverage)} SKUs cover every placement, camera and angle -> {path}")
+    if bad:
+        raise SystemExit(f"SKUs missing a placement, camera or angle: {bad}")
+
+
 def read_plans(out: Path, tasks=None):
     recipes = []
     for path in sorted((out / "plans").glob("task_*.jsonl")):
@@ -387,8 +405,11 @@ def cmd_verify(args) -> None:
     out = Path(args.out_dir)
     layout = config["layout"]
     min_visible = min(layout["min_visible"], layout.get("occluded_min_visible", 1.0))
+    views = {"cutouts": load_json(config["catalog"])["cutouts"], "view_tolerance": layout["quota_tolerance"]} \
+        if layout.get("view_balance") else {}
     report = verify_dataset(out, TaskConfig.load(config["task_config"]), min_visible=min_visible,
-                            new_ratio=tuple(config["layout"]["new_ratio"]), rle_sample=args.rle_sample)
+                            quota_tolerance=layout.get("quota_tolerance", 0.2),
+                            new_ratio=tuple(config["layout"]["new_ratio"]), rle_sample=args.rle_sample, **views)
     report["distributions"] = compare_to_val(out, load_json(config["design_val"]))
     report["checked_at"] = now()
     save_json(out / "verify_report.json", report, indent=1)
@@ -529,6 +550,12 @@ def main(argv=None) -> None:
     pl.add_argument("--pilot", action="store_true")
     pl.add_argument("--tasks", type=int, nargs="*")
     pl.set_defaults(run=cmd_plan)
+
+    cov = sub.add_parser("coverage", help="Q5 gate: placements, cameras and camera-0 angles the cutouts cover")
+    cov.add_argument("--config", required=True)
+    cov.add_argument("--tasks", type=int, nargs="+", required=True)
+    cov.add_argument("--train-ann", default="data/archive/instances_train2019.json")
+    cov.set_defaults(run=cmd_coverage)
 
     gen = sub.add_parser("generate", help="render planned scenes (resumable)")
     gen.add_argument("--config", required=True)

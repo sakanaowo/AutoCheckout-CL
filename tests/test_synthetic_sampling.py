@@ -1,10 +1,12 @@
 """Synthetic v2, T2.1: scene plans per task (formats.md section 7.2, decisions D7, D13, D14)."""
 
+import hashlib
+import json
 from collections import Counter
 
 import pytest
 
-from autocheckout.synthetic import basket_patterns, plan_scenes, stable_seed
+from autocheckout.synthetic import basket_patterns, plan_scenes, source_view, stable_seed
 from autocheckout.taskcfg import TaskConfig
 from tools.make_relearn_config import relearn_config
 
@@ -136,3 +138,40 @@ def test_relearn_task_scenes_label_the_relearned_skus_and_never_list_them_as_old
     relearned = {c.rpc_category_id for c in cfg.task(4).classes}
     assert relearned == {1, 4} and all(o["labeled"] == (o["rpc_category_id"] in relearned) for o in objs)
     assert {o["rpc_category_id"] for o in objs if not o["labeled"]} == set(range(1, 9)) - relearned
+
+
+def test_source_view_reads_placement_camera_and_step():
+    assert source_view("6909409012031-back_camera0-15.jpg") == ("back", 0, 15)
+    assert source_view("038900004095_camera2-3.png") == ("front", 2, 3)
+
+
+GOLDEN = {1: "baf43a4aca5a20a9f1a6113096121b01ef1f372e08a80233a354788f21390047",  # plan(task, n=60) before
+          2: "775af6c540dd22996839fa4211abfbcf4a81171e31fc3f62cb9f1d97dc1e8d6e"}  # view_balance existed
+
+
+@pytest.mark.parametrize("layout", [LAYOUT, {**LAYOUT, "view_balance": False}])
+def test_without_view_balance_the_plan_is_unchanged(layout):
+    cutouts, skus = catalog_and_skus()
+    for task, digest in GOLDEN.items():
+        recipes = plan_scenes(task, 60, task_config=task_config(), cutouts=cutouts, skus=skus, patterns=PATTERNS,
+                              backgrounds=["b1.jpg", "b2.jpg", "b3.jpg"], layout=layout, seed=7)
+        assert hashlib.sha256(json.dumps(recipes, sort_keys=True).encode()).hexdigest() == digest
+
+
+def test_view_balance_alternates_placements_and_spreads_cutouts():
+    cutouts, skus = catalog_and_skus()  # SKU 1 is flat (camera 2): 6 front and 2 back cutouts
+    cutouts = [c for c in cutouts if c["rpc_category_id"] != 1]
+    cutouts += [{"cutout_id": f"f:{k}", "rpc_category_id": 1, "camera": 2, "source": f"1_camera2-{k + 1}.jpg"}
+                for k in range(6)]
+    cutouts += [{"cutout_id": f"b:{k}", "rpc_category_id": 1, "camera": 2, "source": f"1-back_camera2-{k + 1}.jpg"}
+                for k in range(2)]
+    for c in cutouts:
+        c.setdefault("source", f"{c['rpc_category_id']}_camera{c['camera']}-1.jpg")
+    recipes = plan_scenes(1, 300, task_config=task_config(), cutouts=cutouts, skus=skus, patterns=PATTERNS,
+                          backgrounds=["b1.jpg", "b2.jpg", "b3.jpg"], layout={**LAYOUT, "view_balance": True}, seed=7)
+    uses = Counter(o["cutout_id"] for r in recipes for o in r["objects"] if o["rpc_category_id"] == 1)
+    front, back = (sum(n for c, n in uses.items() if c.startswith(p)) for p in ("f:", "b:"))
+    assert abs(front - back) <= 1 and front + back > 100
+    for prefix, k in (("f:", 6), ("b:", 2)):
+        n = [uses[f"{prefix}{i}"] for i in range(k)]
+        assert max(n) - min(n) <= 2
