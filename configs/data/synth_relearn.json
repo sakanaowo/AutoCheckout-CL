@@ -1,0 +1,109 @@
+{
+  "name": "rpc_synth_relearn",
+  "version": "v1",
+  "decisions": "docs/project/synthetic-data-v2-decisions-2026-10-21.md",
+  "seed": 20261031,
+  "task_config": "configs/relearn/task_config_relearn.json",
+  "catalog": "data/processed/rpc_synth_relearn_v1/catalog/cutouts.json",
+  "skus": "data/processed/rpc_synth_relearn_v1/catalog/skus.json",
+  "coverage_exceptions": {
+    "38": "box: camera-0 corner views showing two faces rejected (M0), all four faces kept; gaps at the corners",
+    "90": "flat glass bottle: torn camera-0 masks rejected, widest gap 3 steps (27 degrees)",
+    "97": "milk carton: camera-0 corner views showing two faces rejected (M0), all four faces kept; gaps at the corners",
+    "98": "milk carton: camera-0 corner views showing two faces rejected (M0), all four faces kept; gaps at the corners",
+    "102": "milk carton: camera-0 corner views showing two faces rejected (M0), all four faces kept; gaps at the corners",
+    "112": "RPC train2019 has no camera-0 photo at steps 1-2 (gap 3 steps)",
+    "198": "glue stick: torn camera-0 masks rejected, widest gap 3 steps (27 degrees)"
+  },
+  "design_val": "data/processed/rpc_synth_v2_v1/design/design_val.json",
+  "backgrounds": "data/archive/backgrounds",
+  "image_root": "data/archive",
+  "images_per_task": {
+    "6": 12330,
+    "7": 12330
+  },
+  "pilot_images_per_task": 200,
+  "layout": {
+    "basket_patterns": "sampled from design val images of the same level (n objects, units per SKU)",
+    "new_ratio": [
+      0.4,
+      0.6
+    ],
+    "area_budget_quantile": 99,
+    "center_mean": [
+      0.505,
+      0.552
+    ],
+    "center_std": {
+      "easy": 0.1413,
+      "medium": 0.1683,
+      "hard": 0.1863
+    },
+    "min_visible": 0.9,
+    "position_tries": 60,
+    "object_tries": 4,
+    "scene_retries": 16,
+    "retry_spread_step": 0.15,
+    "pack_mode": "compact",
+    "pack_gap": [
+      1.0,
+      1.1
+    ],
+    "pack_center_jitter": 0.3,
+    "compact_prob": 0.8,
+    "occluded_scene_prob": 0.15,
+    "occluded_min_visible": 0.75,
+    "view_balance": true,
+    "quota_tolerance": 0.05
+  },
+  "scale": {
+    "fit": "per SKU and camera: median val bbox area / median rotated bbox area of the cutouts (source pixels)",
+    "standing_fit": "standing pose (camera 2 of upright SKUs): cutout long side = median val short side",
+    "jitter_log_sigma": 0.08,
+    "max_side_frac": 0.55,
+    "calibration": 1.048
+  },
+  "photometric": {
+    "object_gain": {
+      "0": [
+        0.85,
+        1.05
+      ],
+      "2": [
+        0.76,
+        0.92
+      ]
+    },
+    "object_contrast": 0.06,
+    "object_color": 0.03,
+    "shadow_blur": 0.06,
+    "shadow_strength": [
+      0.15,
+      0.35
+    ],
+    "shadow_offset": [
+      0.01,
+      0.03
+    ],
+    "edge_blur": 3,
+    "global_gain": [
+      0.96,
+      1.04
+    ],
+    "global_offset": 6,
+    "noise_sigma": [
+      0.5,
+      2.0
+    ],
+    "blur_prob": 0.25,
+    "blur_sigma": [
+      0.4,
+      0.8
+    ],
+    "jpeg_quality": [
+      72,
+      80
+    ]
+  },
+  "notes": "object_gain = p25..p75 of val/cutout luminance ratio per camera (measured 21/10 on design val); center stats measured on design val; jpeg quality matches val2019 (~75); pilot round 1 (21/10): synth/val median bbox area 0.91 -> scale calibration 1/sqrt(0.91)=1.048; bbox covered p50 below val -> center_std x0.9; layout v2 (o15, 21/10): pixel occlusion measured with SAM box masks on 450 val images (notch share 2.8/4.5/5.2%) -> each object >= 90% visible, compact baskets, 15% of scenes (and baskets too full to lie apart) allow 75%; release v1 (scatter, min_visible 0.7) hid 4x more; relearn v1 (31/10, docs/project/task6-relearn-plan-2026-10-30.md): tasks 6-7 relearn 50 SKUs (configs/relearn/selection.json); placements alternate per SKU and camera, each cutout used evenly (Q5); per-SKU quota within 5%"
+}
