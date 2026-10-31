@@ -1,6 +1,7 @@
 """Relearn helpers: alias val files, alias resolution of predictions, verdict (task6-relearn plan, Task 7)."""
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -111,3 +112,74 @@ def test_relearn_verdict_needs_the_gain_of_its_stage_without_hurting_the_other_s
     assert verdict == decision
     if decision == "stop":
         assert ("cAcc-M2" in reason.split(":")[-1]) == (round(cacc - 0.4368, 6) < (0.0165 if stage == 6 else 0.03))
+
+
+def test_a_config_whose_learned_tasks_differ_from_the_seed_is_refused():
+    from autocheckout.relearn import relearn_tasks
+    seed = TaskConfig.from_dict(task_config_dict(sizes=(2, 1, 1, 1, 1), reserved=0))
+    assert relearn_tasks(relearn_config(seed, [[1], [3]], reserved=1, name="x"), seed) == [6, 7]
+    other = TaskConfig.from_dict(task_config_dict(sizes=(1, 2, 1, 1, 1), reserved=0))
+    with pytest.raises(ValueError, match="tasks 1-5"):
+        relearn_tasks(relearn_config(other, [[1], [3]], reserved=1, name="x"), seed)
+    with pytest.raises(ValueError, match="alias tasks"):
+        relearn_tasks(relearn_config(seed, [[1]], reserved=1, name="x"), seed)
+
+
+def test_prepare_refuses_to_mix_a_dry_run_and_a_real_seed(tmp_path):
+    from autocheckout import relearn
+    (tmp_path / "seed").mkdir()
+    (tmp_path / "seed/plan.json").write_text(json.dumps({"dry_run": False, "campaign_id": "full-syn-r1"}))
+    with pytest.raises(ValueError, match="dry run"):
+        relearn.prepare({"campaign_id": "rl", "round": 1, "artifact_root": str(tmp_path), "dry_run": True,
+                         "seed_campaign": str(tmp_path / "seed")})
+
+
+def test_task_7_is_refused_when_the_task_6_gate_said_stop(tmp_path):
+    from autocheckout import relearn
+    from autocheckout.full_syn import GateStop
+    plan = {"root": str(tmp_path), "dry_run": False, "relearn_tasks": [6, 7]}
+    (tmp_path / "stages").mkdir()
+    gate = {"name": "relearn task 6", "decision": "stop", "reason": "no gain", "enforced": True}
+    (tmp_path / "stages/task6.json").write_text(json.dumps({"stage": 6, "gate": gate}))
+    with pytest.raises(GateStop, match="no gain"):
+        relearn.stage_task(plan, 7)
+    assert not (tmp_path / "attempts").exists()  # nothing was started
+
+
+@pytest.mark.slow
+def test_relearn_dry_run_expands_trains_two_tasks_and_scores_both_modes(tmp_path):
+    import torch
+
+    from autocheckout import full_syn, relearn
+    base = dict(round=1, artifact_root=str(tmp_path), dry_run=True, batch_size=1, effective_batch=2,
+                resolution=640, fsa_epochs=8, epochs=16, audit_images=4)
+    seed = full_syn.prepare({**base, "campaign_id": "seed"})
+    for stage in (full_syn.stage_fsa, full_syn.stage_task1, full_syn.stage_tasks):
+        stage(seed)
+    settings = dict(campaign_id="rl", round=1, artifact_root=str(tmp_path), dry_run=True, audit_images=4,
+                    seed_campaign=str(tmp_path / "dry_run/seed"), task_config="configs/relearn/task_config_relearn.json")
+    plan = relearn.prepare(settings)
+    assert (plan["n_classes"], plan["relearn_tasks"], plan["relearned"]) == (10, [6, 7], [1, 3])
+    assert sorted(p.name for p in Path(plan["task_dir"]).iterdir()) == [
+        "test_full.json", "train_task_6.json", "train_task_7.json", "val_full.json", "val_task_6.json", "val_task_7.json"]
+    run = tmp_path / "dry_run/rl/runs" / relearn.RELEARN
+
+    relearn.stage_expand(plan)
+    r6, r7 = relearn.stage_task(plan, 6), relearn.stage_task(plan, 7)
+    assert torch.load(run / "task_5/task_final.pth", map_location="cpu")["model"]["class_embed.0.weight"].shape[0] == 10
+    assert load_predictions(run / "task_7/pred_val.npz").label.max() < 8
+    for r in (r6, r7):
+        assert set(r["modes"]) == {"merge", "alias_only"} and r["mode"] in r["modes"]
+        assert {"cAcc_m2", "AP50_other"} <= set(r["modes"]["merge"]) and set(r["seed"]) == {"cAcc_m2", "AP50_other"}
+        assert r["gate"]["decision"] in {"go", "stop"} and r["gate"]["enforced"] is False
+    mtime = (run / "task_7/task_final.pth").stat().st_mtime
+    assert relearn.stage_task(plan, 7)["finished_at"] == r7["finished_at"]
+    assert (run / "task_7/task_final.pth").stat().st_mtime == mtime
+
+    with pytest.raises(RuntimeError, match="confirm"):
+        relearn.stage_final_test(plan)
+    final = relearn.stage_final_test(plan, confirm=True)
+    assert final["mode"] == r7["mode"] and set(final["test2019"]["counting"]) == {
+        "calibration_count_groups.json", "calibration_count.json"}
+    assert relearn.stage_final_test(plan, confirm=True)["finished_at"] == final["finished_at"]
+    assert relearn.prepare(settings) == plan

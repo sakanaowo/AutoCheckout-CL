@@ -137,3 +137,9 @@ def test_full_syn_m5_config_only_adds_feature_tuning():
     _, m5 = resolved_args("EXP-FULL-SYN-M5", FSA_HF="/fixture/fsa/task_1/hf_model")
     assert {k for k in vars(pdp) if getattr(m5, k) != getattr(pdp, k)} == {"tune_after_task1", "feature_kd"}
     assert m5.tune_after_task1 == "stages_3,encoder" and m5.feature_kd == 1
+
+
+def test_full_syn_rl_config_only_sets_the_class_count():
+    _, pdp = resolved_args("EXP-FULL-SYN", FSA_HF="/fixture/fsa/task_1/hf_model")
+    _, rl = resolved_args("EXP-FULL-SYN-RL", FSA_HF="/fixture/fsa/task_1/hf_model")
+    assert {k for k in vars(pdp) if getattr(rl, k) != getattr(pdp, k)} == {"n_classes"} and rl.n_classes == 275

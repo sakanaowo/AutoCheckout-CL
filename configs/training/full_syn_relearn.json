@@ -1,0 +1,20 @@
+{
+  "campaign_id": "full-syn-relearn",
+  "round": 1,
+  "artifact_root": "data/training",
+  "dry_run": true,
+  "release_root": "data/processed/rpc_synth_relearn_v1",
+  "eval_root": "data/processed/rpc_eval_official_v1",
+  "raw_root": "data/archive",
+  "pretrained_root": "data/pretrained/hf-cache",
+  "resolution": 640,
+  "batch_size": 8,
+  "effective_batch": 8,
+  "num_workers": 8,
+  "tf32": true,
+  "epochs": 16,
+  "checkpoint_every_minutes": 2,
+  "audit_images": 1000,
+  "seed_campaign": "data/training/full-syn-r1",
+  "task_config": "configs/relearn/task_config_relearn.json"
+}

@@ -301,6 +301,8 @@ def _config(plan: dict, experiment: str, runs: Path, fsa_hf: str = '') -> Path:
         model = ['--repo_name', '', '--model_config', plan['model_config']] if experiment == FSA else \
             ['--model_config', fsa_hf]
         lines.append(f'ARGS+=({shlex.join(DRY_MODEL_ARGS + model)})')
+    if plan.get('n_classes'):  # relearn: the expanded model (after the dry-run model, which sets 7)
+        lines.append(f"ARGS+=(--n_classes {plan['n_classes']})")
     config = output / 'resolved_config.sh'
     config.write_text('\n'.join(lines) + '\n')
     environment = _environment(plan, experiment, runs, FSA_HF=fsa_hf)
