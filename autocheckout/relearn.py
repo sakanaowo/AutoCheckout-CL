@@ -109,6 +109,52 @@ def relearn_verdict(report: dict[str, Any], seed: dict[str, Any], stage: int) ->
     return "go", scores
 
 
+def per_sku_accuracy(coco, counted: Predictions, thresholds: np.ndarray, seen: int,
+                     iou: float = 0.5) -> dict[int, dict[str, Any]]:
+    """Recall and precision of every learned SKU, as the 50 SKUs to relearn were chosen (min of both < 0.85).
+
+    ``counted`` holds the boxes left by the counting policy's NMS; a box counts when its score reaches the threshold of
+    its label. Objects and counted boxes are paired greedily by IoU (>= ``iou``) per image. recall = objects counted
+    as their own SKU / objects of the SKU; precision = those / boxes counted as the SKU (right, on another SKU's
+    object, or on no object)."""
+    from collections import Counter
+
+    from autocheckout.cl_metrics import box_iou
+
+    counted = counted.subset(counted.score >= np.asarray(thresholds)[counted.label])
+    order = np.argsort(counted.image_id, kind="stable")
+    ids = counted.image_id[order]
+    n, right, wrong, missed, called, extra = (Counter() for _ in range(6))
+    for image_id in coco.getImgIds():
+        rows = order[np.searchsorted(ids, image_id):np.searchsorted(ids, image_id, "right")]
+        anns = [a for a in coco.imgToAnns[image_id] if a["category_id"] < seen]
+        pairs, taken = {}, set()
+        if anns and len(rows):
+            gt = np.array([a["bbox"] for a in anns], float)
+            gt[:, 2:] += gt[:, :2]
+            overlap = box_iou(gt, counted.boxes[rows])
+            for _, i, j in sorted(((overlap[i, j], i, j) for i, j in zip(*np.nonzero(overlap >= iou))), reverse=True):
+                if i not in pairs and j not in taken:
+                    pairs[i] = j
+                    taken.add(j)
+        for i, ann in enumerate(anns):
+            label = ann["category_id"]
+            n[label] += 1
+            if i not in pairs:
+                missed[label] += 1
+            elif int(counted.label[rows[pairs[i]]]) == label:
+                right[label] += 1
+            else:
+                wrong[label] += 1
+                called[int(counted.label[rows[pairs[i]]])] += 1
+        for j in sorted(set(range(len(rows))) - taken):
+            extra[int(counted.label[rows[j]])] += 1
+    return {label: {"n_val": n[label], "recall": round(right[label] / n[label], 4) if n[label] else None,
+                    "precision": round(right[label] / max(1, right[label] + called[label] + extra[label]), 4),
+                    "wrong": wrong[label], "missed": missed[label], "others_called_this": called[label],
+                    "extra_boxes": extra[label]} for label in range(seen)}
+
+
 # --- campaign ------------------------------------------------------------------------------------------------------
 RELEARN = 'EXP-FULL-SYN-RL'
 RELEARN_TASKS = (6, 7)
@@ -349,6 +395,27 @@ def stage_task(plan: dict, task: int) -> dict:
               'pseudo_labels': {key: audit.get(key) for key in ('images', 'earlier_objects', 'recall', 'all',
                                                                 'branches', 'filters', 'confusions_top')}}
     return _finish(plan, f'task{task}', report, gate)
+
+
+def sku_accuracy(plan: dict, task: int) -> dict[int, dict[str, Any]]:
+    """per_sku_accuracy of every SKU of the seed config on val after relearn task ``task``, resolved with the mode its
+    gate chose and counted with that mode's M2 policy, the policy the SKUs were chosen with. Reads the finished stage
+    without its gate, so it also tells which SKUs a stopped task did not relearn."""
+    from autocheckout.cl_metrics import load_coco
+    from autocheckout.counting import dedup_detections, label_thresholds
+
+    path = Path(plan['root']) / 'stages' / f'task{task}.json'
+    if not path.is_file():
+        raise RuntimeError(f'run stage task{task} first')
+    target = Path(plan['root']) / 'scored' / f"task{task}_{load_json(path)['mode']}"
+    policy = load_json(target / 'calibration_count_m2.json')['stages'][str(N_TASKS)]
+    cfg = TaskConfig.load(plan['seed_task_config'])
+    thresholds = label_thresholds([list(cfg.task(t).labels) for t in range(1, N_TASKS + 1)],
+                                  [policy['group_thresholds'][f'task_{t}'] for t in range(1, N_TASKS + 1)])
+    preds = load_predictions(target / f'task_{N_TASKS}/pred_val.npz')
+    counted = dedup_detections(preds, policy['nms_iou']) if policy['nms_iou'] else preds.top1_per_query()
+    return per_sku_accuracy(load_coco(load_json(Path(plan['task_dir']) / 'val_full.json')), counted, thresholds,
+                            cfg.seen_classes(N_TASKS))
 
 
 def stage_final_test(plan: dict, confirm: bool = False) -> dict:

@@ -9,7 +9,7 @@ import pytest
 from autocheckout.cl_metrics import discover_stage_predictions, load_coco
 from autocheckout.io import md5_file
 from autocheckout.predictions import Predictions, load_predictions, save_predictions
-from autocheckout.relearn import alias_val_file, relearn_verdict, resolve_predictions, resolve_run
+from autocheckout.relearn import alias_val_file, per_sku_accuracy, relearn_verdict, resolve_predictions, resolve_run
 from autocheckout.taskcfg import TaskConfig
 from pdp_helpers import task_config_dict
 from tools.eval_count import _validated_predictions
@@ -114,6 +114,22 @@ def test_relearn_verdict_needs_the_gain_of_its_stage_without_hurting_the_other_s
         assert ("cAcc-M2" in reason.split(":")[-1]) == (round(cacc - 0.4368, 6) < (0.0165 if stage == 6 else 0.03))
 
 
+def test_per_sku_accuracy_counts_right_wrong_missed_and_extra_boxes_as_the_selection_did():
+    # image 1: A (label 0) and B (label 1); image 2: C (label 1), no box; one box under its threshold is not counted
+    coco = load_coco({"images": [{"id": i, "file_name": f"{i}.jpg", "width": 100, "height": 100} for i in (1, 2)],
+                      "annotations": [{"id": k, "image_id": i, "category_id": c, "bbox": b, "area": 100, "iscrowd": 0}
+                                      for k, (i, c, b) in enumerate([(1, 0, [0, 0, 10, 10]), (1, 1, [50, 50, 10, 10]),
+                                                                     (2, 1, [0, 0, 10, 10])], start=1)],
+                      "categories": [{"id": 0, "name": "a"}, {"id": 1, "name": "b"}]})
+    counted = Predictions(image_id=[1, 1, 1, 1], query=[0, 1, 2, 3], label=[0, 0, 1, 1], score=[.9, .8, .9, .2],
+                          boxes=[[0, 0, 10, 10], [50, 50, 60, 60], [80, 80, 95, 95], [0, 0, 10, 10]], meta={})
+    acc = per_sku_accuracy(coco, counted, np.array([.5, .5]), seen=2)
+    assert acc[0] == {"n_val": 1, "recall": 1.0, "precision": 0.5, "wrong": 0, "missed": 0, "others_called_this": 1,
+                      "extra_boxes": 0}
+    assert acc[1] == {"n_val": 2, "recall": 0.0, "precision": 0.0, "wrong": 1, "missed": 1, "others_called_this": 0,
+                      "extra_boxes": 1}
+
+
 def test_a_config_whose_learned_tasks_differ_from_the_seed_is_refused():
     from autocheckout.relearn import relearn_tasks
     seed = TaskConfig.from_dict(task_config_dict(sizes=(2, 1, 1, 1, 1), reserved=0))
@@ -174,6 +190,8 @@ def test_relearn_dry_run_expands_trains_two_tasks_and_scores_both_modes(tmp_path
         assert r["gate"]["decision"] in {"go", "stop"} and r["gate"]["enforced"] is False
     mtime = (run / "task_7/task_final.pth").stat().st_mtime
     assert relearn.stage_task(plan, 7)["finished_at"] == r7["finished_at"]
+    acc = relearn.sku_accuracy(plan, 7)
+    assert sorted(acc) == list(range(6)) and all(0 <= a["precision"] <= 1 for a in acc.values())
     assert (run / "task_7/task_final.pth").stat().st_mtime == mtime
 
     with pytest.raises(RuntimeError, match="confirm"):
