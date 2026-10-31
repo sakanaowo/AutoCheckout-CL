@@ -9,6 +9,7 @@ from PIL import Image
 from autocheckout.compositing import generate, scene_paths
 from autocheckout.synthetic import canonical_coco, export_task_annotations
 from autocheckout.taskcfg import TaskConfig
+from tools.make_relearn_config import relearn_config
 
 
 def task_config():
@@ -47,6 +48,16 @@ def test_task2_export_labels_only_new_skus_and_maps_once():
     assert [i["id"] for i in train["images"]] == [i["id"] for i in full["images"]] == [7]
     assert {c["id"] for c in train["categories"]} == {2, 3}
     assert all(c["rpc_category_id"] in (20, 21) for c in train["categories"])
+
+
+def test_a_sku_relearned_in_an_earlier_task_appears_under_its_alias():
+    cfg = relearn_config(task_config(), [[0, 3], [1]], reserved=1, name="t+relearn")  # task 4: rpc 10, 21; task 5: rpc 11
+    coco = canonical_coco([record(5, 7, [(11, True), (10, False), (21, False), (20, False), (30, False)])], CATEGORIES)
+    files = export_task_annotations(coco, 5, cfg)
+    train, full = files["train_task_5.json"], files["train_task_5_gt_full.json"]
+    assert [a["category_id"] for a in train["annotations"]] == list(cfg.task(5).labels) == [7]
+    assert train["categories"][0]["name"] == "sku11@t5"
+    assert sorted(a["category_id"] for a in full["annotations"]) == [2, 4, 5, 6, 7]  # rpc 10, 21 as task-4 aliases
 
 
 def test_export_refuses_scenes_of_another_task():
@@ -110,7 +121,7 @@ def test_resume_keeps_written_scenes(tmp_path, scene_inputs):
     assert not any(k.endswith(".tmp") for k in after)
 
 
-def build_release(tmp_path, scene_inputs, config):
+def build_release(tmp_path, scene_inputs, config, task_id=1):
     from autocheckout.synthetic import canonical_coco, export_task_annotations
     import json as _json
     recipes, kwargs = scene_inputs
@@ -119,9 +130,9 @@ def build_release(tmp_path, scene_inputs, config):
     records = [_json.loads((out / scene_paths(r)["label"]).read_text()) for r in recipes]
     coco = canonical_coco(records, [{"id": r, "name": str(r), "supercategory": "x"} for r in (10, 11)])
     (out / "annotations").mkdir()
-    (out / "annotations/task_1_rpc.json").write_text(_json.dumps(coco))
+    (out / f"annotations/task_{task_id}_rpc.json").write_text(_json.dumps(coco))
     (out / "tasks/synth_v2").mkdir(parents=True)
-    for name, data in export_task_annotations(coco, 1, config).items():
+    for name, data in export_task_annotations(coco, task_id, config).items():
         (out / "tasks/synth_v2" / name).write_text(_json.dumps(data))
     return out
 
@@ -165,6 +176,24 @@ def test_verify_catches_planted_faults(release, fault, gate):
     train_path.write_text(_json.dumps(train))
     report = verify_dataset(out, config, min_visible=0.7, quota_tolerance=0.6)
     assert not report["passed"] and not report["gates"][gate]
+
+
+def test_verify_accepts_a_relearn_release(tmp_path, scene_inputs):
+    from autocheckout.synthetic import verify_dataset
+    recipes, kwargs = scene_inputs
+    for i, r in enumerate(recipes):  # task 2 relearns rpc 10, rpc 11 is an old SKU; half of the objects new
+        r["generation_task"] = 2
+        for o in r["objects"]:
+            o["rpc_category_id"] = 10 if o["instance_id"] <= 1 + i % 2 else 11
+            o["labeled"] = o["rpc_category_id"] == 10
+    kwargs["scales"] = {"10:2": {"k": 1.0}, "11:2": {"k": 1.0}}
+    base = TaskConfig.from_dict({"name": "t", "seed": 0, "tasks": [{"task_id": 1, "offset": 0, "classes": [
+        {"label": 0, "name": "a", "rpc_category_id": 10}, {"label": 1, "name": "b", "rpc_category_id": 11}]}]})
+    config = relearn_config(base, [[0], [1]], reserved=0, name="t+relearn")
+    report = verify_dataset(build_release(tmp_path, scene_inputs, config, task_id=2), config, min_visible=0.7,
+                            quota_tolerance=0.6)
+    assert report["passed"], report["failures"]
+    assert list(report["counts"]) == [2] and report["counts"][2]["new_share"] == 0.5
 
 
 def test_verify_fails_when_a_planned_task_is_not_exported(release):

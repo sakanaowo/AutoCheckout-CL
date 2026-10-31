@@ -197,8 +197,9 @@ def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[
 
     Task 1 holds only task-1 SKUs, all labeled. Task t >= 2 mixes new SKUs (labeled, 40-60 % of the
     objects) with SKUs of earlier tasks (unlabeled, spread evenly over every earlier SKU, D14); future
-    SKUs never appear. Per-SKU object counts are balanced greedily. Transforms are drawn at render time
-    from the per-image seed, so the plan only fixes content.
+    SKUs never appear. A task of alias classes relearns SKUs of earlier tasks: they are its new SKUs, and
+    the old ones are every other SKU learned before. Per-SKU object counts are balanced greedily.
+    Transforms are drawn at render time from the per-image seed, so the plan only fixes content.
 
     ``sku_area`` (median val bbox area of each SKU, as a fraction of the image) and ``max_area`` (per
     level) reject baskets whose objects could not fit, e.g. a small-product pattern filled with large
@@ -206,7 +207,8 @@ def plan_scenes(task_id: int, n_images: int, *, task_config, cutouts: list[dict[
     """
     rng = np.random.default_rng(stable_seed(seed, "plan", task_id))
     new_skus = [c.rpc_category_id for c in task_config.task(task_id).classes]
-    old_skus = [c.rpc_category_id for t in task_config.data_tasks if t.task_id < task_id for c in t.classes]
+    old_skus = [c.rpc_category_id for t in task_config.data_tasks if t.task_id < task_id for c in t.classes
+                if c.alias_of is None and c.rpc_category_id not in new_skus]
     weights = {s["rpc_category_id"]: s["camera_weights"] for s in skus}
     by_sku_cam = defaultdict(list)
     for c in sorted(cutouts, key=lambda c: c["cutout_id"]):
@@ -467,7 +469,7 @@ def export_task_annotations(coco_rpc: dict[str, Any], task_id: int, task_config)
     wrong = sorted({img["generation_task"] for img in coco_rpc["images"]} - {task_id})
     if wrong:
         raise ValueError(f"task {task_id} export got images with generation_task {wrong}")
-    rpc_to_label = task_config.rpc_to_label()
+    rpc_to_label = task_config.rpc_to_label_in(task_id)
     current = {c.rpc_category_id for c in task_config.task(task_id).classes}
     seen = task_config.seen_classes(task_id)
     future = sorted({a["category_id"] for a in coco_rpc["annotations"] if rpc_to_label[a["category_id"]] >= seen})
@@ -517,8 +519,8 @@ def verify_dataset(out_root: str | os.PathLike, task_config, *, min_visible: flo
     out_root = Path(out_root)
     failures = defaultdict(list)
     counts = {}
-    rpc_to_label = task_config.rpc_to_label()
     for task in task_config.data_tasks:
+        rpc_to_label = task_config.rpc_to_label_in(task.task_id)
         canon_path = out_root / "annotations" / f"task_{task.task_id}_rpc.json"
         if not canon_path.exists():
             continue

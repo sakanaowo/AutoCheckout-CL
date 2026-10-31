@@ -6,6 +6,7 @@ import pytest
 
 from autocheckout.synthetic import basket_patterns, plan_scenes, stable_seed
 from autocheckout.taskcfg import TaskConfig
+from tools.make_relearn_config import relearn_config
 
 LAYOUT = {"new_ratio": [0.4, 0.6]}
 
@@ -124,3 +125,14 @@ def test_area_budget_rejects_baskets_that_cannot_fit():
         assert sum(area[o["rpc_category_id"]] for o in r["objects"]) <= {"easy": 0.5, "medium": 0.8}[r["level"]]
     counts = Counter(o["rpc_category_id"] for r in recipes for o in r["objects"])
     assert counts[1] > 0
+
+
+def test_relearn_task_scenes_label_the_relearned_skus_and_never_list_them_as_old():
+    cfg = relearn_config(task_config(), [[0, 3], [1]], reserved=1, name="t+relearn")  # task 4 relearns rpc 1, 4
+    cutouts, skus = catalog_and_skus()
+    recipes = plan_scenes(4, 300, task_config=cfg, cutouts=cutouts, skus=skus, patterns=PATTERNS,
+                          backgrounds=["b1.jpg", "b2.jpg", "b3.jpg"], layout=LAYOUT, seed=7)
+    objs = [o for r in recipes for o in r["objects"]]
+    relearned = {c.rpc_category_id for c in cfg.task(4).classes}
+    assert relearned == {1, 4} and all(o["labeled"] == (o["rpc_category_id"] in relearned) for o in objs)
+    assert {o["rpc_category_id"] for o in objs if not o["labeled"]} == set(range(1, 9)) - relearned
