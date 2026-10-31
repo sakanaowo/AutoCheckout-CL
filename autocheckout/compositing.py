@@ -147,10 +147,12 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
     occluded = np.random.default_rng(stable_seed(recipe["seed"], "occluded")).random() \
         < layout.get("occluded_scene_prob", 0.0)
     base_layout, n_retries = layout, layout["scene_retries"]
-    # a basket that found no layout replays its retries at the occluded share's visibility
-    passes = [False, True] if "occluded_min_visible" in layout and not occluded else [False]
-    attempts = [(replay, retry) for replay in passes for retry in range(n_retries)]
-    for attempt, (replay, retry) in enumerate(attempts):
+    # a basket that found no layout replays its retries at the occluded share's visibility, then once more with
+    # every object one jitter sigma smaller: the area budget lets through a few baskets fuller than the tray
+    replays = [False, True] if "occluded_min_visible" in layout and not occluded else [False]
+    passes = [(replay, 1.0) for replay in replays] + [(replays[-1], float(np.exp(-scale_cfg["jitter_log_sigma"])))]
+    attempts = [(replay, shrink, retry) for replay, shrink in passes for retry in range(n_retries)]
+    for attempt, (replay, shrink, retry) in enumerate(attempts):
         # baskets too full to lie apart get the occluded share's visibility on the last retries, as people
         # stack packs when the counter runs out of room
         last_resort = replay or ("occluded_min_visible" in base_layout and retry >= n_retries * 3 // 4)
@@ -172,7 +174,8 @@ def render_scene(recipe: dict[str, Any], *, cutouts: dict[str, dict[str, Any]], 
             cutout = cutouts[spec["cutout_id"]]
             png_per_source = max(cutout["size"]) / max(cutout["bbox_source"][2:])
             scale = scales[f"{spec['rpc_category_id']}:{spec['camera']}"]["k"] / png_per_source
-            scale *= scale_cfg.get("calibration", 1.0) * float(np.exp(rng.normal(0, scale_cfg["jitter_log_sigma"])))
+            scale *= shrink * scale_cfg.get("calibration", 1.0) \
+                * float(np.exp(rng.normal(0, scale_cfg["jitter_log_sigma"])))
             rgba = load_rgba(cutout["file"])
             scale = min(scale, scale_cfg["max_side_frac"] * size / max(rgba.shape[:2]))
             if rng.random() < layout.get("aligned_prob", 0.0):     # lying square to the tray edges

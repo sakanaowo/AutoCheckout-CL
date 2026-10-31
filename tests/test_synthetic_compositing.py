@@ -145,3 +145,14 @@ def test_basket_without_layout_replays_retries_at_occluded_visibility(assets):
                        backgrounds_dir=root)
     assert out["resolved"]["retry"] >= LAYOUT["scene_retries"] and out["resolved"]["min_visible"] == 0.6
     assert all(a["visible_fraction"] >= 0.6 for a in out["annotations"])
+
+
+def test_basket_fuller_than_the_tray_replays_once_more_one_jitter_sigma_smaller(assets):
+    # four packs too large to fit even at the occluded share's visibility fit once each is exp(-0.1) smaller
+    root, cutouts, _ = assets
+    large = {f"{k + 1}:2": {"k": 3.6} for k in range(4)}
+    layout = {**LAYOUT, "min_visible": 0.95, "occluded_scene_prob": 0.0, "occluded_min_visible": 0.6}
+    config = {**CONFIG, "scale": {**SCALE, "max_side_frac": 0.9, "jitter_log_sigma": 0.1}, "layout": layout}
+    out = render_scene(recipe(4), cutouts=cutouts, scales=large, config=config, backgrounds_dir=root)
+    assert out["resolved"]["retry"] >= 2 * LAYOUT["scene_retries"] and out["resolved"]["min_visible"] == 0.6
+    assert all(a["visible_fraction"] >= 0.6 for a in out["annotations"])
