@@ -57,15 +57,23 @@ def use_tiny_detr(monkeypatch) -> None:
     monkeypatch.setattr(engine, "DeformableDetrConfig", lambda: DeformableDetrConfig(**TINY_DETR))
 
 
-def pdp_args(tmp_path: Path, *extra: str, sizes=(3, 2), reserved=0) -> argparse.Namespace:
-    """Arguments for a small PDP run on a toy task config, set up like main() does."""
+def pdp_args(tmp_path: Path, *extra: str, sizes=(3, 2), reserved=0, config=None) -> argparse.Namespace:
+    """Arguments for a small PDP run on a toy task config, set up like main() does.
+
+    ``config`` (a TaskConfig) replaces the toy config of ``sizes`` and ``reserved``.
+    """
     import main as pdp_main
 
-    config = write_task_config(tmp_path / "tasks.json", sizes=sizes, reserved=reserved)
-    n_classes = sum(sizes) + reserved + 1
+    if config is None:
+        path = write_task_config(tmp_path / "tasks.json", sizes=sizes, reserved=reserved)
+        n_classes, n_tasks = sum(sizes) + reserved + 1, len(sizes)
+    else:
+        path = tmp_path / "tasks.json"
+        config.save(path)
+        n_classes, n_tasks = config.num_classes, len(config.data_tasks)
     args = main_args([
-        "--task_config", str(config), "--n_classes", str(n_classes), "--repo_name", "",
-        "--n_tasks", str(len(sizes)), "--use_prompts", "1", "--local_query", "1",
+        "--task_config", str(path), "--n_classes", str(n_classes), "--repo_name", "",
+        "--n_tasks", str(n_tasks), "--use_prompts", "1", "--local_query", "1",
         "--num_prompts", "4", "--prompt_len", "2", "--lambda_query", "0.1",
         "--freeze", "backbone,encoder,decoder", "--new_params", "class_embed,prompts",
         "--output_dir", str(tmp_path / "run"), *extra,
